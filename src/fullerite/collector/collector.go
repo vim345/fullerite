@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Collector defines the interface of a generic collector.
 type Collector interface {
 	Collect()
 	Name() string
@@ -13,6 +14,7 @@ type Collector interface {
 	Channel() chan metric.Metric
 }
 
+// New creates a new Collector based on the requested collector name.
 func New(name string) Collector {
 	var collector Collector
 	switch name {
@@ -27,8 +29,9 @@ func New(name string) Collector {
 	return collector
 }
 
-// TODO: do we need this?
+// Run runs the collector forever with its defined interval.
 func Run(c Collector) {
+	// TODO: do we need this?
 	for {
 		c.Collect()
 		time.Sleep(time.Duration(c.Interval()) * time.Second)

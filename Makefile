@@ -7,12 +7,13 @@ SOURCES := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 GOPATH  := $(shell pwd -L)
 export GOPATH
 
-all: fmt vet lint $(PROG)
+all: clean fmt vet lint $(PROG)
 
 .PHONY: clean
 clean:
-	rm -f $(PROG) bin/$(PROG)
-	rm -rf pkg/*/$(PROG)
+	@echo Cleaning $(PROG)...
+	@rm -f $(PROG) bin/$(PROG)
+	@rm -rf pkg/*/$(PROG)
 
 deps:
 	@echo Getting dependencies...

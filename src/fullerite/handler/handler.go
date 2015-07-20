@@ -5,6 +5,7 @@ import (
 	"log"
 )
 
+// Handler defines the interface of a generic handler.
 type Handler interface {
 	Send()
 	Name() string
@@ -13,6 +14,7 @@ type Handler interface {
 	Channel() chan metric.Metric
 }
 
+// New creates a new Handler based on the requested handler name.
 func New(name string) Handler {
 	var handler Handler
 	switch name {
