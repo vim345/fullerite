@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-// Config type holds the global Fullerite configuration
+// Config type holds the global Fullerite configuration.
 type Config struct {
 	Collectors []string `json:"collectors"`
 	Handlers   []string `json:"handlers"`

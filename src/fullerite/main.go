@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fullerite/metric"
 	"github.com/codegangsta/cli"
 	"os"
 )
@@ -31,8 +32,12 @@ func start(ctx *cli.Context) {
 	c := readConfig(ctx.String("config"))
 	collectors := startCollectors(c)
 	handlers := startHandlers(c)
-	for {
-		metrics := readFromCollectors(collectors)
-		writeToHandlers(handlers, metrics)
+	metrics := make(chan metric.Metric)
+	readFromCollectors(collectors, metrics)
+	for metric := range metrics {
+		// TODO: Just write to handlers
+		// sequentially. Eventually we'll do this in separate
+		// go routines.
+		writeToHandlers(handlers, metric)
 	}
 }

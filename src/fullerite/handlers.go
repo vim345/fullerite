@@ -17,16 +17,19 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 func startHandler(name string) handler.Handler {
 	log.Println("Starting handler", name)
 	handler := handler.New(name)
+	readHandlerConfig(handler)
+	go handler.Run()
 	return handler
 }
 
-func writeToHandlers(handlers []handler.Handler, metrics []metric.Metric) {
-	for _, handler := range handlers {
-		// TODO: create a goroutine for each handler
-		writeToHandler(handler)
-	}
+func readHandlerConfig(handler handler.Handler) {
+	// TODO: actually read from configuration file.
+	handler.SetInterval(5)
+	handler.SetMaxBufferSize(300)
 }
 
-func writeToHandler(handler handler.Handler) {
-	// TODO: write to handler's Channel
+func writeToHandlers(handlers []handler.Handler, metric metric.Metric) {
+	for _, handler := range handlers {
+		handler.Channel() <- metric
+	}
 }

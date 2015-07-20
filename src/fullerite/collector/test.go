@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fullerite/metric"
+	"math/rand"
 )
 
 // Test collector type
@@ -10,9 +11,19 @@ type Test struct {
 	channel  chan metric.Metric
 }
 
+// NewTest creates a new Test collector.
+func NewTest() *Test {
+	t := new(Test)
+	t.channel = make(chan metric.Metric)
+	return t
+}
+
 // Collect produces some random test metrics.
 func (t Test) Collect() {
-	// TODO: implement
+	metric := metric.New("test")
+	metric.SetValue(rand.Float64())
+	metric.AddDimension("testing", "yes")
+	t.Channel() <- metric
 }
 
 // Name of the collector.
@@ -34,4 +45,9 @@ func (t Test) Channel() chan metric.Metric {
 // String returns the collector name in printable format.
 func (t Test) String() string {
 	return t.Name() + "Collector"
+}
+
+// SetInterval sets the collect rate of the collector.
+func (t *Test) SetInterval(interval int) {
+	t.interval = interval
 }

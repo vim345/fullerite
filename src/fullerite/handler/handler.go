@@ -7,10 +7,12 @@ import (
 
 // Handler defines the interface of a generic handler.
 type Handler interface {
-	Send()
+	Run()
 	Name() string
 	Interval() int
 	MaxBufferSize() int
+	SetInterval(int)
+	SetMaxBufferSize(int)
 	Channel() chan metric.Metric
 }
 
@@ -19,9 +21,9 @@ func New(name string) Handler {
 	var handler Handler
 	switch name {
 	case "Graphite":
-		handler = new(Graphite)
+		handler = NewGraphite()
 	case "SignalFx":
-		handler = new(SignalFx)
+		handler = NewSignalFx()
 	default:
 		log.Fatal("Cannot create handler ", name)
 		return nil

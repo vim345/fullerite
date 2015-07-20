@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fullerite/metric"
+	"log"
 )
 
 // SignalFx type.
@@ -12,9 +13,20 @@ type SignalFx struct {
 	channel       chan metric.Metric
 }
 
-// Send metrics in the channel to SignalFx.
-func (s SignalFx) Send() {
-	// TODO: implement
+// NewSignalFx returns a new SignalFx handler.
+func NewSignalFx() *SignalFx {
+	s := new(SignalFx)
+	s.channel = make(chan metric.Metric)
+	return s
+}
+
+// Run send metrics in the channel to SignalFx.
+func (s SignalFx) Run() {
+	// TODO: check interval and queue size and metrics.
+	for metric := range s.channel {
+		// TODO: Actually send to signalfx.
+		log.Println("Sending metric to SignalFx:", metric)
+	}
 }
 
 // Name of the handler.
@@ -43,4 +55,14 @@ func (s SignalFx) Channel() chan metric.Metric {
 // String returns the handler name in a printable format.
 func (s SignalFx) String() string {
 	return s.Name() + "Handler"
+}
+
+// SetInterval sets the flush rate of the handler.
+func (s *SignalFx) SetInterval(interval int) {
+	s.interval = interval
+}
+
+// SetMaxBufferSize sets the buffer size for flush to be called.
+func (s *SignalFx) SetMaxBufferSize(maxBufferSize int) {
+	s.maxBufferSize = maxBufferSize
 }
