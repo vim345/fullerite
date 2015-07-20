@@ -35,9 +35,8 @@ func start(ctx *cli.Context) {
 	metrics := make(chan metric.Metric)
 	readFromCollectors(collectors, metrics)
 	for metric := range metrics {
-		// TODO: Just write to handlers
-		// sequentially. Eventually we'll do this in separate
-		// go routines.
+		// Writing to handlers' channels. Sending metrics is
+		// handled asynchronously in handlers' Run functions.
 		writeToHandlers(handlers, metric)
 	}
 }
