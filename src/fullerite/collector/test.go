@@ -20,7 +20,7 @@ func NewTest() *Test {
 
 // Collect produces some random test metrics.
 func (t Test) Collect() {
-	metric := metric.New("test")
+	metric := metric.New("TestMetric")
 	metric.SetValue(rand.Float64())
 	metric.AddDimension("testing", "yes")
 	t.Channel() <- metric

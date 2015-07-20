@@ -25,7 +25,7 @@ type Dimension struct {
 // and timestamp is set to now. Value is initialized to 0.0.
 func New(name string) Metric {
 	return Metric{
-		name:       "TestMetric",
+		name:       name,
 		metricType: "gauge",
 		value:      0.0,
 		timestamp:  time.Now().Unix(),
