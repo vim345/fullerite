@@ -11,7 +11,7 @@ type Config struct {
 	Collectors        []string                     `json:"collectors"`
 	Handlers          map[string]map[string]string `json:"handlers"`
 	Prefix            string                       `json:"prefix"`
-	DefaultDimensions map[string]string            `json:"default_dimensions"`
+	DefaultDimensions map[string]string            `json:"defaultDimensions"`
 }
 
 func readConfig(configFile string) (c Config) {

@@ -26,6 +26,7 @@ func NewSignalFx() *SignalFx {
 func (s SignalFx) Configure(config *map[string]string) {
 	asmap := *config
 	s.authToken = asmap["authToken"]
+	s.endpoint = asmap["endpoint"]
 }
 
 // Run send metrics in the channel to SignalFx.
