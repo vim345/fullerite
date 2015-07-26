@@ -8,7 +8,8 @@ import (
 // SignalFx type.
 type SignalFx struct {
 	BaseHandler
-	endpoint string
+	endpoint  string
+	authToken string
 }
 
 // NewSignalFx returns a new SignalFx handler.
@@ -19,8 +20,12 @@ func NewSignalFx() *SignalFx {
 	s.interval = DefaultInterval
 	s.maxBufferSize = DefaultBufferSize
 	s.channel = make(chan metric.Metric)
-
 	return s
+}
+
+func (s SignalFx) Configure(config *map[string]string) {
+	asmap := *config
+	s.authToken = asmap["authToken"]
 }
 
 // Run send metrics in the channel to SignalFx.
