@@ -4,15 +4,20 @@
 The Collector class is a base class for all metric collectors.
 """
 
+import json
+import logging
 import os
 import platform
-import logging
-import time
 import re
+import socket
 import subprocess
+import sys
+import time
 
 from diamond.metric import Metric
 from error import DiamondException
+
+SOCKET_ADDR = '\0fullerite'
 
 # Detect the architecture of the system and set the counters for MAX_VALUES
 # appropriately. Otherwise, rolling over counters will cause incorrect or
@@ -51,7 +56,7 @@ class Collector(object):
     The Collector class is a base class for all metric collectors.
     """
 
-    def __init__(self, handlers=[], name=None, configfile=None):
+    def __init__(self, config=None, handlers=[], name=None, configfile=None):
         """
         Create a new instance of the Collector class
         """
@@ -68,6 +73,17 @@ class Collector(object):
 
         self.configfile = None
         self.load_config(configfile)
+
+        self.socket = self._connect()
+
+    def _connect(self):
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            sock.connect(SOCKET_ADDR)
+        except socket.error, msg:
+            self.log.error("Error connecting to UNIX socket: %s", msg)
+            sys.exit(1)
+        return sock
 
     def load_config(self, configfile=None):
         """
@@ -275,9 +291,11 @@ class Collector(object):
         """
         Publish a Metric object
         """
-        # Process Metric
-        for handler in self.handlers:
-            handler._process(metric)
+        try:
+            self.socket.sendall(json.dumps(metric.export()))
+        except socket.error:
+            self.log.error("Error sending metrics")
+            self.log.exception()
 
     def publish_gauge(self, name, value, precision=0, instance=None):
         return self.publish(name, value, precision=precision,

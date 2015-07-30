@@ -79,6 +79,17 @@ class Metric(object):
         # Return formated string
         return fstring % (self.path, self.value, self.timestamp)
 
+    def export(self):
+        return {
+            'name': self.getMetricPath(),
+            'value': self.value,
+            'type': self.metric_type,
+            'dimensions': {
+                'prefix': self.getPathPrefix(),
+                'collector': self.getCollectorPath(),
+            }
+        }
+
     @classmethod
     def parse(cls, string):
         """
