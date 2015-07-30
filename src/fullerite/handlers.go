@@ -22,13 +22,16 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 		handler.Configure(&config)
 
 		handlers = append(handlers, handler)
+
+		log.Println(handler.Name(), handler.DefaultDimensions())
+
 		go handler.Run()
 	}
 	return handlers
 }
 
 func convertToDimensions(dimsAsMap *map[string]string) []metric.Dimension {
-	defaults := make([]metric.Dimension, len(*dimsAsMap))
+	defaults := make([]metric.Dimension, 0, len(*dimsAsMap))
 	for key, value := range *dimsAsMap {
 		dim := metric.Dimension{Name: key, Value: value}
 		defaults = append(defaults, dim)

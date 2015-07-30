@@ -57,7 +57,7 @@ func (s SignalFx) Run() {
 
 	for incomingMetric := range s.Channel() {
 		log.Println("Processing metric to SignalFx:", incomingMetric)
-		sfxVersion := *convertToSignalFx(&incomingMetric)
+		sfxVersion := *s.convertToSignalFx(&incomingMetric)
 
 		switch incomingMetric.Type() {
 		case metric.Gauge:
@@ -78,11 +78,19 @@ func (s SignalFx) Run() {
 	}
 }
 
-func convertToSignalFx(metric *metric.Metric) *signalfxMetric {
+func (s SignalFx) convertToSignalFx(metric *metric.Metric) *signalfxMetric {
 	sfx := new(signalfxMetric)
-	sfx.Name = metric.Name()
+	sfx.Name = s.Prefix() + metric.Name()
 	sfx.Value = metric.Value()
 	sfx.Dimensions = make(map[string]string)
+
+	log.Println(s.DefaultDimensions())
+	if s.DefaultDimensions() != nil {
+		for _, dimension := range *s.DefaultDimensions() {
+			sfx.Dimensions[dimension.Name] = dimension.Value
+		}
+	}
+
 	for _, dimension := range *metric.Dimensions() {
 		sfx.Dimensions[dimension.Name] = dimension.Value
 	}

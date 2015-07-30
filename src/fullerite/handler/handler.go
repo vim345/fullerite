@@ -42,7 +42,7 @@ type Handler interface {
 	Prefix() string
 	SetPrefix(string)
 
-	DefaultDimensions() []metric.Dimension
+	DefaultDimensions() *[]metric.Dimension
 	SetDefaultDimensions(*[]metric.Dimension)
 }
 
@@ -57,52 +57,52 @@ type BaseHandler struct {
 }
 
 // Channel : the channel to handler listens for metrics on
-func (handler BaseHandler) Channel() chan metric.Metric {
+func (handler *BaseHandler) Channel() chan metric.Metric {
 	return handler.channel
 }
 
 // Name : the name of the handler
-func (handler BaseHandler) Name() string {
+func (handler *BaseHandler) Name() string {
 	return handler.name
 }
 
 // MaxBufferSize : the maximum number of metrics that should be buffered before sending
-func (handler BaseHandler) MaxBufferSize() int {
+func (handler *BaseHandler) MaxBufferSize() int {
 	return handler.maxBufferSize
 }
 
 // SetMaxBufferSize : set the buffer size
-func (handler BaseHandler) SetMaxBufferSize(size int) {
+func (handler *BaseHandler) SetMaxBufferSize(size int) {
 	handler.maxBufferSize = size
 }
 
 // Prefix : any prefix that should be applied to the metrics name as they're sent
 // it is appended without any punctuation, include your own
-func (handler BaseHandler) Prefix() string {
+func (handler *BaseHandler) Prefix() string {
 	return handler.prefix
 }
 
 // SetPrefix : set the prefix
-func (handler BaseHandler) SetPrefix(prefix string) {
+func (handler *BaseHandler) SetPrefix(prefix string) {
 	handler.prefix = prefix
 }
 
 // DefaultDimensions : dimensions that should be included in any metric
-func (handler BaseHandler) DefaultDimensions() []metric.Dimension {
-	return handler.defaultDimensions
+func (handler *BaseHandler) DefaultDimensions() *[]metric.Dimension {
+	return &handler.defaultDimensions
 }
 
 // SetDefaultDimensions : set the defautl dimensions
-func (handler BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
+func (handler *BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
 	handler.defaultDimensions = *defaults
 }
 
 // Configure : this takes a dictionary of values with which the handler can configure itself
-func (handler BaseHandler) Configure(*map[string]string) {
+func (handler *BaseHandler) Configure(*map[string]string) {
 	// noop
 }
 
 // String returns the handler name in a printable format.
-func (handler BaseHandler) String() string {
+func (handler *BaseHandler) String() string {
 	return handler.Name() + "Handler"
 }
