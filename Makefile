@@ -21,7 +21,7 @@ deps:
 
 $(PROG): $(SOURCES) deps
 	@echo Building $(PROG)...
-	@go build $@
+	@go build -o bin/$(PROG) $@
 
 test: tests
 tests: deps
