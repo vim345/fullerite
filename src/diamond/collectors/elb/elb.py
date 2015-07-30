@@ -194,7 +194,7 @@ class ElbCollector(diamond.collector.Collector):
 
         # Create Metric
         metric = Metric(path, value, raw_value=raw_value, timestamp=timestamp,
-                        precision=precision, host=self.get_hostname(),
+                        precision=precision,
                         metric_type=metric_type, ttl=ttl)
 
         # Publish Metric
