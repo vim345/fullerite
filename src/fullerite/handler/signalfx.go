@@ -82,18 +82,18 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 	}
 
 	if s.DefaultDimensions() != nil {
-		for _, dimension := range *s.DefaultDimensions() {
+		for key, value := range *s.DefaultDimensions() {
 			dim := Dimension{
-				Key:   &dimension.Name,
-				Value: &dimension.Value,
+				Key:   &key,
+				Value: &value,
 			}
 			datapoint.Dimensions = append(datapoint.Dimensions, &dim)
 		}
 	}
-	for _, dimension := range incomingMetric.Dimensions {
+	for key, value := range incomingMetric.Dimensions {
 		dim := Dimension{
-			Key:   &dimension.Name,
-			Value: &dimension.Value,
+			Key:   &key,
+			Value: &value,
 		}
 		datapoint.Dimensions = append(datapoint.Dimensions, &dim)
 	}
