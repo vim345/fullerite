@@ -7,13 +7,17 @@ SOURCES := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 GOPATH  := $(shell pwd -L)
 export GOPATH
 
-all: clean fmt vet lint $(PROG)
+PATH := bin:$(PATH)
+export PATH
+
+all: clean fmt vet lint protobuf $(PROG)
 
 .PHONY: clean
 clean:
 	@echo Cleaning $(PROG)...
 	@rm -f $(PROG) bin/$(PROG)
 	@rm -rf pkg/*/$(PROG)
+	@rm -f src/fullerite/handler/*.pb.go
 
 deps:
 	@echo Getting dependencies...
@@ -35,6 +39,10 @@ vet: $(SOURCES)
 	@echo Vetting $(PROG) sources...
 	@go get golang.org/x/tools/cmd/vet
 	@$(foreach pkg, $(PKGS), go vet $(pkg);)
+
+protobuf: signalfx.proto
+	@go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
+	@protoc --go_out=src/fullerite/handler/ signalfx.proto
 
 lint: $(SOURCES)
 	@echo Linting $(PROG) sources...
