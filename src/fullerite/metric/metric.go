@@ -4,6 +4,12 @@ import (
 	"time"
 )
 
+const (
+	Gauge             = "gauge"
+	Counter           = "counter"
+	CumulativeCounter = "cumcounter"
+)
+
 // Metric type holds all the information for a single metric data
 // point. Metrics are generated in collectors and passed to handlers.
 type Metric struct {
@@ -30,6 +36,22 @@ func New(name string) Metric {
 		value:      0.0,
 		timestamp:  time.Now().Unix(),
 	}
+}
+
+func (m *Metric) Value() float64 {
+	return m.value
+}
+
+func (m *Metric) Name() string {
+	return m.name
+}
+
+func (m *Metric) Type() string {
+	return m.metricType
+}
+
+func (m *Metric) Dimensions() *[]Dimension {
+	return &m.dimensions
 }
 
 // SetTimestamp sets the timestamp of a Metric.
