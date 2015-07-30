@@ -24,7 +24,6 @@ func New(name string) Handler {
 		log.Fatal("Cannot create handler ", name)
 		return nil
 	}
-
 	return handler
 }
 
@@ -46,8 +45,8 @@ type Handler interface {
 	Prefix() string
 	SetPrefix(string)
 
-	DefaultDimensions() *[]metric.Dimension
-	SetDefaultDimensions(*[]metric.Dimension)
+	DefaultDimensions() *map[string]string
+	SetDefaultDimensions(*map[string]string)
 }
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
@@ -57,7 +56,8 @@ type BaseHandler struct {
 	maxBufferSize     int
 	prefix            string
 	interval          int
-	defaultDimensions []metric.Dimension
+	source            string
+	defaultDimensions map[string]string
 }
 
 // Channel : the channel to handler listens for metrics on
@@ -92,12 +92,12 @@ func (handler *BaseHandler) SetPrefix(prefix string) {
 }
 
 // DefaultDimensions : dimensions that should be included in any metric
-func (handler *BaseHandler) DefaultDimensions() *[]metric.Dimension {
+func (handler *BaseHandler) DefaultDimensions() *map[string]string {
 	return &handler.defaultDimensions
 }
 
 // SetDefaultDimensions : set the defautl dimensions
-func (handler *BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
+func (handler *BaseHandler) SetDefaultDimensions(defaults *map[string]string) {
 	handler.defaultDimensions = *defaults
 }
 

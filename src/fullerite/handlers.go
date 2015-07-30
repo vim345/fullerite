@@ -9,15 +9,13 @@ import (
 func startHandlers(c Config) (handlers []handler.Handler) {
 	log.Println("Starting handlers...")
 
-	defaults := convertToDimensions(&c.DefaultDimensions)
-
 	for name, config := range c.Handlers {
 		handler := buildHandler(name)
 
 		// apply any global configs
 		handler.SetInterval(c.Interval)
 		handler.SetPrefix(c.Prefix)
-		handler.SetDefaultDimensions(&defaults)
+		handler.SetDefaultDimensions(&c.DefaultDimensions)
 
 		// now apply the handler level configs
 		handler.Configure(&config)
@@ -27,18 +25,6 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 		go handler.Run()
 	}
 	return handlers
-}
-
-func convertToDimensions(dimsAsMap *map[string]string) []metric.Dimension {
-	defaults := make([]metric.Dimension, 0, len(*dimsAsMap))
-	for key, value := range *dimsAsMap {
-		dim := metric.Dimension{
-			Name:  key,
-			Value: value,
-		}
-		defaults = append(defaults, dim)
-	}
-	return defaults
 }
 
 func buildHandler(name string) handler.Handler {
