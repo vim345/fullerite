@@ -1,4 +1,4 @@
-fullerite
+./fullerite
 bin/*
 pkg/*
 src/github.com/*
