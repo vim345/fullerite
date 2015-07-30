@@ -36,7 +36,7 @@ func NewSignalFx() *SignalFx {
 }
 
 // Configure : accepts the different configuration options for the signalfx handler
-func (s SignalFx) Configure(config *map[string]string) {
+func (s *SignalFx) Configure(config *map[string]string) {
 	asmap := *config
 	var exists bool
 	s.authToken, exists = asmap["authToken"]
@@ -50,7 +50,7 @@ func (s SignalFx) Configure(config *map[string]string) {
 }
 
 // Run send metrics in the channel to SignalFx.
-func (s SignalFx) Run() {
+func (s *SignalFx) Run() {
 	log.Println("starting signalfx handler")
 	lastEmission := time.Now()
 
@@ -72,7 +72,7 @@ func (s SignalFx) Run() {
 		}
 
 		numMetrics := len(gauges) + len(cumCounters) + len(counters)
-		if time.Since(lastEmission).Seconds() >= s.interval || numMetrics >= s.maxBufferSize {
+		if time.Since(lastEmission).Seconds() >= float64(s.interval) || numMetrics >= s.maxBufferSize {
 			s.emitMetrics(&gauges, &cumCounters, &counters)
 			gauges = make([]signalfxMetric, 0, s.maxBufferSize)
 			cumCounters = make([]signalfxMetric, 0, s.maxBufferSize)
@@ -81,7 +81,7 @@ func (s SignalFx) Run() {
 	}
 }
 
-func (s SignalFx) convertToSignalFx(metric *metric.Metric) *signalfxMetric {
+func (s *SignalFx) convertToSignalFx(metric *metric.Metric) *signalfxMetric {
 	sfx := new(signalfxMetric)
 	sfx.Name = s.Prefix() + metric.Name()
 	sfx.Value = metric.Value()
@@ -100,7 +100,7 @@ func (s SignalFx) convertToSignalFx(metric *metric.Metric) *signalfxMetric {
 	return sfx
 }
 
-func (s SignalFx) emitMetrics(gauges *[]signalfxMetric, cumCounters *[]signalfxMetric, counters *[]signalfxMetric) {
+func (s *SignalFx) emitMetrics(gauges *[]signalfxMetric, cumCounters *[]signalfxMetric, counters *[]signalfxMetric) {
 	log.Println("Starting to emit ", len(*gauges), "gauges",
 		len(*counters), "counters", len(*cumCounters), "cumulative counters")
 

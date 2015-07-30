@@ -11,7 +11,7 @@ type Config struct {
 	Collectors        []string                     `json:"collectors"`
 	Handlers          map[string]map[string]string `json:"handlers"`
 	Prefix            string                       `json:"prefix"`
-	Interval          float64                      `json:"interval"`
+	Interval          int                          `json:"interval"`
 	DefaultDimensions map[string]string            `json:"defaultDimensions"`
 }
 
