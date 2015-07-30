@@ -111,7 +111,7 @@ func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
 
 	payload := new(DataPointUploadMessage)
 	payload.Datapoints = *datapoints
-	log.Println("payload", payload)
+
 	if s.authToken == "" || s.endpoint == "" {
 		log.Println("Skipping emission because we're missing the auth token ",
 			"or the endpoint, payload would have been", payload.String())
@@ -139,8 +139,14 @@ func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
 	}
 
 	defer rsp.Body.Close()
-	log.Println("status", rsp.Status)
-	log.Println("headers", rsp.Header)
-	body, _ := ioutil.ReadAll(rsp.Body)
-	log.Println("body", string(body))
+	if rsp.Status != "200 OK" {
+		body, _ := ioutil.ReadAll(rsp.Body)
+		log.Println("Failed to post to signalfx @", s.endpoint,
+			"status was", rsp.Status,
+			"rsp body was", string(body),
+			"payload was", payload)
+		return
+	}
+
+	log.Println("Successfully sent", len(*datapoints), "datapoints to signalfx")
 }
