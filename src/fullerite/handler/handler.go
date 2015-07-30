@@ -7,7 +7,6 @@ import (
 
 // Some sane values to default things to
 const (
-	DefaultInterval   = 10
 	DefaultBufferSize = 100
 )
 
@@ -50,7 +49,6 @@ type Handler interface {
 type BaseHandler struct {
 	channel           chan metric.Metric
 	name              string
-	interval          int
 	maxBufferSize     int
 	prefix            string
 	defaultDimensions []metric.Dimension

@@ -15,7 +15,6 @@ type Graphite struct {
 func NewGraphite() *Graphite {
 	g := new(Graphite)
 	g.name = "SignalFx"
-	g.interval = DefaultInterval
 	g.maxBufferSize = DefaultBufferSize
 	g.channel = make(chan metric.Metric)
 

@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"fullerite/metric"
 	"log"
+	"strconv"
 	"time"
+)
+
+const (
+	defaultInterval = 10.0
 )
 
 type signalfxPayload struct {
@@ -22,35 +27,53 @@ type signalfxMetric struct {
 // SignalFx Handler
 type SignalFx struct {
 	BaseHandler
-	endpoint     string
-	authToken    string
-	maxSendPause float64
+	endpoint  string
+	authToken string
+	interval  float64
 }
 
 // NewSignalFx returns a new SignalFx handler.
 func NewSignalFx() *SignalFx {
 	s := new(SignalFx)
 	s.name = "SignalFx"
-	s.interval = DefaultInterval
 	s.maxBufferSize = DefaultBufferSize
 	s.channel = make(chan metric.Metric)
-
-	s.maxSendPause = 10.0 // TODO get this from config
 	return s
 }
 
 // Configure : accepts the different configuration options for the signalfx handler
 func (s SignalFx) Configure(config *map[string]string) {
 	asmap := *config
-	s.authToken = asmap["authToken"]
-	s.endpoint = asmap["endpoint"]
+	var exists bool
+	s.authToken, exists = asmap["authToken"]
+	if !exists {
+		log.Println("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
+	}
+	s.endpoint, exists = asmap["endpoint"]
+	if !exists {
+		log.Println("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
+	}
+
+	var intervalStr string
+	intervalStr, exists = asmap["interval"]
+	if !exists {
+		s.interval = defaultInterval
+	} else {
+		val, err := strconv.ParseFloat(intervalStr, 64)
+		if err != nil {
+			log.Println("Problem parsing interval value", intervalStr)
+			s.interval = defaultInterval
+		} else {
+			s.interval = val
+		}
+	}
 }
 
 // Run send metrics in the channel to SignalFx.
 func (s SignalFx) Run() {
 	log.Println("starting signalfx handler")
 	lastEmission := time.Now()
-	// metricsBuffer := make([]signalfxMetric, 0, s.maxBufferSize)
+
 	gauges := make([]signalfxMetric, 0, s.maxBufferSize)
 	cumCounters := make([]signalfxMetric, 0, s.maxBufferSize)
 	counters := make([]signalfxMetric, 0, s.maxBufferSize)
@@ -69,7 +92,7 @@ func (s SignalFx) Run() {
 		}
 
 		numMetrics := len(gauges) + len(cumCounters) + len(counters)
-		if time.Since(lastEmission).Seconds() >= s.maxSendPause || numMetrics >= s.maxBufferSize {
+		if time.Since(lastEmission).Seconds() >= s.interval || numMetrics >= s.maxBufferSize {
 			s.emitMetrics(&gauges, &cumCounters, &counters)
 			gauges = make([]signalfxMetric, 0, s.maxBufferSize)
 			cumCounters = make([]signalfxMetric, 0, s.maxBufferSize)
