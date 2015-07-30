@@ -23,8 +23,6 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 
 		handlers = append(handlers, handler)
 
-		log.Println(handler.Name(), handler.DefaultDimensions())
-
 		go handler.Run()
 	}
 	return handlers
@@ -33,7 +31,9 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 func convertToDimensions(dimsAsMap *map[string]string) []metric.Dimension {
 	defaults := make([]metric.Dimension, 0, len(*dimsAsMap))
 	for key, value := range *dimsAsMap {
-		dim := metric.Dimension{Name: key, Value: value}
+		dim := metric.Dimension{}
+		dim.SetName(key)
+		dim.SetValue(value)
 		defaults = append(defaults, dim)
 	}
 	return defaults

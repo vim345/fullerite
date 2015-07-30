@@ -84,15 +84,14 @@ func (s SignalFx) convertToSignalFx(metric *metric.Metric) *signalfxMetric {
 	sfx.Value = metric.Value()
 	sfx.Dimensions = make(map[string]string)
 
-	log.Println(s.DefaultDimensions())
 	if s.DefaultDimensions() != nil {
 		for _, dimension := range *s.DefaultDimensions() {
-			sfx.Dimensions[dimension.Name] = dimension.Value
+			sfx.Dimensions[dimension.Name()] = dimension.Value()
 		}
 	}
 
 	for _, dimension := range *metric.Dimensions() {
-		sfx.Dimensions[dimension.Name] = dimension.Value
+		sfx.Dimensions[dimension.Name()] = dimension.Value()
 	}
 
 	return sfx

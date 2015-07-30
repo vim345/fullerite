@@ -24,8 +24,24 @@ type Metric struct {
 // Dimension is a name:value pair. Each Metric have a list of
 // dimensions.
 type Dimension struct {
-	Name  string
-	Value string
+	name  string
+	value string
+}
+
+func (d *Dimension) SetName(name string) {
+	d.name = name
+}
+
+func (d *Dimension) SetValue(value string) {
+	d.value = value
+}
+
+func (d *Dimension) Name() string {
+	return d.name
+}
+
+func (d *Dimension) Value() string {
+	return d.value
 }
 
 // New returns a new metric with name. Default metric type is "gauge"
@@ -76,5 +92,5 @@ func (m *Metric) SetValue(value float64) {
 
 // AddDimension adds a new dimension to the Metric.
 func (m *Metric) AddDimension(name, value string) {
-	m.dimensions = append(m.dimensions, Dimension{Name: name, Value: value})
+	m.dimensions = append(m.dimensions, Dimension{name: name, value: value})
 }
