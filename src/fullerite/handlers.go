@@ -32,9 +32,10 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 func convertToDimensions(dimsAsMap *map[string]string) []metric.Dimension {
 	defaults := make([]metric.Dimension, 0, len(*dimsAsMap))
 	for key, value := range *dimsAsMap {
-		dim := metric.Dimension{}
-		dim.SetName(key)
-		dim.SetValue(value)
+		dim := metric.Dimension{
+			Name:  key,
+			Value: value,
+		}
 		defaults = append(defaults, dim)
 	}
 	return defaults

@@ -1,8 +1,6 @@
 package metric
 
-import (
-	"time"
-)
+import ()
 
 // The different types of metrics that are supported
 const (
@@ -14,87 +12,30 @@ const (
 // Metric type holds all the information for a single metric data
 // point. Metrics are generated in collectors and passed to handlers.
 type Metric struct {
-	name       string
-	metricType string
-	value      float64
-	timestamp  int64
-	dimensions []Dimension
+	Name       string      `json:"name"`
+	MetricType string      `json:"type"`
+	Value      float64     `json:"value"`
+	Dimensions []Dimension `json:"dimensions"`
 }
 
 // Dimension is a name:value pair. Each Metric have a list of
 // dimensions.
 type Dimension struct {
-	name  string
-	value string
-}
-
-// SetName : set the value of the dimension
-func (d *Dimension) SetName(name string) {
-	d.name = name
-}
-
-// SetValue : set the value of the dimension
-func (d *Dimension) SetValue(value string) {
-	d.value = value
-}
-
-// Name : the name of the dimension
-func (d *Dimension) Name() string {
-	return d.name
-}
-
-// Value : the value of the dimension
-func (d *Dimension) Value() string {
-	return d.value
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 // New returns a new metric with name. Default metric type is "gauge"
 // and timestamp is set to now. Value is initialized to 0.0.
 func New(name string) Metric {
 	return Metric{
-		name:       name,
-		metricType: "gauge",
-		value:      0.0,
-		timestamp:  time.Now().Unix(),
+		Name:       name,
+		MetricType: "gauge",
+		Value:      0.0,
 	}
-}
-
-// Value : the floating value of the metric
-func (m *Metric) Value() float64 {
-	return m.value
-}
-
-// Name : the name of the metric
-func (m *Metric) Name() string {
-	return m.name
-}
-
-// Type : the type of the metric: Gauge, Counter or CumulativeCounter
-func (m *Metric) Type() string {
-	return m.metricType
-}
-
-// Dimensions : the list of dimensions that the metric has
-func (m *Metric) Dimensions() *[]Dimension {
-	return &m.dimensions
-}
-
-// SetTimestamp sets the timestamp of a Metric.
-func (m *Metric) SetTimestamp(timestamp int64) {
-	m.timestamp = timestamp
-}
-
-// SetType sets the metric type of a Metric.
-func (m *Metric) SetType(metricType string) {
-	m.metricType = metricType
-}
-
-// SetValue sets the value of a Metric.
-func (m *Metric) SetValue(value float64) {
-	m.value = value
 }
 
 // AddDimension adds a new dimension to the Metric.
 func (m *Metric) AddDimension(name, value string) {
-	m.dimensions = append(m.dimensions, Dimension{name: name, value: value})
+	m.Dimensions = append(m.Dimensions, Dimension{Name: name, Value: value})
 }
