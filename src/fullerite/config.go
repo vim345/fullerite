@@ -8,8 +8,10 @@ import (
 
 // Config type holds the global Fullerite configuration.
 type Config struct {
-	Collectors []string `json:"collectors"`
-	Handlers   []string `json:"handlers"`
+	Collectors        []string                     `json:"collectors"`
+	Handlers          map[string]map[string]string `json:"handlers"`
+	Prefix            string                       `json:"prefix"`
+	DefaultDimensions map[string]string            `json:"defaultDimensions"`
 }
 
 func readConfig(configFile string) (c Config) {
