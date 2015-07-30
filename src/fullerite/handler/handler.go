@@ -24,7 +24,6 @@ func New(name string) Handler {
 		log.Fatal("Cannot create handler ", name)
 		return nil
 	}
-
 	return handler
 }
 
@@ -57,6 +56,7 @@ type BaseHandler struct {
 	maxBufferSize     int
 	prefix            string
 	interval          int
+	source            string
 	defaultDimensions []metric.Dimension
 }
 

@@ -1,7 +1,5 @@
 package metric
 
-import ()
-
 // The different types of metrics that are supported
 const (
 	Gauge             = "gauge"

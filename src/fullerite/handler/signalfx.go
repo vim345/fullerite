@@ -1,23 +1,14 @@
 package handler
 
 import (
-	"encoding/json"
+	"bytes"
 	"fullerite/metric"
+	"github.com/golang/protobuf/proto"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 )
-
-type signalfxPayload struct {
-	Gauges      []signalfxMetric `json:"gauges"`
-	Counters    []signalfxMetric `json:"counter"`
-	Cumulatives []signalfxMetric `json:"cumulativeCounter"`
-}
-
-type signalfxMetric struct {
-	Name       string            `json:"metric"`
-	Value      float64           `json:"value"`
-	Dimensions map[string]string `json:"dimensions"`
-}
 
 // SignalFx Handler
 type SignalFx struct {
@@ -54,65 +45,102 @@ func (s *SignalFx) Run() {
 	log.Println("starting signalfx handler")
 	lastEmission := time.Now()
 
-	gauges := make([]signalfxMetric, 0, s.maxBufferSize)
-	cumCounters := make([]signalfxMetric, 0, s.maxBufferSize)
-	counters := make([]signalfxMetric, 0, s.maxBufferSize)
+	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
 
 	for incomingMetric := range s.Channel() {
 		log.Println("Processing metric to SignalFx:", incomingMetric)
-		sfxVersion := *s.convertToSignalFx(&incomingMetric)
 
-		switch incomingMetric.MetricType {
-		case metric.Gauge:
-			gauges = append(gauges, sfxVersion)
-		case metric.CumulativeCounter:
-			cumCounters = append(cumCounters, sfxVersion)
-		case metric.Counter:
-			counters = append(counters, sfxVersion)
-		}
+		datapoint := s.convertToProto(&incomingMetric)
+		datapoints = append(datapoints, datapoint)
 
-		numMetrics := len(gauges) + len(cumCounters) + len(counters)
-		if time.Since(lastEmission).Seconds() >= float64(s.interval) || numMetrics >= s.maxBufferSize {
-			s.emitMetrics(&gauges, &cumCounters, &counters)
-			gauges = make([]signalfxMetric, 0, s.maxBufferSize)
-			cumCounters = make([]signalfxMetric, 0, s.maxBufferSize)
-			counters = make([]signalfxMetric, 0, s.maxBufferSize)
+		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(datapoints) >= s.maxBufferSize {
+			s.emitMetrics(&datapoints)
+			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
 		}
 	}
 }
 
-func (s *SignalFx) convertToSignalFx(metric *metric.Metric) *signalfxMetric {
-	sfx := new(signalfxMetric)
-	sfx.Name = s.Prefix() + metric.Name
-	sfx.Value = metric.Value
-	sfx.Dimensions = make(map[string]string)
+func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
+
+	datapoint := new(DataPoint)
+	outname := s.Prefix() + (*incomingMetric).Name
+
+	datapoint.Metric = &outname
+	datapoint.Value = &Datum{
+		DoubleValue: &(*incomingMetric).Value,
+	}
+	datapoint.Source = new(string)
+	*datapoint.Source = "fullerite"
+
+	switch incomingMetric.MetricType {
+	case metric.Gauge:
+		datapoint.MetricType = MetricType_GAUGE.Enum()
+	case metric.Counter:
+		datapoint.MetricType = MetricType_COUNTER.Enum()
+	case metric.CumulativeCounter:
+		datapoint.MetricType = MetricType_CUMULATIVE_COUNTER.Enum()
+	}
 
 	if s.DefaultDimensions() != nil {
 		for _, dimension := range *s.DefaultDimensions() {
-			sfx.Dimensions[dimension.Name] = dimension.Value
+			dim := Dimension{
+				Key:   &dimension.Name,
+				Value: &dimension.Value,
+			}
+			datapoint.Dimensions = append(datapoint.Dimensions, &dim)
 		}
 	}
-
-	for _, dimension := range metric.Dimensions {
-		sfx.Dimensions[dimension.Name] = dimension.Value
+	for _, dimension := range incomingMetric.Dimensions {
+		dim := Dimension{
+			Key:   &dimension.Name,
+			Value: &dimension.Value,
+		}
+		datapoint.Dimensions = append(datapoint.Dimensions, &dim)
 	}
 
-	return sfx
+	return datapoint
 }
 
-func (s *SignalFx) emitMetrics(gauges *[]signalfxMetric, cumCounters *[]signalfxMetric, counters *[]signalfxMetric) {
-	log.Println("Starting to emit ", len(*gauges), "gauges",
-		len(*counters), "counters", len(*cumCounters), "cumulative counters")
+func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
+	log.Println("Starting to emit", len(*datapoints), "datapoints")
 
-	payload := new(signalfxPayload)
-	payload.Gauges = *gauges
-	payload.Counters = *counters
-	payload.Cumulatives = *cumCounters
-
-	asjson, err := json.Marshal(*payload)
-	if err != nil {
-		log.Println("error occurred while marshaling counters", *counters,
-			"gauges", *gauges, "cum counters", *cumCounters)
+	if len(*datapoints) == 0 {
+		log.Println("Skipping send because of an empty payload")
+		return
 	}
-	log.Println("going to send", string(asjson))
+
+	payload := new(DataPointUploadMessage)
+	payload.Datapoints = *datapoints
+	log.Println("payload", payload)
+	if s.authToken == "" || s.endpoint == "" {
+		log.Println("Skipping emission because we're missing the auth token ",
+			"or the endpoint, payload would have been", payload.String())
+		return
+	}
+	serialized, err := proto.Marshal(payload)
+	if err != nil {
+		log.Println("Failed to serailize payload", *payload)
+		return
+	}
+
+	req, err := http.NewRequest("POST", s.endpoint, bytes.NewBuffer(serialized))
+	if err != nil {
+		log.Println("Failed to create a request to endpoint", s.endpoint)
+		return
+	}
+	req.Header.Set("X-SF-TOKEN", s.authToken)
+	req.Header.Set("Content-Type", "application/x-protobuf")
+
+	client := &http.Client{}
+	rsp, err := client.Do(req)
+	if err != nil {
+		log.Println("Failed to complete POST", err)
+		return
+	}
+
+	defer rsp.Body.Close()
+	log.Println("status", rsp.Status)
+	log.Println("headers", rsp.Header)
+	body, _ := ioutil.ReadAll(rsp.Body)
+	log.Println("body", string(body))
 }
