@@ -28,18 +28,22 @@ type Dimension struct {
 	value string
 }
 
+// SetName : set the value of the dimension
 func (d *Dimension) SetName(name string) {
 	d.name = name
 }
 
+// SetValue : set the value of the dimension
 func (d *Dimension) SetValue(value string) {
 	d.value = value
 }
 
+// Name : the name of the dimension
 func (d *Dimension) Name() string {
 	return d.name
 }
 
+// Value : the value of the dimension
 func (d *Dimension) Value() string {
 	return d.value
 }

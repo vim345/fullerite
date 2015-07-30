@@ -4,12 +4,7 @@ import (
 	"encoding/json"
 	"fullerite/metric"
 	"log"
-	"strconv"
 	"time"
-)
-
-const (
-	defaultInterval = 10.0
 )
 
 type signalfxPayload struct {
@@ -29,7 +24,6 @@ type SignalFx struct {
 	BaseHandler
 	endpoint  string
 	authToken string
-	interval  float64
 }
 
 // NewSignalFx returns a new SignalFx handler.
@@ -52,20 +46,6 @@ func (s SignalFx) Configure(config *map[string]string) {
 	s.endpoint, exists = asmap["endpoint"]
 	if !exists {
 		log.Println("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
-	}
-
-	var intervalStr string
-	intervalStr, exists = asmap["interval"]
-	if !exists {
-		s.interval = defaultInterval
-	} else {
-		val, err := strconv.ParseFloat(intervalStr, 64)
-		if err != nil {
-			log.Println("Problem parsing interval value", intervalStr)
-			s.interval = defaultInterval
-		} else {
-			s.interval = val
-		}
 	}
 }
 

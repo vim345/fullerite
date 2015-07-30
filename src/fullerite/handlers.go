@@ -15,6 +15,7 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 		handler := buildHandler(name)
 
 		// apply any global configs
+		handler.SetInterval(c.Interval)
 		handler.SetPrefix(c.Prefix)
 		handler.SetDefaultDimensions(&defaults)
 

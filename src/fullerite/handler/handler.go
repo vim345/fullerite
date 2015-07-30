@@ -32,8 +32,13 @@ func New(name string) Handler {
 type Handler interface {
 	Run()
 	Configure(*map[string]string)
+
+	// taken care of by the base
 	Name() string
 	Channel() chan metric.Metric
+
+	Interval() float64
+	SetInterval(float64)
 
 	MaxBufferSize() int
 	SetMaxBufferSize(int)
@@ -51,6 +56,7 @@ type BaseHandler struct {
 	name              string
 	maxBufferSize     int
 	prefix            string
+	interval          float64
 	defaultDimensions []metric.Dimension
 }
 
@@ -93,6 +99,16 @@ func (handler *BaseHandler) DefaultDimensions() *[]metric.Dimension {
 // SetDefaultDimensions : set the defautl dimensions
 func (handler *BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
 	handler.defaultDimensions = *defaults
+}
+
+// Interval : the maximum interval that the handler should buffer stats for
+func (handler *BaseHandler) Interval() float64 {
+	return handler.interval
+}
+
+// SetInterval : set the interval
+func (handler *BaseHandler) SetInterval(val float64) {
+	handler.interval = val
 }
 
 // Configure : this takes a dictionary of values with which the handler can configure itself
