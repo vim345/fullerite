@@ -7,7 +7,6 @@ import (
 
 // Some sane values to default things to
 const (
-	DefaultInterval   = 10
 	DefaultBufferSize = 100
 )
 
@@ -33,6 +32,8 @@ func New(name string) Handler {
 type Handler interface {
 	Run()
 	Configure(*map[string]string)
+
+	// taken care of by the base
 	Name() string
 	Channel() chan metric.Metric
 
@@ -45,7 +46,7 @@ type Handler interface {
 	Prefix() string
 	SetPrefix(string)
 
-	DefaultDimensions() []metric.Dimension
+	DefaultDimensions() *[]metric.Dimension
 	SetDefaultDimensions(*[]metric.Dimension)
 }
 
@@ -53,57 +54,69 @@ type Handler interface {
 type BaseHandler struct {
 	channel           chan metric.Metric
 	name              string
-	interval          int
 	maxBufferSize     int
 	prefix            string
+	interval          int
 	defaultDimensions []metric.Dimension
 }
 
-func (handler BaseHandler) Channel() chan metric.Metric {
+// Channel : the channel to handler listens for metrics on
+func (handler *BaseHandler) Channel() chan metric.Metric {
 	return handler.channel
 }
 
-func (handler BaseHandler) Name() string {
+// Name : the name of the handler
+func (handler *BaseHandler) Name() string {
 	return handler.name
 }
 
-func (handler BaseHandler) Interval() int {
-	return handler.interval
-}
-
-func (handler BaseHandler) SetInterval(interval int) {
-	handler.interval = interval
-}
-
-func (handler BaseHandler) MaxBufferSize() int {
+// MaxBufferSize : the maximum number of metrics that should be buffered before sending
+func (handler *BaseHandler) MaxBufferSize() int {
 	return handler.maxBufferSize
 }
 
-func (handler BaseHandler) SetMaxBufferSize(size int) {
+// SetMaxBufferSize : set the buffer size
+func (handler *BaseHandler) SetMaxBufferSize(size int) {
 	handler.maxBufferSize = size
 }
 
-func (handler BaseHandler) Prefix() string {
+// Prefix : any prefix that should be applied to the metrics name as they're sent
+// it is appended without any punctuation, include your own
+func (handler *BaseHandler) Prefix() string {
 	return handler.prefix
 }
 
-func (handler BaseHandler) SetPrefix(prefix string) {
+// SetPrefix : set the prefix
+func (handler *BaseHandler) SetPrefix(prefix string) {
 	handler.prefix = prefix
 }
 
-func (handler BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
+// DefaultDimensions : dimensions that should be included in any metric
+func (handler *BaseHandler) DefaultDimensions() *[]metric.Dimension {
+	return &handler.defaultDimensions
+}
+
+// SetDefaultDimensions : set the defautl dimensions
+func (handler *BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
 	handler.defaultDimensions = *defaults
 }
 
-func (handler BaseHandler) DefaultDimensions() []metric.Dimension {
-	return handler.defaultDimensions
+// Interval : the maximum interval that the handler should buffer stats for
+func (handler *BaseHandler) Interval() int {
+	return handler.interval
 }
 
-func (handler BaseHandler) Configure(*map[string]string) {
+// SetInterval : set the interval
+func (handler *BaseHandler) SetInterval(val int) {
+	handler.interval = val
+}
+
+// Configure : this takes a dictionary of values with which the handler can configure itself
+func (handler *BaseHandler) Configure(*map[string]string) {
 	// noop
 }
 
 // String returns the handler name in a printable format.
-func (handler BaseHandler) String() string {
+func (handler *BaseHandler) String() string {
 	return handler.Name() + "Handler"
 }
