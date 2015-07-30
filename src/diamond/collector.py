@@ -7,13 +7,11 @@ The Collector class is a base class for all metric collectors.
 import os
 import platform
 import logging
-import configobj
 import time
 import re
 import subprocess
 
 from diamond.metric import Metric
-from diamond.utils.config import load_config
 from error import DiamondException
 
 # Detect the architecture of the system and set the counters for MAX_VALUES
@@ -43,12 +41,17 @@ def str_to_bool(value):
     return value
 
 
+def _load_configfile(configfile):
+    # TODO: IMPLEMENT
+    return {}
+
+
 class Collector(object):
     """
     The Collector class is a base class for all metric collectors.
     """
 
-    def __init__(self, config=None, handlers=[], name=None, configfile=None):
+    def __init__(self, handlers=[], name=None, configfile=None):
         """
         Create a new instance of the Collector class
         """
@@ -64,14 +67,14 @@ class Collector(object):
         self.last_values = {}
 
         self.configfile = None
-        self.load_config(configfile, config)
+        self.load_config(configfile)
 
-    def load_config(self, configfile=None, override_config=None):
+    def load_config(self, configfile=None):
         """
         Process a configfile, or reload if previously given one.
         """
 
-        self.config = configobj.ConfigObj()
+        self.config = {}
 
         # Load in the collector's defaults
         if self.get_default_config() is not None:
@@ -81,7 +84,7 @@ class Collector(object):
             self.configfile = os.path.abspath(configfile)
 
         if self.configfile is not None:
-            config = load_config(self.configfile)
+            config = _load_configfile(self.configfile)
 
             if 'collectors' in config:
                 if 'default' in config['collectors']:
@@ -89,14 +92,6 @@ class Collector(object):
 
                 if self.name in config['collectors']:
                     self.config.merge(config['collectors'][self.name])
-
-        if override_config is not None:
-            if 'collectors' in override_config:
-                if 'default' in override_config['collectors']:
-                    self.config.merge(override_config['collectors']['default'])
-
-                if self.name in override_config['collectors']:
-                    self.config.merge(override_config['collectors'][self.name])
 
         self.process_config()
 
