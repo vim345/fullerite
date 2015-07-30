@@ -13,7 +13,6 @@ type signalfxPayload struct {
 	Cumulatives []signalfxMetric `json:"cumulativeCounter"`
 }
 
-// un exported b/c it is only a useful in this module
 type signalfxMetric struct {
 	Name       string            `json:"metric"`
 	Value      float64           `json:"value"`
@@ -40,6 +39,7 @@ func NewSignalFx() *SignalFx {
 	return s
 }
 
+// Configure : accepts the different configuration options for the signalfx handler
 func (s SignalFx) Configure(config *map[string]string) {
 	asmap := *config
 	s.authToken = asmap["authToken"]

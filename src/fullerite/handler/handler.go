@@ -36,9 +36,6 @@ type Handler interface {
 	Name() string
 	Channel() chan metric.Metric
 
-	Interval() int
-	SetInterval(int)
-
 	MaxBufferSize() int
 	SetMaxBufferSize(int)
 
@@ -59,46 +56,48 @@ type BaseHandler struct {
 	defaultDimensions []metric.Dimension
 }
 
+// Channel : the channel to handler listens for metrics on
 func (handler BaseHandler) Channel() chan metric.Metric {
 	return handler.channel
 }
 
+// Name : the name of the handler
 func (handler BaseHandler) Name() string {
 	return handler.name
 }
 
-func (handler BaseHandler) Interval() int {
-	return handler.interval
-}
-
-func (handler BaseHandler) SetInterval(interval int) {
-	handler.interval = interval
-}
-
+// MaxBufferSize : the maximum number of metrics that should be buffered before sending
 func (handler BaseHandler) MaxBufferSize() int {
 	return handler.maxBufferSize
 }
 
+// SetMaxBufferSize : set the buffer size
 func (handler BaseHandler) SetMaxBufferSize(size int) {
 	handler.maxBufferSize = size
 }
 
+// Prefix : any prefix that should be applied to the metrics name as they're sent
+// it is appended without any punctuation, include your own
 func (handler BaseHandler) Prefix() string {
 	return handler.prefix
 }
 
+// SetPrefix : set the prefix
 func (handler BaseHandler) SetPrefix(prefix string) {
 	handler.prefix = prefix
 }
 
-func (handler BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
-	handler.defaultDimensions = *defaults
-}
-
+// DefaultDimensions : dimensions that should be included in any metric
 func (handler BaseHandler) DefaultDimensions() []metric.Dimension {
 	return handler.defaultDimensions
 }
 
+// SetDefaultDimensions : set the defautl dimensions
+func (handler BaseHandler) SetDefaultDimensions(defaults *[]metric.Dimension) {
+	handler.defaultDimensions = *defaults
+}
+
+// Configure : this takes a dictionary of values with which the handler can configure itself
 func (handler BaseHandler) Configure(*map[string]string) {
 	// noop
 }

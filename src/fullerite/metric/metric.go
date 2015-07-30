@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// The different types of metrics that are supported
 const (
 	Gauge             = "gauge"
 	Counter           = "counter"
@@ -38,18 +39,22 @@ func New(name string) Metric {
 	}
 }
 
+// Value : the floating value of the metric
 func (m *Metric) Value() float64 {
 	return m.value
 }
 
+// Name : the name of the metric
 func (m *Metric) Name() string {
 	return m.name
 }
 
+// Type : the type of the metric: Gauge, Counter or CumulativeCounter
 func (m *Metric) Type() string {
 	return m.metricType
 }
 
+// Dimensions : the list of dimensions that the metric has
 func (m *Metric) Dimensions() *[]Dimension {
 	return &m.dimensions
 }
