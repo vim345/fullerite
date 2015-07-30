@@ -1,7 +1,10 @@
-PROG    := fullerite
-SRCDIR  := src
-PKGS    := $(PROG) $(PROG)/metric $(PROG)/handler $(PROG)/collector
-SOURCES := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
+PROG       := fullerite
+SRCDIR     := src
+PROTO_FILE := src/fullerite/handler/signalfx.pb.go
+PKGS       := $(PROG) $(PROG)/metric $(PROG)/handler $(PROG)/collector
+SOURCES    := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
+SOURCES    := $(filter-out $(PROTO_FILE), $(SOURCES))
+
 
 # symlinks confuse go tools, let's not mess with it and use -L
 GOPATH  := $(shell pwd -L)
@@ -17,7 +20,7 @@ clean:
 	@echo Cleaning $(PROG)...
 	@rm -f $(PROG) bin/$(PROG)
 	@rm -rf pkg/*/$(PROG)
-	@rm -f src/fullerite/handler/*.pb.go
+	@rm -f $(PROTO_FILE)
 
 deps:
 	@echo Getting dependencies...
