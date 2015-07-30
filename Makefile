@@ -34,7 +34,7 @@ fmt: $(SOURCES)
 vet: $(SOURCES)
 	@echo Vetting $(PROG) sources...
 	@go get golang.org/x/tools/cmd/vet
-	@$(foreach pkg, $(PKGS), bin/vet src/$(pkg);)
+	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
 lint: $(SOURCES)
 	@echo Linting $(PROG) sources...
