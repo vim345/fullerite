@@ -1,8 +1,9 @@
-./fullerite
-bin/*
+bin/fullerite
+bin/vet
+bin/golint
+bin/gocyclo
 pkg/*
 src/github.com/*
 src/golang.org/*
 *.secret
-*.pb.go
 *.pyc

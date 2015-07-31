@@ -2,7 +2,7 @@
     "diamond_collectors_path": "src/diamond/collectors",
     "diamond_collectors" : {
         "CPUCollector": {"enabled": true, "interval": 10},
-        "PingCollector": {"enabled": true, "target_google": "google.com", "interval": 10, "bin": "/sbin/ping"}
+        "PingCollector": {"enabled": true, "target_google": "google.com", "interval": 10, "bin": "/bin/ping"}
     },
     "collectors": [
         "Test",
@@ -14,14 +14,15 @@
             "port": "2003"
         },
         "SignalFx": {
-            "authToken": "token",
-            "endpoint": "http://somethingsomething.com/blah",
+            "authToken": "secret_token",
+            "endpoint": "https://ingest.signalfx.com/v2/datapoint",
             "interval": "10.0"
         }
     },
     "prefix": "test.",
     "interval": 10,
     "defaultDimensions": {
-        "application": "fullerite"
+        "application": "fullerite",
+        "host": "dev33-devc"
     }
 }
