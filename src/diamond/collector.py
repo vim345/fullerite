@@ -176,7 +176,7 @@ class Collector(object):
             'path_suffix': '',
 
             # Default Poll Interval (seconds)
-            'interval': 5,
+            'interval': 300,
 
             # Default Event TTL (interval multiplier)
             'ttl_multiplier': 2,
