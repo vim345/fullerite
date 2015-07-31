@@ -81,9 +81,12 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 // Collect reads metrics collected from Diamond collectors, converts
 // them to fullerite's Metric type and publishes them to handlers.
 func (d Diamond) Collect() {
-	for metricLine := range d.incoming {
+	for line := range d.incoming {
 		var metric metric.Metric
-		json.Unmarshal(metricLine, &metric)
+		if err := json.Unmarshal(line, &metric); err != nil {
+			log.Println("Cannot unmarshal metric line from diamond: " + string(line))
+			continue
+		}
 		metric.AddDimension("diamond", "yes")
 		d.Channel() <- metric
 	}
