@@ -5,6 +5,7 @@ import (
 	"time"
 	"fmt"
 	"net"
+	"sort"
 )
 
 // Graphite type
@@ -42,37 +43,45 @@ func (g *Graphite) Configure(config *map[string]string) {
 func (g *Graphite) Run() {
 	lastEmission := time.Now()
 	metrics := make([]string, 0, g.maxBufferSize)
+	log.Info("graphite handler started")
 
-
-	for metric := range g.channel {
+	for metric := range g.Channel() {
 		log.Println("Sending metric to Graphite:", metric)
-		datapoints := g.convertToGraphite(&metric)
+		datapoint := g.convertToGraphite(&metric)
+
+		metrics = append(metrics, datapoint)
 
 		//if the datapoints from metric would overflow the buffer, flush it and then add the new datapoints
-		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(metrics) + len(*datapoints) > g.maxBufferSize {
+		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(metrics) >=g.maxBufferSize {
 			g.emitMetrics(metrics)
 			lastEmission = time.Now()
 			metrics = make([]string, 0, g.maxBufferSize)
 		}
-		metrics = append(metrics, *datapoints...)
 	}
 
 }
 
-func (g *Graphite) convertToGraphite(metric *metric.Metric) *[]string{
+func (g *Graphite) convertToGraphite(metric *metric.Metric) string{
 	outname := g.Prefix() + (*metric).Name
 	dimensions := metric.GetDimensions(g.DefaultDimensions())
-	datapoints := make([]string, 0, len(dimensions) + 1)
 	// for key in dimensions, generate a new metric data point, add to a list, return
 	//what timestamp to use?
-	datapoints = append(datapoints, fmt.Sprintf("%s %f %s\n", outname, metric.Value, time.Now())) //find out what time to use
 
-	for key, value := range dimensions {
+	//orders keys so datapoint keeps consistent name
+	var keys []string
+	for k := range dimensions {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
 		//create a list of datapoints for this metric, then append that list the a global list
-		datapoints = append(datapoints, fmt.Sprintf("%s.%s %f %s\n", outname, key, value, time.Now()))
+		outname = fmt.Sprintf("%s.%s.%s", outname, key, dimensions[key])
 	}
 
-	return &datapoints
+	outname = fmt.Sprintf("%s %f %d", outname, metric.Value, time.Now().Unix())
+
+	return outname
 }
 
 func (g *Graphite) emitMetrics(datapoints []string) {
@@ -86,6 +95,7 @@ func (g *Graphite) emitMetrics(datapoints []string) {
 	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%s", g.server, g.port))
 	for _, datapoint := range datapoints {
 		fmt.Fprintf(conn, datapoint)
+		fmt.Println(datapoint)
 	}
 }
 
