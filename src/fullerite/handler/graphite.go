@@ -13,11 +13,15 @@ type Graphite struct {
 // NewGraphite returns a new Graphite handler.
 func NewGraphite() *Graphite {
 	g := new(Graphite)
-	g.name = "SignalFx"
+	g.name = "Graphite"
 	g.maxBufferSize = DefaultBufferSize
 	g.channel = make(chan metric.Metric)
-
 	return g
+}
+
+// Configure accepts the different configuration options
+func (g Graphite) Configure(conf *map[string]string) {
+	// TODO: implement
 }
 
 // Run sends metrics in the channel to the graphite server.

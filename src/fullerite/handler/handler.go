@@ -35,6 +35,7 @@ type Handler interface {
 
 	// taken care of by the base
 	Name() string
+	String() string
 	Channel() chan metric.Metric
 
 	Interval() int
@@ -115,12 +116,7 @@ func (handler *BaseHandler) SetInterval(val int) {
 	handler.interval = val
 }
 
-// Configure : this takes a dictionary of values with which the handler can configure itself
-func (handler *BaseHandler) Configure(*map[string]string) {
-	// noop
-}
-
 // String returns the handler name in a printable format.
 func (handler *BaseHandler) String() string {
-	return handler.Name() + "Handler"
+	return handler.name + "Handler"
 }

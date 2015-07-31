@@ -1,12 +1,14 @@
 package handler
 
 import (
-	"bytes"
 	"fullerite/metric"
-	"github.com/golang/protobuf/proto"
+
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // SignalFx Handler
@@ -25,7 +27,7 @@ func NewSignalFx() *SignalFx {
 	return s
 }
 
-// Configure : accepts the different configuration options for the signalfx handler
+// Configure accepts the different configuration options for the signalfx handler
 func (s *SignalFx) Configure(config *map[string]string) {
 	asmap := *config
 	var exists bool
@@ -41,7 +43,6 @@ func (s *SignalFx) Configure(config *map[string]string) {
 
 // Run send metrics in the channel to SignalFx.
 func (s *SignalFx) Run() {
-	log.Info("Starting signalfx handler...")
 	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
 
 	lastEmission := time.Now()

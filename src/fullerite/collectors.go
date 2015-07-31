@@ -28,8 +28,8 @@ func readCollectorConfig(collector collector.Collector) {
 }
 
 func runCollector(collector collector.Collector) {
+	log.Info("Running ", collector)
 	for {
-		log.Info("Collecting from ", collector)
 		collector.Collect()
 		time.Sleep(time.Duration(collector.Interval()) * time.Second)
 	}
