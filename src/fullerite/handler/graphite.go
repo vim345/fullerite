@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fullerite/metric"
-	"log"
 	"time"
 	"fmt"
 	"net"
@@ -23,7 +22,6 @@ func NewGraphite() *Graphite {
 	g.channel = make(chan metric.Metric)
 	return g
 }
-
 
 // Configure : accepts the different configuration options for the graphite handler
 func (g *Graphite) Configure(config *map[string]string) {
@@ -51,24 +49,24 @@ func (g *Graphite) Run() {
 		datapoints := g.convertToGraphite(&metric)
 
 		//if the datapoints from metric would overflow the buffer, flush it and then add the new datapoints
-		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(metrics) + len(datapoints) > s.maxBufferSize {
-			s.emitMetrics(metrics)
+		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(metrics) + len(*datapoints) > g.maxBufferSize {
+			g.emitMetrics(metrics)
 			lastEmission = time.Now()
 			metrics = make([]string, 0, g.maxBufferSize)
 		}
-		metrics = append(metrics, datapoints...)
+		metrics = append(metrics, *datapoints...)
 	}
 
 }
 
 func (g *Graphite) convertToGraphite(metric *metric.Metric) *[]string{
 	outname := g.Prefix() + (*metric).Name
-	datapoints := make([]string, 0, len(metric.getDimensions()) + 1)
+	dimensions := metric.GetDimensions(g.DefaultDimensions())
+	datapoints := make([]string, 0, len(dimensions) + 1)
 	// for key in dimensions, generate a new metric data point, add to a list, return
 	//what timestamp to use?
 	datapoints = append(datapoints, fmt.Sprintf("%s %f %s\n", outname, metric.Value, time.Now())) //find out what time to use
 
-	dimensions := metric.getDimensions())
 	for key, value := range dimensions {
 		//create a list of datapoints for this metric, then append that list the a global list
 		datapoints = append(datapoints, fmt.Sprintf("%s.%s %f %s\n", outname, key, value, time.Now()))
@@ -77,7 +75,7 @@ func (g *Graphite) convertToGraphite(metric *metric.Metric) *[]string{
 	return &datapoints
 }
 
-func (g *Graphite) emitMetrics(datapoints []*string) {
+func (g *Graphite) emitMetrics(datapoints []string) {
 	log.Info("Starting to emit ", len(datapoints), " datapoints")
 
 	if len(datapoints) == 0 {
@@ -86,8 +84,8 @@ func (g *Graphite) emitMetrics(datapoints []*string) {
 	}
 
 	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%s", g.server, g.port))
-	for data := range datapoints {
-		fmt.Fprintf(conn, data)
+	for _, datapoint := range datapoints {
+		fmt.Fprintf(conn, datapoint)
 	}
 }
 
