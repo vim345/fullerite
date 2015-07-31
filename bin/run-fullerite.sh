@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -L)"
-FULLERITE="${DIR}/bin/fullerite"
+BINDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -L)"
+FULLERITE_DIR="$(dirname "${BINDIR}")"
+FULLERITE="${BINDIR}/fullerite"
+EXAMPLE_CONFIG="${FULLERITE_DIR}/fullerite.conf.example"
 
 ARGS="$@"
 if [ -z "${ARGS}" ]; then
-    ARGS="-c ${DIR}/fullerite.conf"
+    ARGS="-c ${EXAMPLE_CONFIG}"
 fi
 
 exec ${FULLERITE} ${ARGS}
