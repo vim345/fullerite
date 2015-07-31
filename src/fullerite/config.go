@@ -8,8 +8,8 @@ import (
 
 // Config type holds the global Fullerite configuration.
 type Config struct {
-	Collectors        []string                     `json:"collectors"`
 	Handlers          map[string]map[string]string `json:"handlers"`
+	Collectors        map[string]map[string]string `json:"collectors"`
 	Prefix            string                       `json:"prefix"`
 	Interval          int                          `json:"interval"`
 	DefaultDimensions map[string]string            `json:"defaultDimensions"`

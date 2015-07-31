@@ -10,7 +10,7 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 	log.Println("Starting handlers...")
 
 	for name, config := range c.Handlers {
-		handler := buildHandler(name)
+		handler := handler.New(name)
 
 		// apply any global configs
 		handler.SetInterval(c.Interval)
@@ -25,12 +25,6 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 		go handler.Run()
 	}
 	return handlers
-}
-
-func buildHandler(name string) handler.Handler {
-	log.Println("Building handler", name)
-	handler := handler.New(name)
-	return handler
 }
 
 func writeToHandlers(handlers []handler.Handler, metric metric.Metric) {

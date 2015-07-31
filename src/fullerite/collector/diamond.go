@@ -10,15 +10,15 @@ import (
 )
 
 const (
-	// DiamondCollectorPort is the TCP port that diamond
+	// DefaultDiamondCollectorPort is the TCP port that diamond
 	// collectors write to and we read off of.
-	DiamondCollectorPort = "19191"
+	DefaultDiamondCollectorPort = "19191"
 )
 
 // Diamond collector type
 type Diamond struct {
-	interval int
-	channel  chan metric.Metric
+	BaseCollector
+	port     string
 	incoming chan []byte
 }
 
@@ -31,17 +31,25 @@ func NewDiamond() *Diamond {
 	return d
 }
 
+func (d *Diamond) Configure(config *map[string]string) {
+	port, exists := (*config)["port"]
+	if !exists {
+		port = DefaultDiamondCollectorPort
+	}
+	d.port = port
+}
+
 // collectDiamond opens up and reads from the a TCP socket and
 // writes what it's read to a local channel. Diamond handler (running in
 // separate processes) write to the same port.
 //
 // When Collect() is called it reads from the local channel converts
 // strings to metrics and publishes metrics to handlers.
-func (d Diamond) collectDiamond() {
+func (d *Diamond) collectDiamond() {
 	// TODO: we need to make sure that this goroutine is always up
 	// and running.
 
-	addr, err := net.ResolveTCPAddr("tcp", ":"+DiamondCollectorPort)
+	addr, err := net.ResolveTCPAddr("tcp", ":" + d.port)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +68,7 @@ func (d Diamond) collectDiamond() {
 }
 
 // readDiamondMetrics reads from the connection
-func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
+func (d *Diamond) readDiamondMetrics(conn *net.TCPConn) {
 	defer conn.Close()
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(time.Second)
@@ -80,7 +88,7 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 
 // Collect reads metrics collected from Diamond collectors, converts
 // them to fullerite's Metric type and publishes them to handlers.
-func (d Diamond) Collect() {
+func (d *Diamond) Collect() {
 	for line := range d.incoming {
 		var metric metric.Metric
 		if err := json.Unmarshal(line, &metric); err != nil {
@@ -90,30 +98,4 @@ func (d Diamond) Collect() {
 		metric.AddDimension("diamond", "yes")
 		d.Channel() <- metric
 	}
-}
-
-// Name of the collector.
-func (d Diamond) Name() string {
-	return "Diamond"
-}
-
-// Interval returns the collect rate of the collector.
-func (d Diamond) Interval() int {
-	return d.interval
-}
-
-// Channel returns the internal metrics channel. fullerite reads from
-// this channel to pass metrics to the handlers.
-func (d Diamond) Channel() chan metric.Metric {
-	return d.channel
-}
-
-// String returns the collector name in printable format.
-func (d Diamond) String() string {
-	return d.Name() + "Collector"
-}
-
-// SetInterval sets the collect rate of the collector.
-func (d *Diamond) SetInterval(interval int) {
-	d.interval = interval
 }
