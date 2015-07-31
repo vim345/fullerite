@@ -1,9 +1,11 @@
-PROG       := fullerite
-SRCDIR     := src
-PROTO_FILE := src/fullerite/handler/signalfx.pb.go
-PKGS       := $(PROG) $(PROG)/metric $(PROG)/handler $(PROG)/collector
-SOURCES    := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
-SOURCES    := $(filter-out $(PROTO_FILE), $(SOURCES))
+PROG           := fullerite
+SRCDIR         := src
+HANDLER_DIR    := $(SRCDIR)/fullerite/handler
+PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
+GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
+PKGS           := $(PROG) $(PROG)/metric $(PROG)/handler $(PROG)/collector
+SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
+SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
 
 
 # symlinks confuse go tools, let's not mess with it and use -L
@@ -20,7 +22,7 @@ clean:
 	@echo Cleaning $(PROG)...
 	@rm -f $(PROG) bin/$(PROG)
 	@rm -rf pkg/*/$(PROG)
-	@rm -f $(PROTO_FILE)
+	@rm -f $(GEN_PROTO_SFX)
 
 deps:
 	@echo Getting dependencies...
@@ -43,10 +45,11 @@ vet: $(SOURCES)
 	@go get golang.org/x/tools/cmd/vet
 	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
-protobuf: signalfx.proto
+protobuf: $(PROTO_SFX)
+	@echo Compiling protobuf
 	@go get -u github.com/golang/protobuf/proto
 	@go get -u github.com/golang/protobuf/protoc-gen-go
-	@protoc --go_out=src/fullerite/handler/ signalfx.proto
+	@protoc --go_out=. $(PROTO_SFX)
 
 lint: $(SOURCES)
 	@echo Linting $(PROG) sources...
