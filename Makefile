@@ -15,14 +15,14 @@ export GOPATH
 PATH := bin:$(PATH)
 export PATH
 
-all: clean fmt vet lint protobuf $(PROG)
+all: clean fmt vet lint $(PROG)
 
 .PHONY: clean
 clean:
 	@echo Cleaning $(PROG)...
 	@rm -f $(PROG) bin/$(PROG)
 	@rm -rf pkg/*/$(PROG)
-	@rm -f $(GEN_PROTO_SFX)
+#	@rm -f $(GEN_PROTO_SFX)
 
 deps:
 	@echo Getting dependencies...
@@ -54,7 +54,7 @@ protobuf: $(PROTO_SFX)
 lint: $(SOURCES)
 	@echo Linting $(PROG) sources...
 	@go get github.com/golang/lint/golint
-	@$(foreach pkg, $(PKGS), bin/golint $(pkg);)
+	@$(foreach src, $(SOURCES), bin/golint $(src);)
 
 cyclo: $(SOURCES)
 	@echo Checking code complexity...

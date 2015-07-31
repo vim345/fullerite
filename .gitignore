@@ -4,5 +4,4 @@ pkg/*
 src/github.com/*
 src/golang.org/*
 *.secret
-*.pb.go
 *.pyc
