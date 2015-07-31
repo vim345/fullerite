@@ -8,6 +8,8 @@ import signal
 import sys
 import time
 
+sys.path = [os.path.dirname(__file__)] + sys.path
+
 try:
     from setproctitle import getproctitle, setproctitle
 except ImportError:
@@ -157,3 +159,9 @@ class Server(object):
                 self.config = load_config(self.configfile)
                 collectors = load_collectors(
                     self.config['diamond_collectors_path'])
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    config_file = sys.argv[1]
+    Server(config_file).run()
