@@ -43,15 +43,15 @@ func (s *SignalFx) Configure(config *map[string]string) {
 // Run send metrics in the channel to SignalFx.
 func (s *SignalFx) Run() {
 	log.Println("Starting signalfx handler...")
-	lastEmission := time.Now()
-
 	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
 
+	lastEmission := time.Now()
 	for incomingMetric := range s.Channel() {
 		datapoint := s.convertToProto(&incomingMetric)
 		datapoints = append(datapoints, datapoint)
 		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(datapoints) >= s.maxBufferSize {
 			s.emitMetrics(&datapoints)
+			lastEmission = time.Now()
 			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
 		}
 	}
