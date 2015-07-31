@@ -83,19 +83,16 @@ class Collector(object):
         """
         Process a configfile, or reload if previously given one.
         """
-
         # Load in the collector's defaults
         if self.get_default_config() is not None:
-            # TODO: change this!!!
             self.config.update(self.get_default_config())
 
-            if 'collectors' in config:
+            if 'diamond_collectors' in config:
                 if 'default' in config['collectors']:
-                    self.config.merge(config['collectors']['default'])
+                    self.config.update(config['diamond_collectors']['default'])
 
-                if self.name in config['collectors']:
-                    self.config.merge(config['collectors'][self.name])
-
+                if self.name in config['diamond_collectors']:
+                    self.config.update(config['diamond_collectors'][self.name])
         self.process_config()
 
     def process_config(self):
