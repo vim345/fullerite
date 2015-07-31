@@ -45,8 +45,8 @@ type Handler interface {
 	Prefix() string
 	SetPrefix(string)
 
-	DefaultDimensions() *map[string]string
-	SetDefaultDimensions(*map[string]string)
+	DefaultDimensions() map[string]string
+	SetDefaultDimensions(map[string]string)
 }
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
@@ -92,13 +92,16 @@ func (handler *BaseHandler) SetPrefix(prefix string) {
 }
 
 // DefaultDimensions : dimensions that should be included in any metric
-func (handler *BaseHandler) DefaultDimensions() *map[string]string {
-	return &handler.defaultDimensions
+func (handler *BaseHandler) DefaultDimensions() map[string]string {
+	return handler.defaultDimensions
 }
 
 // SetDefaultDimensions : set the defautl dimensions
-func (handler *BaseHandler) SetDefaultDimensions(defaults *map[string]string) {
-	handler.defaultDimensions = *defaults
+func (handler *BaseHandler) SetDefaultDimensions(defaults map[string]string) {
+	handler.defaultDimensions = make(map[string]string)
+	for name, value := range defaults {
+		handler.defaultDimensions[name] = value
+	}
 }
 
 // Interval : the maximum interval that the handler should buffer stats for

@@ -42,17 +42,14 @@ func (s *SignalFx) Configure(config *map[string]string) {
 
 // Run send metrics in the channel to SignalFx.
 func (s *SignalFx) Run() {
-	log.Println("starting signalfx handler")
+	log.Println("Starting signalfx handler...")
 	lastEmission := time.Now()
 
 	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
 
 	for incomingMetric := range s.Channel() {
-		log.Println("Processing metric to SignalFx:", incomingMetric)
-
 		datapoint := s.convertToProto(&incomingMetric)
 		datapoints = append(datapoints, datapoint)
-
 		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(datapoints) >= s.maxBufferSize {
 			s.emitMetrics(&datapoints)
 			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
@@ -61,10 +58,9 @@ func (s *SignalFx) Run() {
 }
 
 func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
-
-	datapoint := new(DataPoint)
 	outname := s.Prefix() + (*incomingMetric).Name
 
+	datapoint := new(DataPoint)
 	datapoint.Metric = &outname
 	datapoint.Value = &Datum{
 		DoubleValue: &(*incomingMetric).Value,
@@ -81,16 +77,8 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 		datapoint.MetricType = MetricType_CUMULATIVE_COUNTER.Enum()
 	}
 
-	if s.DefaultDimensions() != nil {
-		for key, value := range *s.DefaultDimensions() {
-			dim := Dimension{
-				Key:   &key,
-				Value: &value,
-			}
-			datapoint.Dimensions = append(datapoint.Dimensions, &dim)
-		}
-	}
-	for key, value := range incomingMetric.Dimensions {
+	dimensions := incomingMetric.GetDimensions(s.DefaultDimensions())
+	for key, value := range dimensions {
 		dim := Dimension{
 			Key:   &key,
 			Value: &value,

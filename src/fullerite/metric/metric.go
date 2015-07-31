@@ -31,3 +31,15 @@ func New(name string) Metric {
 func (m *Metric) AddDimension(name, value string) {
 	m.Dimensions[name] = value
 }
+
+// GetDimensions returns the dimensions of a metric merged with defaults. Defaults win.
+func (m *Metric) GetDimensions(defaults map[string]string) (dimensions map[string]string) {
+	dimensions = make(map[string]string)
+	for name, value := range m.Dimensions {
+		dimensions[name] = value
+	}
+	for name, value := range defaults {
+		dimensions[name] = value
+	}
+	return dimensions
+}
