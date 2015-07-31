@@ -44,7 +44,8 @@ vet: $(SOURCES)
 	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
 protobuf: signalfx.proto
-	@go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
+	@go get -u github.com/golang/protobuf/proto
+	@go get -u github.com/golang/protobuf/protoc-gen-go
 	@protoc --go_out=src/fullerite/handler/ signalfx.proto
 
 lint: $(SOURCES)

@@ -22,6 +22,8 @@ func New(name string) Collector {
 		collector = NewTest()
 	case "CPU":
 		collector = NewCPU()
+	case "Diamond":
+		collector = NewDiamond()
 	default:
 		log.Fatal("Cannot create collector", name)
 		return nil
