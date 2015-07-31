@@ -11,8 +11,8 @@
     "handlers": {
         "Graphite": {},
         "SignalFx": {
-            "authToken": "token",
-            "endpoint": "http://somethingsomething.com/blah",
+            "authToken": "secret_token",
+            "endpoint": "https://ingest.signalfx.com/v2/datapoint",
             "interval": "10.0"
         }
     },
