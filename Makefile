@@ -15,13 +15,14 @@ export GOPATH
 PATH := bin:$(PATH)
 export PATH
 
-all: clean fmt vet lint $(PROG)
+all: clean fmt lint $(PROG)
 
 .PHONY: clean
 clean:
 	@echo Cleaning $(PROG)...
 	@rm -f $(PROG) bin/$(PROG)
 	@rm -rf pkg/*/$(PROG)
+# Let's keep the generated file in the repo for ease of development.
 #	@rm -f $(GEN_PROTO_SFX)
 
 deps:
@@ -42,7 +43,7 @@ fmt: $(SOURCES)
 
 vet: $(SOURCES)
 	@echo Vetting $(PROG) sources...
-	@go get golang.org/x/tools/cmd/vet
+	@go get -d -u golang.org/x/tools/cmd/vet
 	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
 protobuf: $(PROTO_SFX)
@@ -53,10 +54,10 @@ protobuf: $(PROTO_SFX)
 
 lint: $(SOURCES)
 	@echo Linting $(PROG) sources...
-	@go get github.com/golang/lint/golint
+	@go get -u github.com/golang/lint/golint
 	@$(foreach src, $(SOURCES), bin/golint $(src);)
 
 cyclo: $(SOURCES)
 	@echo Checking code complexity...
-	@go get github.com/fzipp/gocyclo
+	@go get -u github.com/fzipp/gocyclo
 	@bin/gocyclo $(SOURCES)
