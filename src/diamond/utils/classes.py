@@ -57,7 +57,8 @@ def load_collectors(paths=None, filter=None):
         return
 
     if isinstance(paths, basestring):
-        paths = paths.split(',')
+        paths = map(str, paths.split(','))
+        print paths
         paths = map(str.strip, paths)
 
     load_include_path(paths)
@@ -139,7 +140,7 @@ def load_collectors(paths=None, filter=None):
     return collectors
 
 
-def initialize_collector(cls, name=None, configfile=None, handlers=[]):
+def initialize_collector(cls, name=None, config=None, handlers=[]):
     """
     Initialize collector
     """
@@ -148,7 +149,7 @@ def initialize_collector(cls, name=None, configfile=None, handlers=[]):
 
     try:
         # Initialize Collector
-        collector = cls(name=name, configfile=configfile, handlers=handlers)
+        collector = cls(name=name, config=config, handlers=handlers)
     except Exception:
         # Log error
         log.error("Failed to initialize Collector: %s. %s",

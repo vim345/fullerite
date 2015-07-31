@@ -63,20 +63,19 @@ class Collector(object):
         else:
             self.name = name
 
+        self.socket = None
         self.handlers = handlers
         self.last_values = {}
 
         self.config = {}
         self.load_config(config if config else {})
 
-        self.socket = self._connect()
-
     def _connect(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.connect(FULLERITE_ADDR)
         except socket.error, msg:
-            self.log.error("Error connecting to UNIX socket: %s", msg)
+            self.log.error("Error connecting to fullerite TCP port: %s", msg)
             sys.exit(1)
         return sock
 
@@ -177,7 +176,7 @@ class Collector(object):
             'path_suffix': '',
 
             # Default Poll Interval (seconds)
-            'interval': 300,
+            'interval': 5,
 
             # Default Event TTL (interval multiplier)
             'ttl_multiplier': 2,
@@ -265,7 +264,7 @@ class Collector(object):
         # Create Metric
         try:
             metric = Metric(path, value, raw_value=raw_value, timestamp=None,
-                            precision=precision, host=self.get_hostname(),
+                            precision=precision,
                             metric_type=metric_type, ttl=ttl)
         except DiamondException:
             self.log.error(('Error when creating new Metric: path=%r, '
@@ -280,10 +279,10 @@ class Collector(object):
         Publish a Metric object
         """
         try:
-            self.socket.sendall(json.dumps(metric.export()))
-        except socket.error:
-            self.log.error("Error sending metrics")
-            self.log.exception()
+            self.log.debug("Writing: %s" % metric.export())
+            self.socket.sendall("%s\n" % json.dumps(metric.export()))
+        except socket.error, e:
+            self.log.error("Error sending metrics: %s", e)
 
     def publish_gauge(self, name, value, precision=0, instance=None):
         return self.publish(name, value, precision=precision,
@@ -346,6 +345,9 @@ class Collector(object):
         """
         try:
             start_time = time.time()
+
+            if not self.socket:
+                self.socket = self._connect()
 
             # Collect Data
             self.collect()

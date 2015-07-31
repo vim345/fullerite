@@ -65,7 +65,7 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(time.Second)
 	reader := bufio.NewReader(conn)
-	log.Println("Starting a new reader")
+	log.Println("Diamond collector is starting a new reader...")
 	for {
 		// TODO: verify that timeout is actually working.
 		conn.SetDeadline(time.Now().Add(1e9))

@@ -66,7 +66,7 @@ class Server(object):
         ########################################################################
         self.config = load_config(self.configfile)
 
-        collectors = load_collectors(self.config['server']['collectors_path'])
+        collectors = load_collectors(self.config['diamond_collectors_path'])
 
         ########################################################################
         # Signals
@@ -89,11 +89,14 @@ class Server(object):
                 ##############################################################
 
                 running_collectors = []
-                for collector, config in self.config['collectors'].iteritems():
+                self.log.debug(self.config['diamond_collectors'])
+                for collector, config in self.config['diamond_collectors'].iteritems():
+                    self.log.debug(config.get('enabled', False))
                     if config.get('enabled', False) is not True:
                         continue
                     running_collectors.append(collector)
                 running_collectors = set(running_collectors)
+                self.log.debug("Running collectors: %s" % running_collectors)
 
                 # Collectors that are running but shouldn't be
                 for process_name in running_processes - running_collectors:
@@ -114,6 +117,7 @@ class Server(object):
                     # collector name to spin
                     collector_name = process_name.split()[0]
 
+                    self.log.debug("Attempting to start collector: " + collector_name)
                     if 'Collector' not in collector_name:
                         continue
 
@@ -152,4 +156,4 @@ class Server(object):
                 self.log.info('Reloading state due to HUP')
                 self.config = load_config(self.configfile)
                 collectors = load_collectors(
-                    self.config['server']['collectors_path'])
+                    self.config['diamond_collectors_path'])
