@@ -48,9 +48,10 @@ func (s *SignalFx) Run() {
 	lastEmission := time.Now()
 	for incomingMetric := range s.Channel() {
 		datapoint := s.convertToProto(&incomingMetric)
+		log.Debug("SignalFx datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(datapoints) >= s.maxBufferSize {
-			s.emitMetrics(&datapoints)
+			s.emitMetrics(datapoints)
 			lastEmission = time.Now()
 			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
 		}
@@ -89,19 +90,19 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 	return datapoint
 }
 
-func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
-	log.Info("Starting to emit ", len(*datapoints), " datapoints")
+func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
+	log.Info("Starting to emit ", len(datapoints), " datapoints")
 
-	if len(*datapoints) == 0 {
-		log.Info("Skipping send because of an empty payload")
+	if len(datapoints) == 0 {
+		log.Warn("Skipping send because of an empty payload")
 		return
 	}
 
 	payload := new(DataPointUploadMessage)
-	payload.Datapoints = *datapoints
+	payload.Datapoints = datapoints
 
 	if s.authToken == "" || s.endpoint == "" {
-		log.Info("Skipping emission because we're missing the auth token ",
+		log.Warn("Skipping emission because we're missing the auth token ",
 			"or the endpoint, payload would have been ", payload)
 		return
 	}
@@ -136,5 +137,5 @@ func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
 		return
 	}
 
-	log.Info("Successfully sent ", len(*datapoints), " datapoints to signalfx")
+	log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
 }
