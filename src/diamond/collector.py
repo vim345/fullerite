@@ -17,7 +17,7 @@ import time
 from diamond.metric import Metric
 from error import DiamondException
 
-SOCKET_ADDR = '\0fullerite'
+FULLERITE_ADDR = ('', 19191)
 
 # Detect the architecture of the system and set the counters for MAX_VALUES
 # appropriately. Otherwise, rolling over counters will cause incorrect or
@@ -67,14 +67,14 @@ class Collector(object):
         self.last_values = {}
 
         self.config = {}
-        self.load_config(config)
+        self.load_config(config if config else {})
 
         self.socket = self._connect()
 
     def _connect(self):
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            sock.connect(SOCKET_ADDR)
+            sock.connect(FULLERITE_ADDR)
         except socket.error, msg:
             self.log.error("Error connecting to UNIX socket: %s", msg)
             sys.exit(1)
@@ -88,7 +88,7 @@ class Collector(object):
         # Load in the collector's defaults
         if self.get_default_config() is not None:
             # TODO: change this!!!
-            self.config.merge(self.get_default_config())
+            self.config.update(self.get_default_config())
 
             if 'collectors' in config:
                 if 'default' in config['collectors']:
