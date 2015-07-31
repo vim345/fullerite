@@ -3,12 +3,11 @@ package main
 import (
 	"fullerite/collector"
 	"fullerite/metric"
-	"log"
 	"time"
 )
 
 func startCollectors(c Config) (collectors []collector.Collector) {
-	log.Println("Starting collectors...")
+	log.Info("Starting collectors...")
 	for _, name := range c.Collectors {
 		collectors = append(collectors, startCollector(name))
 	}
@@ -16,7 +15,7 @@ func startCollectors(c Config) (collectors []collector.Collector) {
 }
 
 func startCollector(name string) collector.Collector {
-	log.Println("Starting collector", name)
+	log.Debug("Starting collector ", name)
 	collector := collector.New(name)
 	readCollectorConfig(collector)
 	go runCollector(collector)
@@ -30,7 +29,7 @@ func readCollectorConfig(collector collector.Collector) {
 
 func runCollector(collector collector.Collector) {
 	for {
-		log.Println("Collecting from", collector)
+		log.Info("Collecting from ", collector)
 		collector.Collect()
 		time.Sleep(time.Duration(collector.Interval()) * time.Second)
 	}

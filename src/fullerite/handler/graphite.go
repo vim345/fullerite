@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fullerite/metric"
-	"log"
 )
 
 // Graphite type
@@ -26,7 +25,7 @@ func (g Graphite) Run() {
 	// TODO: check interval and queue size and metrics.
 	for metric := range g.channel {
 		// TODO: Actually send to graphite server
-		log.Println("Sending metric to Graphite:", metric)
+		log.Debug("Sending metric to Graphite:", metric)
 	}
 
 }

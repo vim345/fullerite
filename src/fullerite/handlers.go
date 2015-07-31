@@ -3,11 +3,10 @@ package main
 import (
 	"fullerite/handler"
 	"fullerite/metric"
-	"log"
 )
 
 func startHandlers(c Config) (handlers []handler.Handler) {
-	log.Println("Starting handlers...")
+	log.Info("Starting handlers...")
 
 	for name, config := range c.Handlers {
 		handler := buildHandler(name)
@@ -28,7 +27,6 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 }
 
 func buildHandler(name string) handler.Handler {
-	log.Println("Building handler", name)
 	handler := handler.New(name)
 	return handler
 }

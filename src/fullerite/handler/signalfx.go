@@ -5,7 +5,6 @@ import (
 	"fullerite/metric"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
@@ -32,17 +31,17 @@ func (s *SignalFx) Configure(config *map[string]string) {
 	var exists bool
 	s.authToken, exists = asmap["authToken"]
 	if !exists {
-		log.Println("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
+		log.Error("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
 	}
 	s.endpoint, exists = asmap["endpoint"]
 	if !exists {
-		log.Println("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
+		log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
 }
 
 // Run send metrics in the channel to SignalFx.
 func (s *SignalFx) Run() {
-	log.Println("Starting signalfx handler...")
+	log.Info("Starting signalfx handler...")
 	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
 
 	lastEmission := time.Now()
@@ -90,10 +89,10 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 }
 
 func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
-	log.Println("Starting to emit", len(*datapoints), "datapoints")
+	log.Info("Starting to emit ", len(*datapoints), " datapoints")
 
 	if len(*datapoints) == 0 {
-		log.Println("Skipping send because of an empty payload")
+		log.Info("Skipping send because of an empty payload")
 		return
 	}
 
@@ -101,19 +100,19 @@ func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
 	payload.Datapoints = *datapoints
 
 	if s.authToken == "" || s.endpoint == "" {
-		log.Println("Skipping emission because we're missing the auth token ",
-			"or the endpoint, payload would have been", payload.String())
+		log.Info("Skipping emission because we're missing the auth token ",
+			"or the endpoint, payload would have been ", payload)
 		return
 	}
 	serialized, err := proto.Marshal(payload)
 	if err != nil {
-		log.Println("Failed to serailize payload", *payload)
+		log.Error("Failed to serailize payload ", payload)
 		return
 	}
 
 	req, err := http.NewRequest("POST", s.endpoint, bytes.NewBuffer(serialized))
 	if err != nil {
-		log.Println("Failed to create a request to endpoint", s.endpoint)
+		log.Error("Failed to create a request to endpoint ", s.endpoint)
 		return
 	}
 	req.Header.Set("X-SF-TOKEN", s.authToken)
@@ -122,19 +121,19 @@ func (s *SignalFx) emitMetrics(datapoints *[]*DataPoint) {
 	client := &http.Client{}
 	rsp, err := client.Do(req)
 	if err != nil {
-		log.Println("Failed to complete POST", err)
+		log.Error("Failed to complete POST ", err)
 		return
 	}
 
 	defer rsp.Body.Close()
 	if rsp.Status != "200 OK" {
 		body, _ := ioutil.ReadAll(rsp.Body)
-		log.Println("Failed to post to signalfx @", s.endpoint,
-			"status was", rsp.Status,
-			"rsp body was", string(body),
-			"payload was", payload)
+		log.Error("Failed to post to signalfx @", s.endpoint,
+			" status was ", rsp.Status,
+			" rsp body was ", string(body),
+			" payload was ", payload)
 		return
 	}
 
-	log.Println("Successfully sent", len(*datapoints), "datapoints to signalfx")
+	log.Info("Successfully sent ", len(*datapoints), " datapoints to signalfx")
 }

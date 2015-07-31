@@ -2,7 +2,8 @@ package handler
 
 import (
 	"fullerite/metric"
-	"log"
+
+	"github.com/Sirupsen/logrus"
 )
 
 // Some sane values to default things to
@@ -10,10 +11,10 @@ const (
 	DefaultBufferSize = 100
 )
 
+var log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler"})
+
 // New creates a new Handler based on the requested handler name.
 func New(name string) Handler {
-	log.Println("Building handler " + name)
-
 	var handler Handler
 	switch name {
 	case "Graphite":

@@ -2,8 +2,11 @@ package collector
 
 import (
 	"fullerite/metric"
-	"log"
+
+	"github.com/Sirupsen/logrus"
 )
+
+var log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector"})
 
 // Collector defines the interface of a generic collector.
 type Collector interface {

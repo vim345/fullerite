@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fullerite/metric"
-	"log"
 	"net"
 	"time"
 )
@@ -62,7 +61,7 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(time.Second)
 	reader := bufio.NewReader(conn)
-	log.Println("Diamond collector connection started: ", conn.RemoteAddr())
+	log.Info("Diamond collector connection started: ", conn.RemoteAddr())
 	for {
 		// TODO: verify that timeout is actually working.
 		conn.SetDeadline(time.Now().Add(1e9))
@@ -70,10 +69,10 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 		if err != nil {
 			break
 		}
-		log.Print("Read from Diamond collector: " + string(line))
+		log.Debug("Read from Diamond collector: ", string(line))
 		d.incoming <- line
 	}
-	log.Println("Diamond collector connection closed: ", conn.RemoteAddr())
+	log.Info("Diamond collector connection closed: ", conn.RemoteAddr())
 }
 
 // Collect reads metrics collected from Diamond collectors, converts
@@ -82,7 +81,7 @@ func (d Diamond) Collect() {
 	for line := range d.incoming {
 		var metric metric.Metric
 		if err := json.Unmarshal(line, &metric); err != nil {
-			log.Println("Cannot unmarshal metric line from diamond: " + string(line))
+			log.Error("Cannot unmarshal metric line from diamond:", line)
 			continue
 		}
 		metric.AddDimension("diamond", "yes")
