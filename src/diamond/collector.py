@@ -18,6 +18,7 @@ from diamond.metric import Metric
 from error import DiamondException
 
 FULLERITE_ADDR = ('', 19191)
+FULLERITE_RETRY_COUNT = 3
 
 # Detect the architecture of the system and set the counters for MAX_VALUES
 # appropriately. Otherwise, rolling over counters will cause incorrect or
@@ -63,7 +64,8 @@ class Collector(object):
         else:
             self.name = name
 
-        self.socket = None
+        self._socket = None
+        self._reconnect = False
         self.handlers = handlers
         self.last_values = {}
 
@@ -71,6 +73,7 @@ class Collector(object):
         self.load_config(config if config else {})
 
     def _connect(self):
+        self.log.debug("Connecting to fullerite")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.connect(FULLERITE_ADDR)
@@ -275,11 +278,18 @@ class Collector(object):
         """
         Publish a Metric object
         """
-        try:
-            self.log.debug("Writing: %s" % metric.export())
-            self.socket.sendall("%s\n" % json.dumps(metric.export()))
-        except socket.error, e:
-            self.log.error("Error sending metrics: %s", e)
+        for _ in range(FULLERITE_RETRY_COUNT):
+            try:
+                if not self._socket or self._reconnect is True:
+                    self._socket = self._connect()
+                    self._reconnect = False
+                self._socket.sendall("%s\n" % json.dumps(metric.export()))
+            except socket.error, e:
+                self.log.error("Error sending metrics: %s", e)
+                self._reconnect = True
+            else:
+                self.log.debug("Wrote: %s" % metric.export())
+                break
 
     def publish_gauge(self, name, value, precision=0, instance=None):
         return self.publish(name, value, precision=precision,
@@ -342,9 +352,6 @@ class Collector(object):
         """
         try:
             start_time = time.time()
-
-            if not self.socket:
-                self.socket = self._connect()
 
             # Collect Data
             self.collect()

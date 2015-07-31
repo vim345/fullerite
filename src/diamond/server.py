@@ -91,9 +91,7 @@ class Server(object):
                 ##############################################################
 
                 running_collectors = []
-                self.log.debug(self.config['diamond_collectors'])
                 for collector, config in self.config['diamond_collectors'].iteritems():
-                    self.log.debug(config.get('enabled', False))
                     if config.get('enabled', False) is not True:
                         continue
                     running_collectors.append(collector)
@@ -119,7 +117,6 @@ class Server(object):
                     # collector name to spin
                     collector_name = process_name.split()[0]
 
-                    self.log.debug("Attempting to start collector: " + collector_name)
                     if 'Collector' not in collector_name:
                         continue
 
