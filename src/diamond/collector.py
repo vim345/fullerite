@@ -46,11 +46,6 @@ def str_to_bool(value):
     return value
 
 
-def _load_configfile(configfile):
-    # TODO: IMPLEMENT
-    return {}
-
-
 class Collector(object):
     """
     The Collector class is a base class for all metric collectors.
@@ -71,8 +66,8 @@ class Collector(object):
         self.handlers = handlers
         self.last_values = {}
 
-        self.configfile = None
-        self.load_config(configfile)
+        self.config = {}
+        self.load_config(config)
 
         self.socket = self._connect()
 
@@ -85,22 +80,15 @@ class Collector(object):
             sys.exit(1)
         return sock
 
-    def load_config(self, configfile=None):
+    def load_config(self, config):
         """
         Process a configfile, or reload if previously given one.
         """
 
-        self.config = {}
-
         # Load in the collector's defaults
         if self.get_default_config() is not None:
+            # TODO: change this!!!
             self.config.merge(self.get_default_config())
-
-        if configfile is not None:
-            self.configfile = os.path.abspath(configfile)
-
-        if self.configfile is not None:
-            config = _load_configfile(self.configfile)
 
             if 'collectors' in config:
                 if 'default' in config['collectors']:
