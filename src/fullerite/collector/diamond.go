@@ -38,9 +38,6 @@ func NewDiamond() *Diamond {
 // When Collect() is called it reads from the local channel converts
 // strings to metrics and publishes metrics to handlers.
 func (d Diamond) collectDiamond() {
-	// TODO: we need to make sure that this goroutine is always up
-	// and running.
-
 	addr, err := net.ResolveTCPAddr("tcp", ":"+DiamondCollectorPort)
 	if err != nil {
 		panic(err)
@@ -65,7 +62,7 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(time.Second)
 	reader := bufio.NewReader(conn)
-	log.Println("Diamond collector is starting a new reader...")
+	log.Println("Diamond collector connection started: ", conn.RemoteAddr())
 	for {
 		// TODO: verify that timeout is actually working.
 		conn.SetDeadline(time.Now().Add(1e9))
@@ -73,9 +70,10 @@ func (d Diamond) readDiamondMetrics(conn *net.TCPConn) {
 		if err != nil {
 			break
 		}
-		log.Println("Read from Diamond collector: " + string(line))
+		log.Print("Read from Diamond collector: " + string(line))
 		d.incoming <- line
 	}
+	log.Println("Diamond collector connection closed: ", conn.RemoteAddr())
 }
 
 // Collect reads metrics collected from Diamond collectors, converts
