@@ -41,8 +41,9 @@ func (g *Graphite) Configure(config map[string]interface{}) {
 		g.log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
 	}
 	if timeout, exists := config["timeout"]; exists == true {
-		g.timeout = time.Duration(timeout.(time.Duration) * time.Second)
+		g.timeout = time.Duration(timeout.(float64)) * time.Second
 	}
+	g.log.Info("timeout is ", g.timeout)
 }
 
 // Run sends metrics in the channel to the graphite server.

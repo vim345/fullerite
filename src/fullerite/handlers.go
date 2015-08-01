@@ -8,22 +8,25 @@ import (
 func startHandlers(c Config) (handlers []handler.Handler) {
 	log.Info("Starting handlers...")
 	for name, config := range c.Handlers {
-		handler := handler.New(name)
-
-		// apply any global configs
-		handler.SetInterval(c.Interval)
-		handler.SetPrefix(c.Prefix)
-		handler.SetDefaultDimensions(c.DefaultDimensions)
-
-		// now apply the handler level configs
-		handler.Configure(config)
-
-		handlers = append(handlers, handler)
-
-		log.Info("Running ", handler)
-		go handler.Run()
+		handlers = append(handlers, startHandler(name, c, config))
 	}
 	return handlers
+}
+
+func startHandler(name string, globalConfig Config, config map[string]interface{}) handler.Handler {
+	log.Debug("Starting handler ", name)
+	handler := handler.New(name)
+
+	// apply any global configs
+	handler.SetInterval(globalConfig.Interval)
+	handler.SetPrefix(globalConfig.Prefix)
+	handler.SetDefaultDimensions(globalConfig.DefaultDimensions)
+
+	// now apply the handler level configs
+	handler.Configure(config)
+
+	go handler.Run()
+	return handler
 }
 
 func writeToHandlers(handlers []handler.Handler, metric metric.Metric) {

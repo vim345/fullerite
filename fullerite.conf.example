@@ -26,12 +26,14 @@
     "handlers": {
         "Graphite": {
             "server": "10.40.11.51",
-            "port": "2003"
+            "port": "2003",
+            "timeout": 2
         },
         "SignalFx": {
             "authToken": "secret_token",
             "endpoint": "https://ingest.signalfx.com/v2/datapoint",
-            "interval": 10
+            "interval": 10,
+            "timeout": 2
         }
     }
 }

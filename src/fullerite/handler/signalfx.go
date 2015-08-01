@@ -44,8 +44,9 @@ func (s *SignalFx) Configure(config map[string]interface{}) {
 		s.log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
 	if timeout, exists := config["timeout"]; exists == true {
-		s.timeout = time.Duration(timeout.(time.Duration) * time.Second)
+		s.timeout = time.Duration(timeout.(float64)) * time.Second
 	}
+	s.log.Info("timeout is ", s.timeout)
 }
 
 // Run send metrics in the channel to SignalFx.
