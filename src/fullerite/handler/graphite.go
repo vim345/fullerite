@@ -63,22 +63,20 @@ func (g *Graphite) Run() {
 	}
 }
 
-func (g *Graphite) convertToGraphite(metric *metric.Metric) (datapoint string) {
-	datapoint = g.Prefix() + (*metric).Name
-	dimensions := metric.GetDimensions(g.DefaultDimensions())
-
-	//orders keys so datapoint keeps consistent name
+func (g *Graphite) convertToGraphite(incomingMetric *metric.Metric) (datapoint string) {
+	//orders dimensions so datapoint keeps consistent name
 	var keys []string
+	dimensions := incomingMetric.GetDimensions(g.DefaultDimensions())
 	for k := range dimensions {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
+	datapoint = g.Prefix() + incomingMetric.Name
 	for _, key := range keys {
-		//create a list of datapoints for this metric, then append that list the a global list
 		datapoint = fmt.Sprintf("%s.%s.%s", datapoint, key, dimensions[key])
 	}
-	datapoint = fmt.Sprintf("%s %f %d\n", datapoint, metric.Value, time.Now().Unix())
+	datapoint = fmt.Sprintf("%s %f %d\n", datapoint, incomingMetric.Value, time.Now().Unix())
 	return datapoint
 }
 

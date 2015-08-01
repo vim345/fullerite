@@ -67,12 +67,12 @@ func (s *SignalFx) Run() {
 }
 
 func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
-	outname := s.Prefix() + (*incomingMetric).Name
+	outname := s.Prefix() + incomingMetric.Name
 
 	datapoint := new(DataPoint)
 	datapoint.Metric = &outname
 	datapoint.Value = &Datum{
-		DoubleValue: &(*incomingMetric).Value,
+		DoubleValue: &incomingMetric.Value,
 	}
 	datapoint.Source = new(string)
 	*datapoint.Source = "fullerite"
