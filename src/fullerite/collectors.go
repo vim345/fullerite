@@ -14,7 +14,7 @@ func startCollectors(c Config) (collectors []collector.Collector) {
 	return collectors
 }
 
-func startCollector(name string, config map[string]string) collector.Collector {
+func startCollector(name string, config map[string]interface{}) collector.Collector {
 	log.Debug("Starting collector ", name)
 	collector := collector.New(name)
 	collector.Configure(config)

@@ -16,7 +16,7 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 		handler.SetDefaultDimensions(c.DefaultDimensions)
 
 		// now apply the handler level configs
-		handler.Configure(&config)
+		handler.Configure(config)
 
 		handlers = append(handlers, handler)
 

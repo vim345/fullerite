@@ -31,7 +31,7 @@ func New(name string) Handler {
 // Handler defines the interface of a generic handler.
 type Handler interface {
 	Run()
-	Configure(*map[string]string)
+	Configure(map[string]interface{})
 
 	// taken care of by the base
 	Name() string

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fullerite/metric"
 	"net"
-	"strconv"
 	"time"
 )
 
@@ -34,14 +33,12 @@ func NewDiamond() *Diamond {
 }
 
 // Configure the collector
-func (d *Diamond) Configure(config map[string]string) {
+func (d *Diamond) Configure(config map[string]interface{}) {
 	if port, exists := config["port"]; exists == true {
-		d.port = port
+		d.port = port.(string)
 	}
 	if interval, exists := config["interval"]; exists == true {
-		if interval, err := strconv.ParseInt(interval, 10, 32); err == nil {
-			d.interval = interval
-		}
+		d.interval = int64(interval.(float64))
 	}
 }
 

@@ -3,7 +3,6 @@ package collector
 import (
 	"fullerite/metric"
 	"math/rand"
-	"strconv"
 )
 
 // Test collector type
@@ -23,14 +22,12 @@ func NewTest() *Test {
 }
 
 // Configure this takes a dictionary of values with which the handler can configure itself
-func (t *Test) Configure(config map[string]string) {
+func (t *Test) Configure(config map[string]interface{}) {
 	if metricName, exists := config["metricName"]; exists == true {
-		t.metricName = metricName
+		t.metricName = metricName.(string)
 	}
 	if interval, exists := config["interval"]; exists == true {
-		if interval, err := strconv.ParseInt(interval, 10, 32); err == nil {
-			t.interval = interval
-		}
+		t.interval = int64(interval.(float64))
 	}
 }
 

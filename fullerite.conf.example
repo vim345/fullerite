@@ -4,10 +4,10 @@
     "defaultDimensions": {
         "application": "fullerite",
         "host": "dev33-devc"
-    }
+    },
 
     "diamond_collectors_path": "src/diamond/collectors",
-    "diamond_collectors" : {
+    "diamond_collectors": {
         "CPUCollector": {"enabled": true, "interval": 10},
         "PingCollector": {"enabled": true, "target_google": "google.com", "interval": 10, "bin": "/bin/ping"}
     },
@@ -18,8 +18,8 @@
             "interval": 10
         },
         "Diamond":{
-            "launchScript": "/var/something/cool",
-            "port": "19191"
+            "port": "19191",
+            "interval": 10
         }
     },
 
@@ -33,6 +33,5 @@
             "endpoint": "https://ingest.signalfx.com/v2/datapoint",
             "interval": 10
         }
-    },
-
+    }
 }

@@ -25,40 +25,34 @@ func NewGraphite() *Graphite {
 }
 
 // Configure accepts the different configuration options for the Graphite handler
-func (g *Graphite) Configure(config *map[string]string) {
-	asmap := *config
-	var exists bool
-	g.server, exists = asmap["server"]
-	if !exists {
-		log.Println("There was no server specified for the Graphite Handler, there won't be any emissions")
+func (g *Graphite) Configure(config map[string]interface{}) {
+	if server, exists := config["server"]; exists == true {
+		g.server = server.(string)
+	} else {
+		log.Error("There was no server specified for the Graphite Handler, there won't be any emissions")
 	}
-
-	g.port, exists = asmap["port"]
-	if !exists {
-		log.Println("There was no port specified for the Graphite Handler, there won't be any emissions")
+	if port, exists := config["port"]; exists == true {
+		g.port = port.(string)
+	} else {
+		log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
 	}
 }
 
 // Run sends metrics in the channel to the graphite server.
 func (g *Graphite) Run() {
+	datapoints := make([]string, 0, g.maxBufferSize)
+
 	lastEmission := time.Now()
-	metrics := make([]string, 0, g.maxBufferSize)
-	log.Info("graphite handler started")
-
-	for metric := range g.Channel() {
-		log.Println("Sending metric to Graphite:", metric)
-		datapoint := g.convertToGraphite(&metric)
-
-		metrics = append(metrics, datapoint)
-
-		//if the datapoints from metric would overflow the buffer, flush it and then add the new datapoints
-		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(metrics) >= g.maxBufferSize {
-			g.emitMetrics(metrics)
+	for incomingMetric := range g.Channel() {
+		datapoint := g.convertToGraphite(&incomingMetric)
+		log.Debug("Graphite datapoint: ", datapoint)
+		datapoints = append(datapoints, datapoint)
+		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(datapoints) >= g.maxBufferSize {
+			g.emitMetrics(datapoints)
 			lastEmission = time.Now()
-			metrics = make([]string, 0, g.maxBufferSize)
+			datapoints = make([]string, 0, g.maxBufferSize)
 		}
 	}
-
 }
 
 func (g *Graphite) convertToGraphite(metric *metric.Metric) (datapoint string) {
@@ -91,6 +85,5 @@ func (g *Graphite) emitMetrics(datapoints []string) {
 	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%s", g.server, g.port))
 	for _, datapoint := range datapoints {
 		fmt.Fprintf(conn, datapoint)
-		fmt.Println(datapoint)
 	}
 }

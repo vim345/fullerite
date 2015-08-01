@@ -22,6 +22,6 @@ func (c *CPU) Collect() {
 }
 
 // Configure the collector
-func (c *CPU) Configure(config map[string]string) {
+func (c *CPU) Configure(config map[string]interface{}) {
 	// TODO implement
 }

@@ -28,15 +28,15 @@ func NewSignalFx() *SignalFx {
 }
 
 // Configure accepts the different configuration options for the signalfx handler
-func (s *SignalFx) Configure(config *map[string]string) {
-	asmap := *config
-	var exists bool
-	s.authToken, exists = asmap["authToken"]
-	if !exists {
+func (s *SignalFx) Configure(config map[string]interface{}) {
+	if authToken, exists := config["authToken"]; exists == true {
+		s.authToken = authToken.(string)
+	} else {
 		log.Error("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
 	}
-	s.endpoint, exists = asmap["endpoint"]
-	if !exists {
+	if endpoint, exists := config["endpoint"]; exists == true {
+		s.endpoint = endpoint.(string)
+	} else {
 		log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
 }

@@ -56,7 +56,6 @@ func start(ctx *cli.Context) {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
 	log.Info("Starting fullerite...")
-	log.Debug("test")
 
 	c := readConfig(ctx.String("config"))
 	collectors := startCollectors(c)
