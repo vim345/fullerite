@@ -1,4 +1,5 @@
 PROG           := fullerite
+VERSION        := 0.0.1
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
@@ -22,6 +23,7 @@ clean:
 	@echo Cleaning $(PROG)...
 	@rm -f $(PROG) bin/$(PROG)
 	@rm -rf pkg/*/$(PROG)
+	@rm -rf build fullerite*.deb
 # Let's keep the generated file in the repo for ease of development.
 #	@rm -f $(GEN_PROTO_SFX)
 
@@ -46,6 +48,7 @@ vet: $(SOURCES)
 	@go get -d -u golang.org/x/tools/cmd/vet
 	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
+proto: protobuf
 protobuf: $(PROTO_SFX)
 	@echo Compiling protobuf
 	@go get -u github.com/golang/protobuf/proto
@@ -61,3 +64,13 @@ cyclo: $(SOURCES)
 	@echo Checking code complexity...
 	@go get -u github.com/fzipp/gocyclo
 	@bin/gocyclo $(SOURCES)
+
+pkg: package
+package: clean $(PROG)
+	@echo Packaging...
+	@mkdir -p build/usr/local/bin build/usr/local/share build/etc
+	@cp bin/fullerite build/usr/local/bin/
+	@cp bin/run-* build/usr/local/bin/
+	@cp fullerite.conf.example build/etc/
+	@cp -r src/diamond build/usr/local/share/fullerite/
+	@fpm -s dir -t deb --name $(PROG) --version $(VERSION) --depends python -C build .
