@@ -68,9 +68,9 @@ cyclo: $(SOURCES)
 pkg: package
 package: clean $(PROG)
 	@echo Packaging...
-	@mkdir -p build/usr/local/bin build/usr/local/share build/etc
-	@cp bin/fullerite build/usr/local/bin/
-	@cp bin/run-* build/usr/local/bin/
+	@mkdir -p build/usr/bin build/usr/share/fullerite build/etc
+	@cp bin/fullerite build/usr/bin/
+	@cp bin/run-* build/usr/bin/
 	@cp fullerite.conf.example build/etc/
-	@cp -r src/diamond build/usr/local/share/fullerite/
+	@cp -r src/diamond build/usr/share/fullerite/diamond
 	@fpm -s dir -t deb --name $(PROG) --version $(VERSION) --depends python -C build .
