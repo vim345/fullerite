@@ -18,13 +18,35 @@ const (
 
 var log = logrus.WithFields(logrus.Fields{"app": "fullerite"})
 
-func init() {
-	// Output to stderr instead of stdout, could also be a file.
-	logrus.SetOutput(os.Stderr)
+func init_logrus(ctx *cli.Context) {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		TimestampFormat: time.RFC822,
 		FullTimestamp:   true,
 	})
+
+	if level, err := logrus.ParseLevel(ctx.String("log_level")); err == nil {
+		logrus.SetLevel(level)
+	} else {
+		log.Error(err)
+		logrus.SetLevel(logrus.InfoLevel)
+	}
+
+	filename := ctx.String("log_file")
+	logrus.SetOutput(os.Stderr)
+	if filename != "" {
+		var f *os.File
+		_, err := os.Stat(filename)
+		if !os.IsNotExist(err) {
+			os.Rename(filename, filename+".prev")
+		}
+		f, err = os.Create(filename)
+		if err != nil {
+			log.Error("Cannot create log file ", err)
+			log.Warning("Continuing to log to stderr")
+		} else {
+			logrus.SetOutput(f)
+		}
+	}
 }
 
 func main() {
@@ -43,18 +65,18 @@ func main() {
 			Value: "info",
 			Usage: "Logging level (debug, info, warn, error, fatal, panic)",
 		},
+		cli.StringFlag{
+			Name:  "log_file",
+			Value: "",
+			Usage: "Log to file",
+		},
 	}
 	app.Action = start
 	app.Run(os.Args)
 }
 
 func start(ctx *cli.Context) {
-	if level, err := logrus.ParseLevel(ctx.String("log_level")); err == nil {
-		logrus.SetLevel(level)
-	} else {
-		log.Error(err)
-		logrus.SetLevel(logrus.InfoLevel)
-	}
+	init_logrus(ctx)
 	log.Info("Starting fullerite...")
 
 	c := readConfig(ctx.String("config"))

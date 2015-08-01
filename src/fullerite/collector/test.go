@@ -40,4 +40,5 @@ func (t Test) Collect() {
 	metric.Value = rand.Float64()
 	metric.AddDimension("testing", "yes")
 	t.Channel() <- metric
+	t.log.Debug(metric)
 }
