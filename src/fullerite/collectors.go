@@ -8,23 +8,18 @@ import (
 
 func startCollectors(c Config) (collectors []collector.Collector) {
 	log.Info("Starting collectors...")
-	for _, name := range c.Collectors {
-		collectors = append(collectors, startCollector(name))
+	for name, config := range c.Collectors {
+		collectors = append(collectors, startCollector(name, config))
 	}
 	return collectors
 }
 
-func startCollector(name string) collector.Collector {
+func startCollector(name string, config map[string]string) collector.Collector {
 	log.Debug("Starting collector ", name)
 	collector := collector.New(name)
-	readCollectorConfig(collector)
+	collector.Configure(config)
 	go runCollector(collector)
 	return collector
-}
-
-func readCollectorConfig(collector collector.Collector) {
-	// TODO: actually read from configuration file.
-	collector.SetInterval(10)
 }
 
 func runCollector(collector collector.Collector) {

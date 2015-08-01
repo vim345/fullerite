@@ -1,13 +1,28 @@
 {
+    "prefix": "test.",
+    "interval": 10,
+    "defaultDimensions": {
+        "application": "fullerite",
+        "host": "dev33-devc"
+    }
+
     "diamond_collectors_path": "src/diamond/collectors",
     "diamond_collectors" : {
         "CPUCollector": {"enabled": true, "interval": 10},
         "PingCollector": {"enabled": true, "target_google": "google.com", "interval": 10, "bin": "/bin/ping"}
     },
-    "collectors": [
-        "Test",
-        "Diamond"
-    ],
+
+    "collectors": {
+        "Test": {
+            "metricName": "TestMetric",
+            "interval": 10
+        },
+        "Diamond":{
+            "launchScript": "/var/something/cool",
+            "port": "19191"
+        }
+    },
+
     "handlers": {
         "Graphite": {
             "server": "10.40.11.51",
@@ -16,13 +31,8 @@
         "SignalFx": {
             "authToken": "secret_token",
             "endpoint": "https://ingest.signalfx.com/v2/datapoint",
-            "interval": "10.0"
+            "interval": 10
         }
     },
-    "prefix": "test.",
-    "interval": 10,
-    "defaultDimensions": {
-        "application": "fullerite",
-        "host": "dev33-devc"
-    }
+
 }
