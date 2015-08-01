@@ -2,13 +2,15 @@ package handler
 
 import (
 	"fullerite/metric"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 )
 
 // Some sane values to default things to
 const (
-	DefaultBufferSize = 100
+	DefaultBufferSize        = 100
+	DefaultHandlerTimeoutSec = 2
 )
 
 var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler"})
@@ -57,6 +59,7 @@ type BaseHandler struct {
 	name              string
 	maxBufferSize     int
 	prefix            string
+	timeout           time.Duration
 	interval          int
 	source            string
 	defaultDimensions map[string]string

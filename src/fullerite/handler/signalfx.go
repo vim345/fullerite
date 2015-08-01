@@ -5,6 +5,7 @@ import (
 
 	"bytes"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -24,6 +25,7 @@ func NewSignalFx() *SignalFx {
 	s := new(SignalFx)
 	s.name = "SignalFx"
 	s.maxBufferSize = DefaultBufferSize
+	s.timeout = time.Duration(DefaultHandlerTimeoutSec * time.Second)
 	s.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "SignalFx"})
 	s.channel = make(chan metric.Metric)
 	return s
@@ -40,6 +42,9 @@ func (s *SignalFx) Configure(config map[string]interface{}) {
 		s.endpoint = endpoint.(string)
 	} else {
 		s.log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
+	}
+	if timeout, exists := config["timeout"]; exists == true {
+		s.timeout = time.Duration(timeout.(time.Duration) * time.Second)
 	}
 }
 
@@ -122,7 +127,12 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	req.Header.Set("X-SF-TOKEN", s.authToken)
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
-	client := &http.Client{}
+	transport := http.Transport{
+		Dial: s.dialTimeout,
+	}
+	client := &http.Client{
+		Transport: &transport,
+	}
 	rsp, err := client.Do(req)
 	if err != nil {
 		s.log.Error("Failed to complete POST ", err)
@@ -140,4 +150,8 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	}
 
 	s.log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
+}
+
+func (s SignalFx) dialTimeout(network, addr string) (net.Conn, error) {
+	return net.DialTimeout(network, addr, s.timeout)
 }

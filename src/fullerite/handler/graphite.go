@@ -22,6 +22,7 @@ func NewGraphite() *Graphite {
 	g := new(Graphite)
 	g.name = "Graphite"
 	g.maxBufferSize = DefaultBufferSize
+	g.timeout = time.Duration(DefaultHandlerTimeoutSec * time.Second)
 	g.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Graphite"})
 	g.channel = make(chan metric.Metric)
 	return g
@@ -38,6 +39,9 @@ func (g *Graphite) Configure(config map[string]interface{}) {
 		g.port = port.(string)
 	} else {
 		g.log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
+	}
+	if timeout, exists := config["timeout"]; exists == true {
+		g.timeout = time.Duration(timeout.(time.Duration) * time.Second)
 	}
 }
 
@@ -85,8 +89,13 @@ func (g *Graphite) emitMetrics(datapoints []string) {
 		return
 	}
 
-	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%s", g.server, g.port))
-	for _, datapoint := range datapoints {
-		fmt.Fprintf(conn, datapoint)
+	addr := fmt.Sprintf("%s:%s", g.server, g.port)
+	conn, err := net.DialTimeout("tcp", addr, g.timeout)
+	if err != nil {
+		g.log.Error("Failed to connect ", addr)
+	} else {
+		for _, datapoint := range datapoints {
+			fmt.Fprintf(conn, datapoint)
+		}
 	}
 }
