@@ -6,6 +6,8 @@ import (
 	"fullerite/metric"
 	"net"
 	"time"
+
+	"github.com/Sirupsen/logrus"
 )
 
 const (
@@ -24,6 +26,7 @@ type Diamond struct {
 // NewDiamond creates a new Diamond collector.
 func NewDiamond() *Diamond {
 	d := new(Diamond)
+	d.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "Diamond"})
 	d.incoming = make(chan []byte)
 	d.channel = make(chan metric.Metric)
 	d.port = DefaultDiamondCollectorPort
@@ -57,12 +60,12 @@ func (d Diamond) collectDiamond() {
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		log.Fatal("Cannot listen on diamond socket", err)
+		d.log.Fatal("Cannot listen on diamond socket", err)
 	}
 	for {
 		conn, err := l.AcceptTCP()
 		if err != nil {
-			log.Fatal(err)
+			d.log.Fatal(err)
 		}
 		go d.readDiamondMetrics(conn)
 	}
@@ -74,7 +77,7 @@ func (d *Diamond) readDiamondMetrics(conn *net.TCPConn) {
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(time.Second)
 	reader := bufio.NewReader(conn)
-	log.Info("Diamond collector connection started: ", conn.RemoteAddr())
+	d.log.Info("Connection started: ", conn.RemoteAddr())
 	for {
 		// TODO: verify that timeout is actually working.
 		conn.SetDeadline(time.Now().Add(1e9))
@@ -82,10 +85,10 @@ func (d *Diamond) readDiamondMetrics(conn *net.TCPConn) {
 		if err != nil {
 			break
 		}
-		log.Debug("Read from Diamond collector: ", string(line))
+		d.log.Debug("Read: ", string(line))
 		d.incoming <- line
 	}
-	log.Info("Diamond collector connection closed: ", conn.RemoteAddr())
+	d.log.Info("Connection closed: ", conn.RemoteAddr())
 }
 
 // Collect reads metrics collected from Diamond collectors, converts
@@ -94,7 +97,7 @@ func (d *Diamond) Collect() {
 	for line := range d.incoming {
 		var metric metric.Metric
 		if err := json.Unmarshal(line, &metric); err != nil {
-			log.Error("Cannot unmarshal metric line from diamond:", line)
+			d.log.Error("Cannot unmarshal metric line from diamond:", line)
 			continue
 		}
 		metric.AddDimension("diamond", "yes")

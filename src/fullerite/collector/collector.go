@@ -11,7 +11,7 @@ const (
 	DefaultCollectionInterval = 10
 )
 
-var log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector"})
+var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector"})
 
 // Collector defines the interface of a generic collector.
 type Collector interface {
@@ -36,7 +36,7 @@ func New(name string) Collector {
 	case "Diamond":
 		collector = NewDiamond()
 	default:
-		log.Fatal("Cannot create collector", name)
+		defaultLog.Fatal("Cannot create collector", name)
 		return nil
 	}
 	return collector
@@ -47,6 +47,7 @@ type BaseCollector struct {
 	channel  chan metric.Metric
 	name     string
 	interval int64
+	log      *logrus.Entry
 }
 
 // Channel : the channel on which the collector should send metrics

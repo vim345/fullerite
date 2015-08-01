@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -23,6 +24,7 @@ func NewSignalFx() *SignalFx {
 	s := new(SignalFx)
 	s.name = "SignalFx"
 	s.maxBufferSize = DefaultBufferSize
+	s.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "SignalFx"})
 	s.channel = make(chan metric.Metric)
 	return s
 }
@@ -32,12 +34,12 @@ func (s *SignalFx) Configure(config map[string]interface{}) {
 	if authToken, exists := config["authToken"]; exists == true {
 		s.authToken = authToken.(string)
 	} else {
-		log.Error("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
+		s.log.Error("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
 	}
 	if endpoint, exists := config["endpoint"]; exists == true {
 		s.endpoint = endpoint.(string)
 	} else {
-		log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
+		s.log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
 }
 
@@ -48,7 +50,7 @@ func (s *SignalFx) Run() {
 	lastEmission := time.Now()
 	for incomingMetric := range s.Channel() {
 		datapoint := s.convertToProto(&incomingMetric)
-		log.Debug("SignalFx datapoint: ", datapoint)
+		s.log.Debug("SignalFx datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(datapoints) >= s.maxBufferSize {
 			s.emitMetrics(datapoints)
@@ -91,10 +93,10 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 }
 
 func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
-	log.Info("Starting to emit ", len(datapoints), " datapoints")
+	s.log.Info("Starting to emit ", len(datapoints), " datapoints")
 
 	if len(datapoints) == 0 {
-		log.Warn("Skipping send because of an empty payload")
+		s.log.Warn("Skipping send because of an empty payload")
 		return
 	}
 
@@ -102,19 +104,19 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	payload.Datapoints = datapoints
 
 	if s.authToken == "" || s.endpoint == "" {
-		log.Warn("Skipping emission because we're missing the auth token ",
+		s.log.Warn("Skipping emission because we're missing the auth token ",
 			"or the endpoint, payload would have been ", payload)
 		return
 	}
 	serialized, err := proto.Marshal(payload)
 	if err != nil {
-		log.Error("Failed to serailize payload ", payload)
+		s.log.Error("Failed to serailize payload ", payload)
 		return
 	}
 
 	req, err := http.NewRequest("POST", s.endpoint, bytes.NewBuffer(serialized))
 	if err != nil {
-		log.Error("Failed to create a request to endpoint ", s.endpoint)
+		s.log.Error("Failed to create a request to endpoint ", s.endpoint)
 		return
 	}
 	req.Header.Set("X-SF-TOKEN", s.authToken)
@@ -123,19 +125,19 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	client := &http.Client{}
 	rsp, err := client.Do(req)
 	if err != nil {
-		log.Error("Failed to complete POST ", err)
+		s.log.Error("Failed to complete POST ", err)
 		return
 	}
 
 	defer rsp.Body.Close()
 	if rsp.Status != "200 OK" {
 		body, _ := ioutil.ReadAll(rsp.Body)
-		log.Error("Failed to post to signalfx @", s.endpoint,
+		s.log.Error("Failed to post to signalfx @", s.endpoint,
 			" status was ", rsp.Status,
 			" rsp body was ", string(body),
 			" payload was ", payload)
 		return
 	}
 
-	log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
+	s.log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
 }

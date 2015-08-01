@@ -11,7 +11,7 @@ const (
 	DefaultBufferSize = 100
 )
 
-var log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler"})
+var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler"})
 
 // New creates a new Handler based on the requested handler name.
 func New(name string) Handler {
@@ -22,7 +22,7 @@ func New(name string) Handler {
 	case "SignalFx":
 		handler = NewSignalFx()
 	default:
-		log.Fatal("Cannot create handler ", name)
+		defaultLog.Fatal("Cannot create handler ", name)
 		return nil
 	}
 	return handler
@@ -60,6 +60,7 @@ type BaseHandler struct {
 	interval          int
 	source            string
 	defaultDimensions map[string]string
+	log               *logrus.Entry
 }
 
 // Channel : the channel to handler listens for metrics on

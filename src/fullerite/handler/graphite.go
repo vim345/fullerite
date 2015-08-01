@@ -6,6 +6,8 @@ import (
 	"net"
 	"sort"
 	"time"
+
+	"github.com/Sirupsen/logrus"
 )
 
 // Graphite type
@@ -20,6 +22,7 @@ func NewGraphite() *Graphite {
 	g := new(Graphite)
 	g.name = "Graphite"
 	g.maxBufferSize = DefaultBufferSize
+	g.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Graphite"})
 	g.channel = make(chan metric.Metric)
 	return g
 }
@@ -29,12 +32,12 @@ func (g *Graphite) Configure(config map[string]interface{}) {
 	if server, exists := config["server"]; exists == true {
 		g.server = server.(string)
 	} else {
-		log.Error("There was no server specified for the Graphite Handler, there won't be any emissions")
+		g.log.Error("There was no server specified for the Graphite Handler, there won't be any emissions")
 	}
 	if port, exists := config["port"]; exists == true {
 		g.port = port.(string)
 	} else {
-		log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
+		g.log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
 	}
 }
 
@@ -45,7 +48,7 @@ func (g *Graphite) Run() {
 	lastEmission := time.Now()
 	for incomingMetric := range g.Channel() {
 		datapoint := g.convertToGraphite(&incomingMetric)
-		log.Debug("Graphite datapoint: ", datapoint)
+		g.log.Debug("Graphite datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(datapoints) >= g.maxBufferSize {
 			g.emitMetrics(datapoints)
@@ -75,10 +78,10 @@ func (g *Graphite) convertToGraphite(metric *metric.Metric) (datapoint string) {
 }
 
 func (g *Graphite) emitMetrics(datapoints []string) {
-	log.Info("Starting to emit ", len(datapoints), " datapoints")
+	g.log.Info("Starting to emit ", len(datapoints), " datapoints")
 
 	if len(datapoints) == 0 {
-		log.Warn("Skipping send because of an empty payload")
+		g.log.Warn("Skipping send because of an empty payload")
 		return
 	}
 
