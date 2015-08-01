@@ -18,7 +18,7 @@ const (
 
 var log = logrus.WithFields(logrus.Fields{"app": "fullerite"})
 
-func init_logrus(ctx *cli.Context) {
+func initLogrus(ctx *cli.Context) {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		TimestampFormat: time.RFC822,
 		FullTimestamp:   true,
@@ -76,10 +76,13 @@ func main() {
 }
 
 func start(ctx *cli.Context) {
-	init_logrus(ctx)
+	initLogrus(ctx)
 	log.Info("Starting fullerite...")
 
-	c := readConfig(ctx.String("config"))
+	c, err := readConfig(ctx.String("config"))
+	if err != nil {
+		return
+	}
 	collectors := startCollectors(c)
 	handlers := startHandlers(c)
 	metrics := make(chan metric.Metric)

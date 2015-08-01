@@ -16,12 +16,13 @@ type Config struct {
 	DefaultDimensions     map[string]string                 `json:"defaultDimensions"`
 }
 
-func readConfig(configFile string) (c Config) {
+func readConfig(configFile string) (c Config, e error) {
 	log.Info("Reading configuration file at ", configFile)
 	contents, e := ioutil.ReadFile(configFile)
 	if e != nil {
-		log.Fatal("Config file error: ", e)
+		log.Error("Config file error: ", e)
+		return c, e
 	}
 	json.Unmarshal(contents, &c)
-	return c
+	return c, nil
 }
