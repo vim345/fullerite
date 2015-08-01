@@ -16,7 +16,7 @@ export GOPATH
 PATH := bin:$(PATH)
 export PATH
 
-all: clean fmt lint $(PROG)
+all: clean fmt lint $(PROG) test
 
 .PHONY: clean
 clean:

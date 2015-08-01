@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var testConfiguration string = `{
+var testConfiguration = `{
     "prefix": "test.",
     "interval": 10,
     "defaultDimensions": {
