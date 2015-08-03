@@ -8,7 +8,7 @@ fullerite is also able to run diamond collectors natively. This means you don't 
 
 # supported collectors
  * [fullerite collectors](src/fullerite/collector)
- * [diamond collectors](src/diamond/collectors): fullerite natively supports diamond collectors.
+ * [diamond collectors](src/diamond/collectors): fullerite natively supports [Diamond](https://github.com/python-diamond/Diamond) collectors.
 
 # supported handlers
  * [Graphite](http://graphite.wikidot.com/)
