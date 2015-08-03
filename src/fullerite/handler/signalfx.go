@@ -153,6 +153,6 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	s.log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
 }
 
-func (s SignalFx) dialTimeout(network, addr string) (net.Conn, error) {
+func (s *SignalFx) dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, s.timeout)
 }

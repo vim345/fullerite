@@ -52,7 +52,7 @@ func (g *Graphite) Run() {
 
 	lastEmission := time.Now()
 	for incomingMetric := range g.Channel() {
-		datapoint := g.convertToGraphite(&incomingMetric)
+		datapoint := g.convertToGraphite(incomingMetric)
 		g.log.Debug("Graphite datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(datapoints) >= g.maxBufferSize {
@@ -63,7 +63,7 @@ func (g *Graphite) Run() {
 	}
 }
 
-func (g *Graphite) convertToGraphite(incomingMetric *metric.Metric) (datapoint string) {
+func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint string) {
 	//orders dimensions so datapoint keeps consistent name
 	var keys []string
 	dimensions := incomingMetric.GetDimensions(g.DefaultDimensions())

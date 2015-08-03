@@ -43,3 +43,13 @@ func (m *Metric) GetDimensions(defaults map[string]string) (dimensions map[strin
 	}
 	return dimensions
 }
+
+// GetDimensionValue returns the value of a dimension if it's set.
+func (m *Metric) GetDimensionValue(dimension string, defaults map[string]string) (value string, ok bool) {
+	for name, value := range m.GetDimensions(defaults) {
+		if name == dimension {
+			return value, true
+		}
+	}
+	return "", false
+}
