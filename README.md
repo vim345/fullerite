@@ -8,8 +8,11 @@ fullerite is also able to run diamond collectors natively. This means you don't 
 
 # supported collectors
  * [fullerite collectors](src/fullerite/collector)
- * [diamond collectors](src/diamond/collectors)
+ * [diamond collectors](src/diamond/collectors): fullerite natively supports diamond collectors.
 
 # supported handlers
- * [fullerite handlers](src/fullerite/handler)
+ * [Graphite](http://graphite.wikidot.com/)
+ * [Signalfx](https://www.signalfx.com)
+ * [Datadog](https://www.datadoghq.com)
+
 
