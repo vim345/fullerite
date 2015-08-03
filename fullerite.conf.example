@@ -34,6 +34,12 @@
             "endpoint": "https://ingest.signalfx.com/v2/datapoint",
             "interval": 10,
             "timeout": 2
+        },
+        "Datadog": {
+            "apiKey": "secret_key",
+            "endpoint": "https://app.datadoghq.com/api/v1",
+            "interval": 10,
+            "timeout": 2
         }
     }
 }

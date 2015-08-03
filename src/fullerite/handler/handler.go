@@ -23,6 +23,8 @@ func New(name string) Handler {
 		handler = NewGraphite()
 	case "SignalFx":
 		handler = NewSignalFx()
+	case "Datadog":
+		handler = NewDatadog()
 	default:
 		defaultLog.Fatal("Cannot create handler ", name)
 		return nil
