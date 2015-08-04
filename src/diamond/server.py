@@ -92,10 +92,17 @@ class Server(object):
 
                 running_collectors = []
                 for collector, config in self.config['diamond_collectors'].iteritems():
-                    # Inject 'enabled' key to be compatible with
+                    # Inject keys to collector's configuration.
+                    #
+                    # "enabled" is requied to be compatible with
                     # diamond configuration. There are collectors that
                     # check if they are enabled.
+                    #
+                    # We use "fullerite_port" in collectors to connect
+                    # to the running fullerite instance.
                     config['enabled'] = True
+                    config['fullerite_port'] = self.config['fullerite_port']
+
                     running_collectors.append(collector)
                 running_collectors = set(running_collectors)
                 self.log.debug("Running collectors: %s" % running_collectors)
