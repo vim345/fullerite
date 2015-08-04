@@ -18,7 +18,7 @@ export PYTHONPATH
 
 ARGS="$@"
 if [ -z "${ARGS}" ]; then
-    ARGS="${EXAMPLE_CONFIG}"
+    ARGS="-c ${EXAMPLE_CONFIG}"
 fi
 
 exec $PYTHON ${DIAMOND_SERVER} ${ARGS}

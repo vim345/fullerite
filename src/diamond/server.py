@@ -3,6 +3,7 @@
 import logging
 import json
 import multiprocessing
+import optparse
 import os
 import signal
 import sys
@@ -167,7 +168,21 @@ class Server(object):
                     self.config['diamond_collectors_path'])
 
 
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-c", "--config-file", dest="config_file",
+                      help="Fullerite configuration file", metavar="FILE")
+    parser.add_option("-d", "--debug",
+                      action="store_true", dest="debug", default=False,
+                      help="Enable debug logs")
+    (options, args) = parser.parse_args()
+
+    if options.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    Server(options.config_file).run()
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    config_file = sys.argv[1]
-    Server(config_file).run()
+    main()
