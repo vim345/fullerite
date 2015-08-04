@@ -1,5 +1,5 @@
 PROG           := fullerite
-VERSION        := 0.0.2
+VERSION        := 0.0.3
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
