@@ -139,7 +139,7 @@ func (d *Datadog) emitMetrics(series []datadogMetric) {
 		d.log.Error("Failed to post to Datadog @", d.endpoint,
 			" status was ", rsp.Status,
 			" rsp body was ", string(body),
-			" payload was ", payload)
+			" payload was ", string(payload))
 		return
 	}
 
