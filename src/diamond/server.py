@@ -92,8 +92,10 @@ class Server(object):
 
                 running_collectors = []
                 for collector, config in self.config['diamond_collectors'].iteritems():
-                    if config.get('enabled', False) is not True:
-                        continue
+                    # Inject 'enabled' key to be compatible with
+                    # diamond configuration. There are collectors that
+                    # check if they are enabled.
+                    config['enabled'] = True
                     running_collectors.append(collector)
                 running_collectors = set(running_collectors)
                 self.log.debug("Running collectors: %s" % running_collectors)
