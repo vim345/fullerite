@@ -81,4 +81,4 @@ package: clean $(FULLERITE) $(BEATIT)
 	@cp bin/run-* build/usr/bin/
 	@cp fullerite.conf.example build/etc/
 	@cp -r src/diamond build/usr/share/fullerite/diamond
-	@fpm -s dir -t deb --name $(FULLERITE) --version $(VERSION) --depends python -C build .
+	@fpm -s dir -t deb --name $(FULLERITE) --version $(VERSION) --description "metrics collector" --depends python -C build .
