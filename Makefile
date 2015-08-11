@@ -1,6 +1,6 @@
 FULLERITE      := fullerite
 BEATIT         := beatit
-VERSION        := 0.0.4
+VERSION        := 0.0.5
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
@@ -73,7 +73,7 @@ cyclo: $(SOURCES)
 	@bin/gocyclo $(SOURCES)
 
 pkg: package
-package: clean $(FULLERITE)
+package: clean $(FULLERITE) $(BEATIT)
 	@echo Packaging...
 	@mkdir -p build/usr/bin build/usr/share/fullerite build/etc
 	@cp bin/fullerite build/usr/bin/
