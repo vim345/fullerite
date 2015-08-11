@@ -2,11 +2,12 @@ package main
 
 import (
 	"fullerite/collector"
+	"fullerite/config"
 	"fullerite/metric"
 	"time"
 )
 
-func startCollectors(c Config) (collectors []collector.Collector) {
+func startCollectors(c config.Config) (collectors []collector.Collector) {
 	log.Info("Starting collectors...")
 	for name, config := range c.Collectors {
 		collectors = append(collectors, startCollector(name, config))

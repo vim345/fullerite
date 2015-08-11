@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 
 	"os"
@@ -94,7 +95,7 @@ func start(ctx *cli.Context) {
 	initLogrus(ctx)
 	log.Info("Starting fullerite...")
 
-	c, err := readConfig(ctx.String("config"))
+	c, err := config.ReadConfig(ctx.String("config"))
 	if err != nil {
 		return
 	}

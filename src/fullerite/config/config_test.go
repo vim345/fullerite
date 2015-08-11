@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"io/ioutil"
@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseExampleConfig(t *testing.T) {
-	_, err := readConfig(tmpTestFile)
+	_, err := ReadConfig(tmpTestFile)
 	if err != nil {
 		t.Fail()
 	}

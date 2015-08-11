@@ -1,11 +1,12 @@
 package main
 
 import (
+	"fullerite/config"
 	"fullerite/handler"
 	"fullerite/metric"
 )
 
-func startHandlers(c Config) (handlers []handler.Handler) {
+func startHandlers(c config.Config) (handlers []handler.Handler) {
 	log.Info("Starting handlers...")
 	for name, config := range c.Handlers {
 		handlers = append(handlers, startHandler(name, c, config))
@@ -13,7 +14,7 @@ func startHandlers(c Config) (handlers []handler.Handler) {
 	return handlers
 }
 
-func startHandler(name string, globalConfig Config, config map[string]interface{}) handler.Handler {
+func startHandler(name string, globalConfig config.Config, config map[string]interface{}) handler.Handler {
 	log.Debug("Starting handler ", name)
 	handler := handler.New(name)
 
