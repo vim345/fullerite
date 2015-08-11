@@ -1,12 +1,14 @@
-PROG           := fullerite
+FULLERITE      := fullerite
+BEATIT         := beatit
 VERSION        := 0.0.3
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
-PKGS           := $(PROG) $(PROG)/metric $(PROG)/handler $(PROG)/collector
+PKGS           := $(FULERITE) $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector
 SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
+
 
 
 # symlinks confuse go tools, let's not mess with it and use -L
@@ -16,35 +18,40 @@ export GOPATH
 PATH := bin:$(PATH)
 export PATH
 
-all: clean fmt lint $(PROG) test
+all: clean fmt lint $(FULLERITE) $(BEATIT) test
 
 .PHONY: clean
 clean:
-	@echo Cleaning $(PROG)...
-	@rm -f $(PROG) bin/$(PROG)
-	@rm -rf pkg/*/$(PROG)
+	@echo Cleaning $(FULLERITE)...
+	@rm -f $(FULLERITE) bin/$(FULLERITE)
+	@rm -f $(BEATIT) bin/$(BEATIT)
+	@rm -rf pkg/*/$(FULLERITE)
 	@rm -rf build fullerite*.deb
 # Let's keep the generated file in the repo for ease of development.
 #	@rm -f $(GEN_PROTO_SFX)
 
 deps:
 	@echo Getting dependencies...
-	@go get $(PROG)
+	@go get $(FULLERITE)
 
-$(PROG): $(SOURCES) deps
-	@echo Building $(PROG)...
-	@go build -o bin/$(PROG) $@
+$(FULLERITE): $(SOURCES) deps
+	@echo Building $(FULLERITE)...
+	@go build -o bin/$(FULLERITE) $@
+
+$(BEATIT): $(BEATIT_SOURCES)
+	@echo Building $(BEATIT)...
+	@go build -o bin/$(BEATIT) $@
 
 test: tests
 tests: deps
-	@echo Testing $(PROG)
-	@go test $(PROG)
+	@echo Testing $(FULLERITE)
+	@go test $(FULLERITE)
 
 fmt: $(SOURCES)
 	@$(foreach pkg, $(PKGS), go fmt $(pkg);)
 
 vet: $(SOURCES)
-	@echo Vetting $(PROG) sources...
+	@echo Vetting $(FULLERITE) sources...
 	@go get -d -u golang.org/x/tools/cmd/vet
 	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
@@ -56,7 +63,7 @@ protobuf: $(PROTO_SFX)
 	@protoc --go_out=. $(PROTO_SFX)
 
 lint: $(SOURCES)
-	@echo Linting $(PROG) sources...
+	@echo Linting $(FULLERITE) sources...
 	@go get -u github.com/golang/lint/golint
 	@$(foreach src, $(SOURCES), bin/golint $(src);)
 
@@ -66,11 +73,11 @@ cyclo: $(SOURCES)
 	@bin/gocyclo $(SOURCES)
 
 pkg: package
-package: clean $(PROG)
+package: clean $(FULLERITE)
 	@echo Packaging...
 	@mkdir -p build/usr/bin build/usr/share/fullerite build/etc
 	@cp bin/fullerite build/usr/bin/
 	@cp bin/run-* build/usr/bin/
 	@cp fullerite.conf.example build/etc/
 	@cp -r src/diamond build/usr/share/fullerite/diamond
-	@fpm -s dir -t deb --name $(PROG) --version $(VERSION) --depends python -C build .
+	@fpm -s dir -t deb --name $(FULLERITE) --version $(VERSION) --depends python -C build .
