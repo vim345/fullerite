@@ -5,7 +5,7 @@ SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
-PKGS           := $(FULERITE) $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector
+PKGS           := $(FULERITE) $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector $(FULLERITE)/config
 SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
 
@@ -45,7 +45,7 @@ $(BEATIT): $(BEATIT_SOURCES)
 test: tests
 tests: deps
 	@echo Testing $(FULLERITE)
-	@go test $(FULLERITE)
+	@$(foreach pkg, $(PKGS), go test $(pkg);)
 
 fmt: $(SOURCES)
 	@$(foreach pkg, $(PKGS), go fmt $(pkg);)
