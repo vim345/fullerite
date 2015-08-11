@@ -1,6 +1,6 @@
 FULLERITE      := fullerite
 BEATIT         := beatit
-VERSION        := 0.0.3
+VERSION        := 0.0.4
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
@@ -77,6 +77,7 @@ package: clean $(FULLERITE)
 	@echo Packaging...
 	@mkdir -p build/usr/bin build/usr/share/fullerite build/etc
 	@cp bin/fullerite build/usr/bin/
+	@cp bin/beatit build/usr/bin/
 	@cp bin/run-* build/usr/bin/
 	@cp fullerite.conf.example build/etc/
 	@cp -r src/diamond build/usr/share/fullerite/diamond
