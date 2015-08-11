@@ -61,7 +61,9 @@ func (d *Datadog) Configure(config map[string]interface{}) {
 	if timeout, exists := config["timeout"]; exists == true {
 		d.timeout = time.Duration(timeout.(float64)) * time.Second
 	}
-	d.log.Info("timeout is ", d.timeout)
+	if bufferSize, exists := config["max_buffer_size"]; exists == true {
+		d.maxBufferSize = int(bufferSize.(float64))
+	}
 }
 
 // Run runs the Datadog handler

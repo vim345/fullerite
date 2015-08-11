@@ -43,7 +43,9 @@ func (g *Graphite) Configure(config map[string]interface{}) {
 	if timeout, exists := config["timeout"]; exists == true {
 		g.timeout = time.Duration(timeout.(float64)) * time.Second
 	}
-	g.log.Info("timeout is ", g.timeout)
+	if bufferSize, exists := config["max_buffer_size"]; exists == true {
+		g.maxBufferSize = int(bufferSize.(float64))
+	}
 }
 
 // Run sends metrics in the channel to the graphite server.

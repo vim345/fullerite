@@ -46,7 +46,9 @@ func (s *SignalFx) Configure(config map[string]interface{}) {
 	if timeout, exists := config["timeout"]; exists == true {
 		s.timeout = time.Duration(timeout.(float64)) * time.Second
 	}
-	s.log.Info("timeout is ", s.timeout)
+	if bufferSize, exists := config["max_buffer_size"]; exists == true {
+		s.maxBufferSize = int(bufferSize.(float64))
+	}
 }
 
 // Run send metrics in the channel to SignalFx.

@@ -28,18 +28,21 @@
         "Graphite": {
             "server": "10.40.11.51",
             "port": "2003",
+            "max_buffer_size": 300,
             "timeout": 2
         },
         "SignalFx": {
             "authToken": "secret_token",
             "endpoint": "https://ingest.signalfx.com/v2/datapoint",
             "interval": 10,
+            "max_buffer_size": 300,
             "timeout": 2
         },
         "Datadog": {
             "apiKey": "secret_key",
             "endpoint": "https://app.datadoghq.com/api/v1",
             "interval": 10,
+            "max_buffer_size": 300,
             "timeout": 2
         }
     }
