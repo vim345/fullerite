@@ -2,6 +2,7 @@ bin/fullerite
 bin/vet
 bin/golint
 bin/gocyclo
+bin/beatit
 pkg/*
 src/github.com/*
 src/golang.org/*

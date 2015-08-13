@@ -34,7 +34,7 @@
         "SignalFx": {
             "authToken": "secret_token",
             "endpoint": "https://ingest.signalfx.com/v2/datapoint",
-            "interval": 10,
+            "interval": "10",
             "max_buffer_size": 300,
             "timeout": 2
         },

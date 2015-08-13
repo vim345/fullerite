@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -30,4 +31,34 @@ func ReadConfig(configFile string) (c Config, e error) {
 	}
 	json.Unmarshal(contents, &c)
 	return c, nil
+}
+
+// GetAsFloat parses a string to a float or returns the float if float is passed in
+func GetAsFloat(value interface{}) (result float64, err error) {
+	err = nil
+
+	switch value.(type) {
+	case string:
+		result, err = strconv.ParseFloat(value.(string), 64)
+	case float64:
+		result = value.(float64)
+	}
+
+	return
+}
+
+// GetAsInt parses a string/float to an int or returns the int if int is passed in
+func GetAsInt(value interface{}) (result int, err error) {
+	err = nil
+	var somethingelse int64
+	switch value.(type) {
+	case string:
+		somethingelse, err = strconv.ParseInt(value.(string), 10, 64)
+	case int64:
+		somethingelse = value.(int64)
+	case float64:
+		somethingelse = int64(value.(float64))
+	}
+	result = int(somethingelse)
+	return
 }

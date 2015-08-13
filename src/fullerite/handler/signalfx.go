@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 
 	"bytes"
@@ -32,22 +33,32 @@ func NewSignalFx() *SignalFx {
 }
 
 // Configure accepts the different configuration options for the signalfx handler
-func (s *SignalFx) Configure(config map[string]interface{}) {
-	if authToken, exists := config["authToken"]; exists == true {
+func (s *SignalFx) Configure(configMap map[string]interface{}) {
+	if authToken, exists := configMap["authToken"]; exists == true {
 		s.authToken = authToken.(string)
 	} else {
 		s.log.Error("There was no auth key specified for the SignalFx Handler, there won't be any emissions")
 	}
-	if endpoint, exists := config["endpoint"]; exists == true {
+	if endpoint, exists := configMap["endpoint"]; exists == true {
 		s.endpoint = endpoint.(string)
 	} else {
 		s.log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
-	if timeout, exists := config["timeout"]; exists == true {
-		s.timeout = time.Duration(timeout.(float64)) * time.Second
+	if timeout, exists := configMap["timeout"]; exists == true {
+		val, err := config.GetAsFloat(timeout)
+		if err != nil {
+			s.log.Error("Failed to parse the value", timeout, "into a float")
+		} else {
+			s.timeout = time.Duration(val) * time.Second
+		}
 	}
-	if bufferSize, exists := config["max_buffer_size"]; exists == true {
-		s.maxBufferSize = int(bufferSize.(float64))
+	if bufferSize, exists := configMap["max_buffer_size"]; exists == true {
+		val, err := config.GetAsInt(bufferSize)
+		if err != nil {
+			s.log.Error("Failed to parse the value", bufferSize, "into an int")
+		} else {
+			s.maxBufferSize = val
+		}
 	}
 }
 

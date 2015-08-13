@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var testConfiguration = `{
@@ -63,4 +65,45 @@ func TestParseExampleConfig(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+}
+
+func TestGetInt(t *testing.T) {
+	val, err := GetAsInt("10")
+	assert.Equal(t, val, 10)
+	assert.Nil(t, err)
+
+	val, err = GetAsInt("notanint")
+	assert.Nil(t, val)
+	assert.NotNil(t, err)
+
+	val, err = GetAsInt(12)
+	assert.Equal(t, val, 12)
+	assert.Nil(t, err)
+
+	val, err = GetAsInt(12.123)
+	assert.Equal(t, val, 12)
+	assert.Nil(t, err)
+
+	var asint int
+	asint, err = GetAsInt(12)
+	assert.Equal(t, asint, 12)
+	assert.Nil(t, err)
+}
+
+func TestGetFloat(t *testing.T) {
+	val, err := GetAsFloat("10")
+	assert.Equal(t, val, 10)
+	assert.Nil(t, err)
+
+	val, err = GetAsFloat("10.21")
+	assert.Equal(t, val, 10.21)
+	assert.Nil(t, err)
+
+	val, err = GetAsFloat("notanint")
+	assert.Nil(t, val)
+	assert.NotNil(t, err)
+
+	val, err = GetAsFloat(12.123)
+	assert.Equal(t, val, 12)
+	assert.Nil(t, err)
 }
