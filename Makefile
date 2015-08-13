@@ -5,7 +5,7 @@ SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
-PKGS           := $(FULERITE) $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector $(FULLERITE)/config
+PKGS           := $(FULLERITE) $(BEATIT) $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector $(FULLERITE)/config
 SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
 
@@ -32,7 +32,7 @@ clean:
 
 deps:
 	@echo Getting dependencies...
-	@go get $(FULLERITE)
+	@$(foreach pkg, $(PKGS), go get -t $(pkg);)
 
 $(FULLERITE): $(SOURCES) deps
 	@echo Building $(FULLERITE)...

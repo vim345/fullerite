@@ -23,18 +23,18 @@ const (
 
 var log = logrus.WithFields(logrus.Fields{"app": "fullerite"})
 
-func generateMetrics(prefix string, num_metrics, dps int, randomize bool) (metrics []metric.Metric) {
+func generateMetrics(prefix string, numMetrics, dps int, randomize bool) (metrics []metric.Metric) {
 	if randomize {
 		rand.Seed(time.Now().Unix())
 	}
-	dps_per_metric := dps / num_metrics
-	for i := 0; i < num_metrics; i++ {
+	dpsPerMetric := dps / numMetrics
+	for i := 0; i < numMetrics; i++ {
 		suffix := int64(i)
 		if randomize {
 			suffix = rand.Int63()
 		}
 		name := fmt.Sprintf("%s_%d", prefix, suffix)
-		for j := 0; j < dps_per_metric; j++ {
+		for j := 0; j < dpsPerMetric; j++ {
 			m := metric.New(name)
 			m.Value = rand.Float64()
 			m.AddDimension("application", "beatit")
