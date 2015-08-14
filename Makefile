@@ -78,7 +78,20 @@ package: clean $(FULLERITE) $(BEATIT)
 	@mkdir -p build/usr/bin build/usr/share/fullerite build/etc
 	@cp bin/fullerite build/usr/bin/
 	@cp bin/beatit build/usr/bin/
-	@cp bin/run-* build/usr/bin/
+	@cp deb/bin/run-* build/usr/bin/
 	@cp fullerite.conf.example build/etc/
 	@cp -r src/diamond build/usr/share/fullerite/diamond
-	@fpm -s dir -t deb --name $(FULLERITE) --version $(VERSION) --description "metrics collector" --depends python -C build .
+	@fpm -s dir \
+		-t deb \
+		--name $(FULLERITE) \
+		--version $(VERSION) \
+		--description "metrics collector" \
+		--depends python \
+		--deb-user "fullerite" \
+		--deb-group "fullerite" \
+		--deb-default "deb/etc/fullerite" \
+		--deb-upstart "deb/etc/init/fullerite" \
+		--deb-upstart "deb/etc/init/fullerite_diamond_server" \
+		--before-install "deb/before_install.sh" \
+		--after-remove "deb/after_rm.sh" \
+		-C build .
