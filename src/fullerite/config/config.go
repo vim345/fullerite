@@ -29,7 +29,11 @@ func ReadConfig(configFile string) (c Config, e error) {
 		log.Error("Config file error: ", e)
 		return c, e
 	}
-	json.Unmarshal(contents, &c)
+	err := json.Unmarshal(contents, &c)
+	if err != nil {
+    		log.Error("Invalid JSON in config: ", err)
+		return c, err
+	}
 	return c, nil
 }
 
