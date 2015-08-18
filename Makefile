@@ -8,6 +8,7 @@ GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
 PKGS           := $(FULLERITE) $(BEATIT) $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector $(FULLERITE)/config
 SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
+OS	       := $(shell /usr/bin/lsb_release -si)
 
 
 
@@ -26,7 +27,7 @@ clean:
 	@rm -f $(FULLERITE) bin/$(FULLERITE)
 	@rm -f $(BEATIT) bin/$(BEATIT)
 	@rm -rf pkg/*/$(FULLERITE)
-	@rm -rf build fullerite*.deb
+	@rm -rf build fullerite*.deb fullerite*.rpm
 # Let's keep the generated file in the repo for ease of development.
 #	@rm -f $(GEN_PROTO_SFX)
 
@@ -74,13 +75,14 @@ cyclo: $(SOURCES)
 
 pkg: package
 package: clean $(FULLERITE) $(BEATIT)
-	@echo Packaging...
+	@echo Packaging for $(OS)
 	@mkdir -p build/usr/bin build/usr/share/fullerite build/etc
 	@cp bin/fullerite build/usr/bin/
 	@cp bin/beatit build/usr/bin/
 	@cp deb/bin/run-* build/usr/bin/
 	@cp fullerite.conf.example build/etc/
 	@cp -r src/diamond build/usr/share/fullerite/diamond
+ifeq ($(OS),Ubuntu)
 	@fpm -s dir \
 		-t deb \
 		--name $(FULLERITE) \
@@ -95,3 +97,21 @@ package: clean $(FULLERITE) $(BEATIT)
 		--before-install "deb/before_install.sh" \
 		--after-remove "deb/after_rm.sh" \
 		-C build .
+# CentOS 7 Only
+else ifeq ($(OS),CentOS)
+	@fpm -s dir \
+		-t rpm \
+		--name $(FULLERITE) \
+		--version $(VERSION) \
+		--description "metrics collector" \
+		--depends python \
+		--rpm-user "fullerite" \
+		--rpm-group "fullerite" \
+                --before-install "rpm/before_install.sh" \
+		--after-remove "rpm/after_rm.sh" \
+		-C build . \
+		../rpm/fullerite.systemd=/etc/systemd/system/fullerite.service \
+                ../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
+else 
+	@echo "OS not supported"
+endif
