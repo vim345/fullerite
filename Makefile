@@ -1,6 +1,6 @@
 FULLERITE      := fullerite
 BEATIT         := beatit
-VERSION        := 0.0.8
+VERSION        := 0.0.9
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
@@ -112,6 +112,6 @@ else ifeq ($(OS),CentOS)
 		-C build . \
 		../rpm/fullerite.systemd=/etc/systemd/system/fullerite.service \
                 ../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
-else 
+else
 	@echo "OS not supported"
 endif
