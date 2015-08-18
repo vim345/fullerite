@@ -10,13 +10,13 @@ LOG_FILE="/var/log/fullerite/fullerite.log"
 ERR_LOG_FILE="/var/log/fullerite/fullerite.err"
 LOG_LEVEL="info"
 
-if [ -e "/etc/defaults/fullerite" ]; then
-  . /etc/defaults/fullerite
+if [ -e "/etc/default/fullerite" ]; then
+  . /etc/default/fullerite
 fi
 
 sudo -u "$USER" /usr/bin/fullerite \
   --config "$CONFIG_FILE" \
-  --log_file "$LOG_FILE"
+  --log_file "$LOG_FILE" \
   --log_level "$LOG_LEVEL" 2>&1 | \
   sudo -u "$USER" tee --append "$ERR_LOG_FILE"
 end script
