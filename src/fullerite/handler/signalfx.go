@@ -101,9 +101,15 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 
 	dimensions := incomingMetric.GetDimensions(s.DefaultDimensions())
 	for key, value := range dimensions {
+		// Dimension (protobuf) require a pointer to string
+		// values. We need to create new string objects in the
+		// scope of this for loop not to repeatedly add the
+		// same key:value pairs to the the datapoint.
+		dimensionKey := key
+		dimensionValue := value
 		dim := Dimension{
-			Key:   &key,
-			Value: &value,
+			Key:   &dimensionKey,
+			Value: &dimensionValue,
 		}
 		datapoint.Dimensions = append(datapoint.Dimensions, &dim)
 	}
