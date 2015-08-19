@@ -1,10 +1,10 @@
 #!/bin/bash
 
-USER="fullerite"
+service 'fullerite' stop
+service 'fullerite_diamond_server' stop
 
-id $USER > /dev/null 2>&1
-if [ $? = 0 ]; then
-  userdel $USER
+if [ "$(id 'fullerite')" ]; then
+  userdel 'fullerite'
 fi
 
 rm -rf /var/log/fullerite
