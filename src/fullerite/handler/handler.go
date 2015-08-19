@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 	"time"
 
@@ -9,8 +10,9 @@ import (
 
 // Some sane values to default things to
 const (
-	DefaultBufferSize        = 100
-	DefaultHandlerTimeoutSec = 2
+	DefaultBufferSize = 100
+	DefaultTimeoutSec = 2
+	DefaultInterval   = 10
 )
 
 var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler"})
@@ -66,6 +68,21 @@ type BaseHandler struct {
 	source            string
 	defaultDimensions map[string]string
 	log               *logrus.Entry
+}
+
+func (handler *BaseHandler) ConfigureCommonParams(configMap *map[string]interface{}) {
+	if asInterface, exists := (*configMap)["timeout"]; exists == true {
+		timeout := config.GetAsFloat(asInterface, DefaultTimeoutSec)
+		handler.timeout = time.Duration(timeout) * time.Second
+	}
+
+	if asInterface, exists := (*configMap)["max_buffer_size"]; exists == true {
+		handler.maxBufferSize = config.GetAsInt(asInterface, DefaultBufferSize)
+	}
+
+	if asInterface, exists := (*configMap)["interval"]; exists == true {
+		handler.interval = config.GetAsInt(asInterface, DefaultInterval)
+	}
 }
 
 // Channel : the channel to handler listens for metrics on

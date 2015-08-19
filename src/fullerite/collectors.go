@@ -10,17 +10,23 @@ import (
 func startCollectors(c config.Config) (collectors []collector.Collector) {
 	log.Info("Starting collectors...")
 	for name, config := range c.Collectors {
-		collectors = append(collectors, startCollector(name, config))
+		collectors = append(collectors, startCollector(name, c, config))
 	}
 	return collectors
 }
 
-func startCollector(name string, config map[string]interface{}) collector.Collector {
+func startCollector(name string, globalConfig config.Config, instanceConfig map[string]interface{}) collector.Collector {
 	log.Debug("Starting collector ", name)
-	collector := collector.New(name)
-	collector.Configure(config)
-	go runCollector(collector)
-	return collector
+	collectorInst := collector.New(name)
+
+	// apply the global configs
+	collectorInst.SetInterval(config.GetAsInt(globalConfig.Interval, collector.DefaultCollectionInterval))
+
+	// apply the instance configs
+	collectorInst.Configure(instanceConfig)
+
+	go runCollector(collectorInst)
+	return collectorInst
 }
 
 func runCollector(collector collector.Collector) {

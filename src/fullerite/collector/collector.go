@@ -21,8 +21,8 @@ type Collector interface {
 	// taken care of by the base class
 	Name() string
 	Channel() chan metric.Metric
-	Interval() int64
-	SetInterval(int64)
+	Interval() int
+	SetInterval(int)
 }
 
 // New creates a new Collector based on the requested collector name.
@@ -46,7 +46,7 @@ func New(name string) Collector {
 type BaseCollector struct {
 	channel  chan metric.Metric
 	name     string
-	interval int64
+	interval int
 	log      *logrus.Entry
 }
 
@@ -61,12 +61,12 @@ func (collector *BaseCollector) Name() string {
 }
 
 // Interval : the interval to collect the metrics on
-func (collector *BaseCollector) Interval() int64 {
+func (collector *BaseCollector) Interval() int {
 	return collector.interval
 }
 
 // SetInterval : set the interval to collect on
-func (collector *BaseCollector) SetInterval(interval int64) {
+func (collector *BaseCollector) SetInterval(interval int) {
 	collector.interval = interval
 }
 

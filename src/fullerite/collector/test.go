@@ -1,7 +1,9 @@
 package collector
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
+
 	"math/rand"
 
 	"github.com/Sirupsen/logrus"
@@ -25,12 +27,12 @@ func NewTest() *Test {
 }
 
 // Configure this takes a dictionary of values with which the handler can configure itself
-func (t *Test) Configure(config map[string]interface{}) {
-	if metricName, exists := config["metricName"]; exists == true {
+func (t *Test) Configure(configMap map[string]interface{}) {
+	if metricName, exists := configMap["metricName"]; exists == true {
 		t.metricName = metricName.(string)
 	}
-	if interval, exists := config["interval"]; exists == true {
-		t.interval = int64(interval.(float64))
+	if interval, exists := configMap["interval"]; exists == true {
+		t.interval = config.GetAsInt(interval, DefaultCollectionInterval)
 	}
 }
 

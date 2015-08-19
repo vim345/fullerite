@@ -40,7 +40,7 @@ func NewDatadog() *Datadog {
 	d := new(Datadog)
 	d.name = "Datadog"
 	d.maxBufferSize = DefaultBufferSize
-	d.timeout = time.Duration(DefaultHandlerTimeoutSec * time.Second)
+	d.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	d.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Datadog"})
 	d.channel = make(chan metric.Metric)
 	return d

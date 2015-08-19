@@ -13,7 +13,7 @@ var log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "config"})
 // Config type holds the global Fullerite configuration.
 type Config struct {
 	Prefix                string                            `json:"prefix"`
-	Interval              int                               `json:"interval"`
+	Interval              interface{}                       `json:"interval"`
 	DiamondCollectorsPath string                            `json:"diamond_collectors_path"`
 	DiamondCollectors     map[string]map[string]interface{} `json:"diamond_collectors"`
 	Handlers              map[string]map[string]interface{} `json:"handlers"`
@@ -34,12 +34,18 @@ func ReadConfig(configFile string) (c Config, e error) {
 }
 
 // GetAsFloat parses a string to a float or returns the float if float is passed in
-func GetAsFloat(value interface{}) (result float64, err error) {
-	err = nil
+func GetAsFloat(value interface{}, defaultValue float64) (result float64) {
+	result = defaultValue
 
 	switch value.(type) {
 	case string:
-		result, err = strconv.ParseFloat(value.(string), 64)
+		fromString, err := strconv.ParseFloat(value.(string), 64)
+		if err != nil {
+			log.Warn("Failed to convert value", value, "to a float64. Falling back to default", defaultValue)
+			result = defaultValue
+		} else {
+			result = fromString
+		}
 	case float64:
 		result = value.(float64)
 	}
@@ -48,17 +54,26 @@ func GetAsFloat(value interface{}) (result float64, err error) {
 }
 
 // GetAsInt parses a string/float to an int or returns the int if int is passed in
-func GetAsInt(value interface{}) (result int, err error) {
-	err = nil
-	var somethingelse int64
+func GetAsInt(value interface{}, defaultValue int) (result int) {
+	result = defaultValue
+
 	switch value.(type) {
 	case string:
-		somethingelse, err = strconv.ParseInt(value.(string), 10, 64)
+		fromString, err := strconv.ParseInt(value.(string), 10, 64)
+		if err == nil {
+			result = int(fromString)
+		} else {
+			log.Warn("Failed to convert value", value, "to an int")
+		}
+	case int:
+		result = value.(int)
+	case int32:
+		result = int(value.(int32))
 	case int64:
-		somethingelse = value.(int64)
+		result = int(value.(int64))
 	case float64:
-		somethingelse = int64(value.(float64))
+		result = int(value.(float64))
 	}
-	result = int(somethingelse)
+
 	return
 }

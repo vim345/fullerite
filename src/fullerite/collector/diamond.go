@@ -1,9 +1,11 @@
 package collector
 
 import (
+	"fullerite/config"
+	"fullerite/metric"
+
 	"bufio"
 	"encoding/json"
-	"fullerite/metric"
 	"net"
 	"time"
 
@@ -36,12 +38,12 @@ func NewDiamond() *Diamond {
 }
 
 // Configure the collector
-func (d *Diamond) Configure(config map[string]interface{}) {
-	if port, exists := config["port"]; exists == true {
+func (d *Diamond) Configure(configMap map[string]interface{}) {
+	if port, exists := configMap["port"]; exists == true {
 		d.port = port.(string)
 	}
-	if interval, exists := config["interval"]; exists == true {
-		d.interval = int64(interval.(float64))
+	if interval, exists := configMap["interval"]; exists == true {
+		d.interval = config.GetAsInt(interval, DefaultCollectionInterval)
 	}
 }
 

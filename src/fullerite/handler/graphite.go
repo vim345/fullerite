@@ -22,30 +22,26 @@ func NewGraphite() *Graphite {
 	g := new(Graphite)
 	g.name = "Graphite"
 	g.maxBufferSize = DefaultBufferSize
-	g.timeout = time.Duration(DefaultHandlerTimeoutSec * time.Second)
+	g.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	g.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Graphite"})
 	g.channel = make(chan metric.Metric)
 	return g
 }
 
 // Configure accepts the different configuration options for the Graphite handler
-func (g *Graphite) Configure(config map[string]interface{}) {
-	if server, exists := config["server"]; exists == true {
+func (g *Graphite) Configure(configMap map[string]interface{}) {
+	if server, exists := configMap["server"]; exists == true {
 		g.server = server.(string)
 	} else {
 		g.log.Error("There was no server specified for the Graphite Handler, there won't be any emissions")
 	}
-	if port, exists := config["port"]; exists == true {
+
+	if port, exists := configMap["port"]; exists == true {
 		g.port = port.(string)
 	} else {
 		g.log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
 	}
-	if timeout, exists := config["timeout"]; exists == true {
-		g.timeout = time.Duration(timeout.(float64)) * time.Second
-	}
-	if bufferSize, exists := config["max_buffer_size"]; exists == true {
-		g.maxBufferSize = int(bufferSize.(float64))
-	}
+	g.ConfigureCommonParams(&configMap)
 }
 
 // Run sends metrics in the channel to the graphite server.
