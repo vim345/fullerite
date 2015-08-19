@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fullerite/config"
 	"fullerite/metric"
 
 	"bytes"
@@ -26,7 +25,7 @@ func NewSignalFx() *SignalFx {
 	s := new(SignalFx)
 	s.name = "SignalFx"
 	s.maxBufferSize = DefaultBufferSize
-	s.timeout = time.Duration(DefaultHandlerTimeoutSec * time.Second)
+	s.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	s.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "SignalFx"})
 	s.channel = make(chan metric.Metric)
 	return s
@@ -44,22 +43,8 @@ func (s *SignalFx) Configure(configMap map[string]interface{}) {
 	} else {
 		s.log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
-	if timeout, exists := configMap["timeout"]; exists == true {
-		val, err := config.GetAsFloat(timeout)
-		if err != nil {
-			s.log.Error("Failed to parse the value", timeout, "into a float")
-		} else {
-			s.timeout = time.Duration(val) * time.Second
-		}
-	}
-	if bufferSize, exists := configMap["max_buffer_size"]; exists == true {
-		val, err := config.GetAsInt(bufferSize)
-		if err != nil {
-			s.log.Error("Failed to parse the value", bufferSize, "into an int")
-		} else {
-			s.maxBufferSize = val
-		}
-	}
+
+	s.ConfigureCommonParams(&configMap)
 }
 
 // Run send metrics in the channel to SignalFx.

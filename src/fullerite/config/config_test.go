@@ -68,42 +68,33 @@ func TestParseExampleConfig(t *testing.T) {
 }
 
 func TestGetInt(t *testing.T) {
-	val, err := GetAsInt("10")
+	val := GetAsInt("10", 123)
 	assert.Equal(t, val, 10)
-	assert.Nil(t, err)
 
-	val, err = GetAsInt("notanint")
-	assert.Nil(t, val)
-	assert.NotNil(t, err)
+	val = GetAsInt("notanint", 123)
+	assert.Equal(t, val, 123)
 
-	val, err = GetAsInt(12)
+	val = GetAsInt(12, 143)
 	assert.Equal(t, val, 12)
-	assert.Nil(t, err)
 
-	val, err = GetAsInt(12.123)
+	val = GetAsInt(12.123, 123)
 	assert.Equal(t, val, 12)
-	assert.Nil(t, err)
 
 	var asint int
-	asint, err = GetAsInt(12)
+	asint = GetAsInt(12, 123)
 	assert.Equal(t, asint, 12)
-	assert.Nil(t, err)
 }
 
 func TestGetFloat(t *testing.T) {
-	val, err := GetAsFloat("10")
+	val := GetAsFloat("10", 123)
 	assert.Equal(t, val, 10)
-	assert.Nil(t, err)
 
-	val, err = GetAsFloat("10.21")
+	val = GetAsFloat("10.21", 123)
 	assert.Equal(t, val, 10.21)
-	assert.Nil(t, err)
 
-	val, err = GetAsFloat("notanint")
-	assert.Nil(t, val)
-	assert.NotNil(t, err)
+	val = GetAsFloat("notanint", 123)
+	assert.Equal(t, val, 123.0)
 
-	val, err = GetAsFloat(12.123)
-	assert.Equal(t, val, 12)
-	assert.Nil(t, err)
+	val = GetAsFloat(12.123, 123)
+	assert.Equal(t, val, 12.123)
 }

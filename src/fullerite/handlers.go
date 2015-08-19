@@ -14,20 +14,20 @@ func startHandlers(c config.Config) (handlers []handler.Handler) {
 	return handlers
 }
 
-func startHandler(name string, globalConfig config.Config, config map[string]interface{}) handler.Handler {
+func startHandler(name string, globalConfig config.Config, instanceConfig map[string]interface{}) handler.Handler {
 	log.Debug("Starting handler ", name)
-	handler := handler.New(name)
+	handlerInst := handler.New(name)
 
 	// apply any global configs
-	handler.SetInterval(globalConfig.Interval)
-	handler.SetPrefix(globalConfig.Prefix)
-	handler.SetDefaultDimensions(globalConfig.DefaultDimensions)
+	handlerInst.SetInterval(config.GetAsInt(globalConfig.Interval, handler.DefaultInterval))
+	handlerInst.SetPrefix(globalConfig.Prefix)
+	handlerInst.SetDefaultDimensions(globalConfig.DefaultDimensions)
 
 	// now apply the handler level configs
-	handler.Configure(config)
+	handlerInst.Configure(instanceConfig)
 
-	go handler.Run()
-	return handler
+	go handlerInst.Run()
+	return handlerInst
 }
 
 func writeToHandlers(handlers []handler.Handler, metric metric.Metric) {
