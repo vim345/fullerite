@@ -95,7 +95,7 @@ ifeq ($(OS),Ubuntu)
 		--deb-upstart "deb/etc/init/fullerite" \
 		--deb-upstart "deb/etc/init/fullerite_diamond_server" \
 		--before-install "deb/before_install.sh" \
-		--after-remove "deb/after_rm.sh" \
+		--before-remove "deb/before_rm.sh" \
 		-C build .
 # CentOS 7 Only
 else ifeq ($(OS),CentOS)
@@ -108,7 +108,7 @@ else ifeq ($(OS),CentOS)
 		--rpm-user "fullerite" \
 		--rpm-group "fullerite" \
                 --before-install "rpm/before_install.sh" \
-		--after-remove "rpm/after_rm.sh" \
+		--before-remove "rpm/before_rm.sh" \
 		-C build . \
 		../rpm/fullerite.systemd=/etc/systemd/system/fullerite.service \
                 ../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
