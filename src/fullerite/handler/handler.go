@@ -70,6 +70,7 @@ type BaseHandler struct {
 	log               *logrus.Entry
 }
 
+// ConfigureCommonParams will extract the common parameters that are used and set them in the handler
 func (handler *BaseHandler) ConfigureCommonParams(configMap *map[string]interface{}) {
 	if asInterface, exists := (*configMap)["timeout"]; exists == true {
 		timeout := config.GetAsFloat(asInterface, DefaultTimeoutSec)

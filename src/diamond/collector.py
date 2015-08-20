@@ -75,7 +75,7 @@ class Collector(object):
     def _connect(self):
         fullerite_addr = FULLERITE_ADDR
         try:
-            if self.config.has_key('fullerite_port'):
+            if 'fullerite_port' in self.config:
                 fullerite_addr = ('', int(self.config['fullerite_port']))
         except TypeError:
             raise "Invalid fullerite port %s" % self.config['fullerite_port']
@@ -285,18 +285,27 @@ class Collector(object):
         """
         Publish a Metric object
         """
-        for _ in range(FULLERITE_RETRY_COUNT):
+        payload = "%s\n" % json.dumps(metric.export())
+        success = False
+
+        for i in range(FULLERITE_RETRY_COUNT):
             try:
                 if not self._socket or self._reconnect is True:
                     self._socket = self._connect()
                     self._reconnect = False
-                self._socket.sendall("%s\n" % json.dumps(metric.export()))
-            except socket.error, e:
-                self.log.error("Error sending metrics: %s", e)
-                self._reconnect = True
-            else:
-                self.log.debug("Wrote: %s" % metric.export())
+                    self.log.debug("Successfully reconnected")
+
+                self._socket.sendall(payload)
+                success = True
+                self.log.debug("Attempt %d: Wrote: %s" % (i, payload))
                 break
+            except socket.error, e:
+                self.log.exception("Error sending payload on attempt %d. "
+                                   "We will reconnect. Payload: %s", (i, payload))
+                self._reconnect = True
+
+        if not success:
+            self.log.warn("After %d attempts failed to write payload %s", (FULLERITE_RETRY_COUNT, payload))
 
     def publish_gauge(self, name, value, precision=0, instance=None):
         return self.publish(name, value, precision=precision,

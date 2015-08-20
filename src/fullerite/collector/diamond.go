@@ -81,10 +81,9 @@ func (d *Diamond) readDiamondMetrics(conn *net.TCPConn) {
 	reader := bufio.NewReader(conn)
 	d.log.Info("Connection started: ", conn.RemoteAddr())
 	for {
-		// TODO: verify that timeout is actually working.
-		conn.SetDeadline(time.Now().Add(1e9))
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
+			d.log.Warn("Error while reading diamond metrics", err)
 			break
 		}
 		d.log.Debug("Read: ", string(line))
