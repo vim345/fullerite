@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import logging
+import logging.config
 import json
 import multiprocessing
 import optparse
@@ -29,6 +30,9 @@ from diamond.utils.scheduler import collector_process
 
 from diamond.utils.signals import signal_to_exception
 from diamond.utils.signals import SIGHUPException
+
+
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 
 def load_config(configfile):
@@ -103,6 +107,7 @@ class Server(object):
                     # to the running fullerite instance.
                     config['enabled'] = True
                     config['fullerite_port'] = self.config['fullerite_port']
+                    config['interval'] = config.get('interval', self.config['interval'])
 
                     running_collectors.append(collector)
                 running_collectors = set(running_collectors)
@@ -170,17 +175,25 @@ class Server(object):
 
 def main():
     parser = optparse.OptionParser()
-    parser.add_option("-c", "--config-file", dest="config_file",
-                      help="Fullerite configuration file", metavar="FILE")
-    parser.add_option("-d", "--debug",
-                      action="store_true", dest="debug", default=False,
-                      help="Enable debug logs")
+    parser.add_option("-c",
+                      "--config-file",
+                      dest="config_file",
+                      help="Fullerite configuration file",
+                      metavar="FILE")
+    parser.add_option("-l",
+                      "--log_level",
+                      default='INFO',
+                      choices=['INFO', 'DEBUG', 'WARN', 'CRITICAL', 'NOTSET', 'ERROR'],
+                      help="Set the log level to this level")
+    parser.add_option("-f",
+                      "--log_config",
+                      help="Configure logging with the specified file")
     (options, args) = parser.parse_args()
 
-    if options.debug:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.getLevelName(options.log_level or 'INFO'),
+                        format=LOG_FORMAT)
+    if options.log_config:
+        logging.config.fileConfig(options.log_config)
 
     Server(options.config_file).run()
 
