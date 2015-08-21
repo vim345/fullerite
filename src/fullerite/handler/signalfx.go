@@ -65,12 +65,14 @@ func (s *SignalFx) Run() {
 }
 
 func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
+	// Create a new values for the Datapoint that requires pointers.
 	outname := s.Prefix() + incomingMetric.Name
+	value := incomingMetric.Value
 
 	datapoint := new(DataPoint)
 	datapoint.Metric = &outname
 	datapoint.Value = &Datum{
-		DoubleValue: &incomingMetric.Value,
+		DoubleValue: &value,
 	}
 	datapoint.Source = new(string)
 	*datapoint.Source = "fullerite"
