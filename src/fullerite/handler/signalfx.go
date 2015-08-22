@@ -76,7 +76,7 @@ func (s *SignalFx) Run() {
 			lastEmission = time.Now()
 
 			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			s.log.Debug("POST to SignalFx took ", emissionTimeInSeconds, " seconds")
+			s.log.Info("POST to SignalFx took ", emissionTimeInSeconds, " seconds")
 			s.emissionTimes = append(s.emissionTimes, emissionTimeInSeconds)
 
 			// reset datapoints

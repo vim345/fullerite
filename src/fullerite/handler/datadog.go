@@ -95,7 +95,7 @@ func (d *Datadog) Run() {
 			lastEmission = time.Now()
 
 			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			d.log.Debug("POST to Datadog took ", emissionTimeInSeconds, " seconds")
+			d.log.Info("POST to Datadog took ", emissionTimeInSeconds, " seconds")
 			d.emissionTimes = append(d.emissionTimes, emissionTimeInSeconds)
 
 			// reset datapoints

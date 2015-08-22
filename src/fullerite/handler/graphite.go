@@ -73,7 +73,7 @@ func (g *Graphite) Run() {
 			lastEmission = time.Now()
 
 			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			g.log.Debug("Sending to Graphite took ", emissionTimeInSeconds, " seconds")
+			g.log.Info("Sending to Graphite took ", emissionTimeInSeconds, " seconds")
 			g.emissionTimes = append(g.emissionTimes, emissionTimeInSeconds)
 
 			// reset datapoints
