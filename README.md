@@ -13,7 +13,7 @@ fullerite is also able to run [Diamond](https://github.com/python-diamond/Diamon
 ## supported handlers
  * [Graphite](http://graphite.wikidot.com/)
  * [Kairos](https://github.com/kairosdb/kairosdb)
- * [Signalfx](https://www.signalfx.com)
+ * [SignalFx](https://www.signalfx.com)
  * [Datadog](https://www.datadoghq.com)
 
 # beatit
