@@ -48,23 +48,24 @@ func NewDatadog() *Datadog {
 }
 
 // Configure the Datadog handler
-func (d *Datadog) Configure(config map[string]interface{}) {
-	if apiKey, exists := config["apiKey"]; exists == true {
+func (d *Datadog) Configure(configMap map[string]interface{}) {
+	if apiKey, exists := configMap["apiKey"]; exists == true {
 		d.apiKey = apiKey.(string)
 	} else {
 		d.log.Error("There was no API key specified for the Datadog handler, there won't be any emissions")
 	}
-	if endpoint, exists := config["endpoint"]; exists == true {
+	if endpoint, exists := configMap["endpoint"]; exists == true {
 		d.endpoint = endpoint.(string)
 	} else {
 		d.log.Error("There was no endpoint specified for the Datadog Handler, there won't be any emissions")
 	}
-	if timeout, exists := config["timeout"]; exists == true {
+	if timeout, exists := configMap["timeout"]; exists == true {
 		d.timeout = time.Duration(timeout.(float64)) * time.Second
 	}
-	if bufferSize, exists := config["max_buffer_size"]; exists == true {
+	if bufferSize, exists := configMap["max_buffer_size"]; exists == true {
 		d.maxBufferSize = int(bufferSize.(float64))
 	}
+	d.ConfigureCommonParams(&configMap)
 }
 
 // Run runs the Datadog handler
