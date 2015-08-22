@@ -21,6 +21,8 @@
         "Diamond":{
             "port": "19191",
             "interval": 10
+        },
+        "Fullerite":{
         }
     },
 
