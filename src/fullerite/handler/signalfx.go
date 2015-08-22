@@ -28,6 +28,7 @@ func NewSignalFx() *SignalFx {
 	s.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	s.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "SignalFx"})
 	s.channel = make(chan metric.Metric)
+	s.emissionTimes = make([]float64, 0)
 	return s
 }
 
@@ -56,9 +57,29 @@ func (s *SignalFx) Run() {
 		datapoint := s.convertToProto(&incomingMetric)
 		s.log.Debug("SignalFx datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
-		if time.Since(lastEmission).Seconds() >= float64(s.interval) || len(datapoints) >= s.maxBufferSize {
+
+		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(s.interval)
+		bufferSizeLimitReached := len(datapoints) >= s.maxBufferSize
+		doEmit := emitIntervalPassed || bufferSizeLimitReached
+
+		if emitIntervalPassed {
+			m := s.makeEmissionTimeMetric()
+			s.resetEmissionTimes()
+			m.AddDimension("handler", "SignalFx")
+			datapoints = append(datapoints, s.convertToProto(&m))
+		}
+
+		if doEmit {
+			// emit datapoints
+			beforeEmission := time.Now()
 			s.emitMetrics(datapoints)
 			lastEmission = time.Now()
+
+			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
+			s.log.Debug("POST to SignalFx took ", emissionTimeInSeconds, " seconds")
+			s.emissionTimes = append(s.emissionTimes, emissionTimeInSeconds)
+
+			// reset datapoints
 			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
 		}
 	}

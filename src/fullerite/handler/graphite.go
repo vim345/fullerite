@@ -25,6 +25,7 @@ func NewGraphite() *Graphite {
 	g.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	g.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Graphite"})
 	g.channel = make(chan metric.Metric)
+	g.emissionTimes = make([]float64, 0)
 	return g
 }
 
@@ -53,11 +54,32 @@ func (g *Graphite) Run() {
 		datapoint := g.convertToGraphite(incomingMetric)
 		g.log.Debug("Graphite datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
-		if time.Since(lastEmission).Seconds() >= float64(g.interval) || len(datapoints) >= g.maxBufferSize {
+
+		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(g.interval)
+		bufferSizeLimitReached := len(datapoints) >= g.maxBufferSize
+		doEmit := emitIntervalPassed || bufferSizeLimitReached
+
+		if emitIntervalPassed {
+			m := g.makeEmissionTimeMetric()
+			g.resetEmissionTimes()
+			m.AddDimension("handler", "Graphite")
+			datapoints = append(datapoints, g.convertToGraphite(m))
+		}
+
+		if doEmit {
+			// emit datapoints
+			beforeEmission := time.Now()
 			g.emitMetrics(datapoints)
 			lastEmission = time.Now()
+
+			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
+			g.log.Debug("Sending to Graphite took ", emissionTimeInSeconds, " seconds")
+			g.emissionTimes = append(g.emissionTimes, emissionTimeInSeconds)
+
+			// reset datapoints
 			datapoints = make([]string, 0, g.maxBufferSize)
 		}
+
 	}
 }
 

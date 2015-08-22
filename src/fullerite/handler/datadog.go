@@ -43,6 +43,7 @@ func NewDatadog() *Datadog {
 	d.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	d.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Datadog"})
 	d.channel = make(chan metric.Metric)
+	d.emissionTimes = make([]float64, 0)
 	return d
 }
 
@@ -75,11 +76,32 @@ func (d *Datadog) Run() {
 		datapoint := d.convertToDatadog(incomingMetric)
 		d.log.Debug("Datadog datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
-		if time.Since(lastEmission).Seconds() >= float64(d.interval) || len(datapoints) >= d.maxBufferSize {
+
+		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(d.interval)
+		bufferSizeLimitReached := len(datapoints) >= d.maxBufferSize
+		doEmit := emitIntervalPassed || bufferSizeLimitReached
+
+		if emitIntervalPassed {
+			m := d.makeEmissionTimeMetric()
+			d.resetEmissionTimes()
+			m.AddDimension("handler", "Datadog")
+			datapoints = append(datapoints, d.convertToDatadog(m))
+		}
+
+		if doEmit {
+			// emit datapoints
+			beforeEmission := time.Now()
 			d.emitMetrics(datapoints)
 			lastEmission = time.Now()
+
+			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
+			d.log.Debug("POST to Datadog took ", emissionTimeInSeconds, " seconds")
+			d.emissionTimes = append(d.emissionTimes, emissionTimeInSeconds)
+
+			// reset datapoints
 			datapoints = make([]datadogMetric, 0, d.maxBufferSize)
 		}
+
 	}
 }
 

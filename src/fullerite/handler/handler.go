@@ -67,6 +67,7 @@ type BaseHandler struct {
 	interval          int
 	source            string
 	defaultDimensions map[string]string
+	emissionTimes     []float64
 	log               *logrus.Entry
 }
 
@@ -143,4 +144,18 @@ func (handler *BaseHandler) SetInterval(val int) {
 // String returns the handler name in a printable format.
 func (handler *BaseHandler) String() string {
 	return handler.name + "Handler"
+}
+
+func (handler *BaseHandler) makeEmissionTimeMetric() metric.Metric {
+	value := 0.0
+	for _, v := range handler.emissionTimes {
+		value += v
+	}
+	m := metric.New("HandlerEmitTiming")
+	m.Value = value / float64(len(handler.emissionTimes))
+	return m
+}
+
+func (handler *BaseHandler) resetEmissionTimes() {
+	handler.emissionTimes = make([]float64, 0)
 }
