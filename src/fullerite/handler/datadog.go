@@ -73,16 +73,19 @@ func (d *Datadog) Run() {
 	datapoints := make([]datadogMetric, 0, d.maxBufferSize)
 
 	lastEmission := time.Now()
+	lastHandlerMetricsEmission := lastEmission
 	for incomingMetric := range d.Channel() {
 		datapoint := d.convertToDatadog(incomingMetric)
 		d.log.Debug("Datadog datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 
 		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(d.interval)
+		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(d.interval)
 		bufferSizeLimitReached := len(datapoints) >= d.maxBufferSize
 		doEmit := emitIntervalPassed || bufferSizeLimitReached
 
-		if emitIntervalPassed {
+		if emitHandlerIntervalPassed {
+			lastHandlerMetricsEmission = time.Now()
 			m := d.makeEmissionTimeMetric()
 			d.resetEmissionTimes()
 			m.AddDimension("handler", "Datadog")

@@ -24,8 +24,8 @@ type Kairos struct {
 type kairosMetric struct {
 	Name       string            `json:"name"`
 	Timestamp  int64             `json:"timestamp"`
-	Value      float64           `json:"value"`
 	MetricType string            `json:"type"`
+	Value      float64           `json:"value"`
 	Tags       map[string]string `json:"tags"`
 }
 
@@ -62,16 +62,19 @@ func (k *Kairos) Run() {
 	datapoints := make([]kairosMetric, 0, k.maxBufferSize)
 
 	lastEmission := time.Now()
+	lastHandlerMetricsEmission := lastEmission
 	for incomingMetric := range k.Channel() {
 		datapoint := k.convertToKairos(incomingMetric)
 		k.log.Debug("Kairos datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 
 		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(k.interval)
+		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(k.interval)
 		bufferSizeLimitReached := len(datapoints) >= k.maxBufferSize
 		doEmit := emitIntervalPassed || bufferSizeLimitReached
 
-		if emitIntervalPassed {
+		if emitHandlerIntervalPassed {
+			lastHandlerMetricsEmission = time.Now()
 			m := k.makeEmissionTimeMetric()
 			k.resetEmissionTimes()
 			m.AddDimension("handler", "Kairos")

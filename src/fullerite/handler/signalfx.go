@@ -53,16 +53,19 @@ func (s *SignalFx) Run() {
 	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
 
 	lastEmission := time.Now()
+	lastHandlerMetricsEmission := lastEmission
 	for incomingMetric := range s.Channel() {
 		datapoint := s.convertToProto(&incomingMetric)
 		s.log.Debug("SignalFx datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 
 		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(s.interval)
+		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(s.interval)
 		bufferSizeLimitReached := len(datapoints) >= s.maxBufferSize
 		doEmit := emitIntervalPassed || bufferSizeLimitReached
 
-		if emitIntervalPassed {
+		if emitHandlerIntervalPassed {
+			lastHandlerMetricsEmission = time.Now()
 			m := s.makeEmissionTimeMetric()
 			s.resetEmissionTimes()
 			m.AddDimension("handler", "SignalFx")

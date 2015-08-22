@@ -50,16 +50,19 @@ func (g *Graphite) Run() {
 	datapoints := make([]string, 0, g.maxBufferSize)
 
 	lastEmission := time.Now()
+	lastHandlerMetricsEmission := lastEmission
 	for incomingMetric := range g.Channel() {
 		datapoint := g.convertToGraphite(incomingMetric)
 		g.log.Debug("Graphite datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 
 		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(g.interval)
+		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(g.interval)
 		bufferSizeLimitReached := len(datapoints) >= g.maxBufferSize
 		doEmit := emitIntervalPassed || bufferSizeLimitReached
 
-		if emitIntervalPassed {
+		if emitHandlerIntervalPassed {
+			lastHandlerMetricsEmission = time.Now()
 			m := g.makeEmissionTimeMetric()
 			g.resetEmissionTimes()
 			m.AddDimension("handler", "Graphite")
