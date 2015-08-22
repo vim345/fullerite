@@ -14,7 +14,7 @@ type Fullerite struct {
 	BaseCollector
 }
 
-// NewTest creates a new Test collector.
+// NewFullerite creates a new Test collector.
 func NewFullerite() *Fullerite {
 	f := new(Fullerite)
 	f.name = "Fullerite"
