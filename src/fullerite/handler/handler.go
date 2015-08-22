@@ -27,6 +27,8 @@ func New(name string) Handler {
 		handler = NewSignalFx()
 	case "Datadog":
 		handler = NewDatadog()
+	case "Kairos":
+		handler = NewKairos()
 	default:
 		defaultLog.Fatal("Cannot create handler ", name)
 		return nil

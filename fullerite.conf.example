@@ -30,6 +30,14 @@
         "Graphite": {
             "server": "10.40.11.51",
             "port": "2003",
+            "interval": "10",
+            "max_buffer_size": 300,
+            "timeout": 2
+        },
+        "Kairos": {
+            "server": "localhost",
+            "port": "8080",
+            "interval": "10",
             "max_buffer_size": 300,
             "timeout": 2
         },
