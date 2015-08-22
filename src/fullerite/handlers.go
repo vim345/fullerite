@@ -15,7 +15,7 @@ func startHandlers(c config.Config) (handlers []handler.Handler) {
 }
 
 func startHandler(name string, globalConfig config.Config, instanceConfig map[string]interface{}) handler.Handler {
-	log.Debug("Starting handler ", name)
+	log.Info("Starting handler ", name)
 	handlerInst := handler.New(name)
 
 	// apply any global configs
