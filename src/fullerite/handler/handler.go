@@ -30,7 +30,7 @@ func New(name string) Handler {
 	case "Kairos":
 		handler = NewKairos()
 	default:
-		defaultLog.Fatal("Cannot create handler ", name)
+		defaultLog.Error("Cannot create handler ", name)
 		return nil
 	}
 	return handler

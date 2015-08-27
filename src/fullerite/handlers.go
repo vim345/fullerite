@@ -17,6 +17,9 @@ func startHandlers(c config.Config) (handlers []handler.Handler) {
 func startHandler(name string, globalConfig config.Config, instanceConfig map[string]interface{}) handler.Handler {
 	log.Info("Starting handler ", name)
 	handlerInst := handler.New(name)
+	if handlerInst == nil {
+		return nil
+	}
 
 	// apply any global configs
 	handlerInst.SetInterval(config.GetAsInt(globalConfig.Interval, handler.DefaultInterval))

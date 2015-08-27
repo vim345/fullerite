@@ -18,6 +18,9 @@ func startCollectors(c config.Config) (collectors []collector.Collector) {
 func startCollector(name string, globalConfig config.Config, instanceConfig map[string]interface{}) collector.Collector {
 	log.Debug("Starting collector ", name)
 	collectorInst := collector.New(name)
+	if collectorInst == nil {
+		return nil
+	}
 
 	// apply the global configs
 	collectorInst.SetInterval(config.GetAsInt(globalConfig.Interval, collector.DefaultCollectionInterval))

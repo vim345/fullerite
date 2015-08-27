@@ -36,7 +36,7 @@ func New(name string) Collector {
 	case "Fullerite":
 		collector = NewFullerite()
 	default:
-		defaultLog.Fatal("Cannot create collector", name)
+		defaultLog.Error("Cannot create collector", name)
 		return nil
 	}
 	return collector
