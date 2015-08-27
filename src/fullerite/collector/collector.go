@@ -31,8 +31,6 @@ func New(name string) Collector {
 	switch name {
 	case "Test":
 		collector = NewTest()
-	case "CPU":
-		collector = NewCPU()
 	case "Diamond":
 		collector = NewDiamond()
 	case "Fullerite":
