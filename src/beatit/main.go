@@ -27,6 +27,9 @@ func generateMetrics(prefix string, numMetrics, dps int, randomize bool) (metric
 	if randomize {
 		rand.Seed(time.Now().Unix())
 	}
+	if numMetrics > dps {
+		numMetrics = dps
+	}
 	dpsPerMetric := dps / numMetrics
 	for i := 0; i < numMetrics; i++ {
 		suffix := int64(i)
