@@ -46,7 +46,7 @@ $(BEATIT): $(BEATIT_SOURCES)
 test: tests
 tests: deps
 	@echo Testing $(FULLERITE)
-	@$(foreach pkg, $(PKGS), go test $(pkg);)
+	@$(foreach pkg, $(PKGS), go test -cover $(pkg);)
 
 fmt: $(SOURCES)
 	@$(foreach pkg, $(PKGS), go fmt $(pkg);)
