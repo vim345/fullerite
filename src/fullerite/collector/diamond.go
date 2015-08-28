@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -21,8 +22,9 @@ const (
 // Diamond collector type
 type Diamond struct {
 	BaseCollector
-	port     string
-	incoming chan []byte
+	port          string
+	serverStarted bool
+	incoming      chan []byte
 }
 
 // NewDiamond creates a new Diamond collector.
@@ -34,7 +36,7 @@ func NewDiamond() *Diamond {
 	d.channel = make(chan metric.Metric)
 	d.port = DefaultDiamondCollectorPort
 	d.interval = DefaultCollectionInterval
-	go d.collectDiamond()
+	d.serverStarted = false
 	return d
 }
 
@@ -48,23 +50,32 @@ func (d *Diamond) Configure(configMap map[string]interface{}) {
 	}
 }
 
+// Port returns Diamond collectors listen port
+func (d *Diamond) Port() string {
+	return d.port
+}
+
 // collectDiamond opens up and reads from the a TCP socket and
 // writes what it's read to a local channel. Diamond handler (running in
 // separate processes) write to the same port.
 //
 // When Collect() is called it reads from the local channel converts
 // strings to metrics and publishes metrics to handlers.
-func (d Diamond) collectDiamond() {
+func (d *Diamond) collectDiamond() {
 	addr, err := net.ResolveTCPAddr("tcp", ":"+d.port)
 
 	if err != nil {
 		panic(err)
 	}
 
-	l, err := net.ListenTCP("tcp", addr)
+	l, err := net.ListenTCP("tcp4", addr)
 	if err != nil {
 		d.log.Fatal("Cannot listen on diamond socket", err)
 	}
+
+	// figure out the port bind for Port()
+	d.port = strings.Split(l.Addr().String(), ":")[1]
+
 	for {
 		conn, err := l.AcceptTCP()
 		if err != nil {
@@ -96,6 +107,11 @@ func (d *Diamond) readDiamondMetrics(conn *net.TCPConn) {
 // Collect reads metrics collected from Diamond collectors, converts
 // them to fullerite's Metric type and publishes them to handlers.
 func (d *Diamond) Collect() {
+	if !d.serverStarted {
+		d.serverStarted = true
+		go d.collectDiamond()
+	}
+
 	for line := range d.incoming {
 		var metric metric.Metric
 		if err := json.Unmarshal(line, &metric); err != nil {
