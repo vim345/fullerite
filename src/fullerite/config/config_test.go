@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,50 +52,49 @@ var testConfiguration = `{
 var tmpTestFile string
 
 func TestMain(m *testing.M) {
+	logrus.SetLevel(logrus.ErrorLevel)
 	if f, err := ioutil.TempFile("/tmp", "fullerite"); err == nil {
 		f.WriteString(testConfiguration)
 		tmpTestFile = f.Name()
 		f.Close()
 		defer os.Remove(tmpTestFile)
 	}
-	m.Run()
+	os.Exit(m.Run())
+}
+
+func TestGetInt(t *testing.T) {
+	assert := assert.New(t)
+
+	val := GetAsInt("10", 123)
+	assert.Equal(val, 10)
+
+	val = GetAsInt("notanint", 123)
+	assert.Equal(val, 123)
+
+	val = GetAsInt(12.123, 123)
+	assert.Equal(val, 12)
+
+	val = GetAsInt(12, 123)
+	assert.Equal(val, 12)
+}
+
+func TestGetFloat(t *testing.T) {
+	assert := assert.New(t)
+
+	val := GetAsFloat("10", 123)
+	assert.Equal(val, 10.0)
+
+	val = GetAsFloat("10.21", 123)
+	assert.Equal(val, 10.21)
+
+	val = GetAsFloat("notanint", 123)
+	assert.Equal(val, 123.0)
+
+	val = GetAsFloat(12.123, 123)
+	assert.Equal(val, 12.123)
 }
 
 func TestParseExampleConfig(t *testing.T) {
 	_, err := ReadConfig(tmpTestFile)
-	if err != nil {
-		t.Fail()
-	}
-}
-
-func TestGetInt(t *testing.T) {
-	val := GetAsInt("10", 123)
-	assert.Equal(t, val, 10)
-
-	val = GetAsInt("notanint", 123)
-	assert.Equal(t, val, 123)
-
-	val = GetAsInt(12, 143)
-	assert.Equal(t, val, 12)
-
-	val = GetAsInt(12.123, 123)
-	assert.Equal(t, val, 12)
-
-	var asint int
-	asint = GetAsInt(12, 123)
-	assert.Equal(t, asint, 12)
-}
-
-func TestGetFloat(t *testing.T) {
-	val := GetAsFloat("10", 123)
-	assert.Equal(t, val, 10)
-
-	val = GetAsFloat("10.21", 123)
-	assert.Equal(t, val, 10.21)
-
-	val = GetAsFloat("notanint", 123)
-	assert.Equal(t, val, 123.0)
-
-	val = GetAsFloat(12.123, 123)
-	assert.Equal(t, val, 12.123)
+	assert.Nil(t, err, "should succeed")
 }
