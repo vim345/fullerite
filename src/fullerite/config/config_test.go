@@ -1,6 +1,8 @@
-package config
+package config_test
 
 import (
+	"fullerite/config"
+
 	"io/ioutil"
 	"os"
 	"testing"
@@ -79,41 +81,41 @@ func TestMain(m *testing.M) {
 func TestGetInt(t *testing.T) {
 	assert := assert.New(t)
 
-	val := GetAsInt("10", 123)
+	val := config.GetAsInt("10", 123)
 	assert.Equal(val, 10)
 
-	val = GetAsInt("notanint", 123)
+	val = config.GetAsInt("notanint", 123)
 	assert.Equal(val, 123)
 
-	val = GetAsInt(12.123, 123)
+	val = config.GetAsInt(12.123, 123)
 	assert.Equal(val, 12)
 
-	val = GetAsInt(12, 123)
+	val = config.GetAsInt(12, 123)
 	assert.Equal(val, 12)
 }
 
 func TestGetFloat(t *testing.T) {
 	assert := assert.New(t)
 
-	val := GetAsFloat("10", 123)
+	val := config.GetAsFloat("10", 123)
 	assert.Equal(val, 10.0)
 
-	val = GetAsFloat("10.21", 123)
+	val = config.GetAsFloat("10.21", 123)
 	assert.Equal(val, 10.21)
 
-	val = GetAsFloat("notanint", 123)
+	val = config.GetAsFloat("notanint", 123)
 	assert.Equal(val, 123.0)
 
-	val = GetAsFloat(12.123, 123)
+	val = config.GetAsFloat(12.123, 123)
 	assert.Equal(val, 12.123)
 }
 
 func TestParseGoodConfig(t *testing.T) {
-	_, err := ReadConfig(tmpTestGoodFile)
+	_, err := config.ReadConfig(tmpTestGoodFile)
 	assert.Nil(t, err, "should succeed")
 }
 
 func TestParseBadConfig(t *testing.T) {
-	_, err := ReadConfig(tmpTestBadFile)
+	_, err := config.ReadConfig(tmpTestBadFile)
 	assert.NotNil(t, err, "should fail")
 }
