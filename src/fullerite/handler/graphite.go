@@ -21,6 +21,7 @@ type Graphite struct {
 func NewGraphite() *Graphite {
 	g := new(Graphite)
 	g.name = "Graphite"
+	g.interval = DefaultInterval
 	g.maxBufferSize = DefaultBufferSize
 	g.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	g.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Graphite"})

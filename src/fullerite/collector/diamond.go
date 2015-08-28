@@ -28,6 +28,7 @@ type Diamond struct {
 // NewDiamond creates a new Diamond collector.
 func NewDiamond() *Diamond {
 	d := new(Diamond)
+	d.name = "Diamond"
 	d.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "Diamond"})
 	d.incoming = make(chan []byte)
 	d.channel = make(chan metric.Metric)

@@ -24,6 +24,7 @@ type SignalFx struct {
 func NewSignalFx() *SignalFx {
 	s := new(SignalFx)
 	s.name = "SignalFx"
+	s.interval = DefaultInterval
 	s.maxBufferSize = DefaultBufferSize
 	s.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	s.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "SignalFx"})

@@ -33,6 +33,7 @@ type kairosMetric struct {
 func NewKairos() *Kairos {
 	k := new(Kairos)
 	k.name = "Kairos"
+	k.interval = DefaultInterval
 	k.maxBufferSize = DefaultBufferSize
 	k.timeout = time.Duration(DefaultTimeoutSec * time.Second)
 	k.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Kairos"})
