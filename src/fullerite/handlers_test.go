@@ -11,9 +11,9 @@ import (
 
 func TestStartHandlersEmptyConfig(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
-
 	handlers := startHandlers(config.Config{})
-	assert.Equal(t, len(handlers), 0)
+
+	assert.NotEqual(t, len(handlers), 1, "should create an Handler")
 }
 
 func TestStartHandlerUnknownHandler(t *testing.T) {
@@ -21,5 +21,6 @@ func TestStartHandlerUnknownHandler(t *testing.T) {
 
 	c := make(map[string]interface{})
 	handler := startHandler("unknown handler", config.Config{}, c)
-	assert.Equal(t, handler, nil)
+
+	assert.Nil(t, handler)
 }

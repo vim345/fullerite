@@ -11,15 +11,15 @@ import (
 
 func TestStartCollectorsEmptyConfig(t *testing.T) {
 	logrus.SetLevel(logrus.ErrorLevel)
-
 	collectors := startCollectors(config.Config{})
-	assert.Equal(t, len(collectors), 0)
+
+	assert.NotEqual(t, len(collectors), 1, "should create a Collector")
 }
 
 func TestStartCollectorUnknownCollector(t *testing.T) {
 	logrus.SetLevel(logrus.ErrorLevel)
-
 	c := make(map[string]interface{})
 	collector := startCollector("unknown collector", config.Config{}, c)
-	assert.Equal(t, collector, nil)
+
+	assert.Nil(t, collector, "should NOT create a Collector")
 }

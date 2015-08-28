@@ -8,22 +8,27 @@ import (
 
 func TestNewMetric(t *testing.T) {
 	m := New("TestMetric")
-	assert.Equal(t, m.Name, "TestMetric")
-	assert.Equal(t, m.Value, 0.0)
-	assert.Equal(t, m.MetricType, "gauge")
-	assert.Equal(t, len(m.Dimensions), 0)
+
+	assert := assert.New(t)
+	assert.Equal(m.Name, "TestMetric")
+	assert.Equal(m.Value, 0.0, "default value should be 0.0")
+	assert.Equal(m.MetricType, "gauge", "should be a Gauge metric")
+	assert.NotEqual(len(m.Dimensions), 1, "should have one dimension")
 }
 
 func TestAddDimension(t *testing.T) {
 	m := New("TestMetric")
 	m.AddDimension("TestDimension", "test value")
-	assert.Equal(t, len(m.Dimensions), 1)
-	assert.Equal(t, m.Dimensions["TestDimension"], "test value")
+
+	assert := assert.New(t)
+	assert.Equal(len(m.Dimensions), 1, "should have 1 dimension")
+	assert.Equal(m.Dimensions["TestDimension"], "test value")
 }
 
 func TestGetDimensionsWithNoDimensions(t *testing.T) {
 	defaultDimensions := make(map[string]string, 0)
 	m := New("TestMetric")
+
 	assert.Equal(t, len(m.GetDimensions(defaultDimensions)), 0)
 }
 
@@ -32,7 +37,9 @@ func TestGetDimensionsWithDimensions(t *testing.T) {
 	defaultDimensions["DefaultDim"] = "default value"
 	m := New("TestMetric")
 	m.AddDimension("TestDimension", "test value")
-	assert.Equal(t, len(m.GetDimensions(defaultDimensions)), 2)
+
+	numDimensions := len(m.GetDimensions(defaultDimensions))
+	assert.Equal(t, numDimensions, 2, "dimensions length should be 2")
 }
 
 func TestGetDimensionValueFound(t *testing.T) {
@@ -41,8 +48,9 @@ func TestGetDimensionValueFound(t *testing.T) {
 	m.AddDimension("TestDimension", "test value")
 	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
 
-	assert.Equal(t, value, "test value")
-	assert.Equal(t, ok, true)
+	assert := assert.New(t)
+	assert.Equal(value, "test value", "test value does not match")
+	assert.Equal(ok, true, "should succeed")
 }
 
 func TestGetDimensionValueNotFound(t *testing.T) {
@@ -50,6 +58,7 @@ func TestGetDimensionValueNotFound(t *testing.T) {
 	m := New("TestMetric")
 	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
 
-	assert.Equal(t, value, "")
-	assert.Equal(t, ok, false)
+	assert := assert.New(t)
+	assert.Equal(value, "", "non-existing value should be empty")
+	assert.Equal(ok, false, "should return false")
 }
