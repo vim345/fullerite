@@ -9,7 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testConfiguration = `{
+var testBadConfiguration = `{
+    "prefix": "test.",
+    malformed JSON File {123!!!!
+}
+`
+
+var testGoodConfiguration = `{
     "prefix": "test.",
     "interval": 10,
     "defaultDimensions": {
@@ -49,15 +55,23 @@ var testConfiguration = `{
     }
 }
 `
-var tmpTestFile string
+var (
+	tmpTestGoodFile, tmpTestBadFile string
+)
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.ErrorLevel)
 	if f, err := ioutil.TempFile("/tmp", "fullerite"); err == nil {
-		f.WriteString(testConfiguration)
-		tmpTestFile = f.Name()
+		f.WriteString(testGoodConfiguration)
+		tmpTestGoodFile = f.Name()
 		f.Close()
-		defer os.Remove(tmpTestFile)
+		defer os.Remove(tmpTestGoodFile)
+	}
+	if f, err := ioutil.TempFile("/tmp", "fullerite"); err == nil {
+		f.WriteString(testBadConfiguration)
+		tmpTestBadFile = f.Name()
+		f.Close()
+		defer os.Remove(tmpTestBadFile)
 	}
 	os.Exit(m.Run())
 }
@@ -94,7 +108,12 @@ func TestGetFloat(t *testing.T) {
 	assert.Equal(val, 12.123)
 }
 
-func TestParseExampleConfig(t *testing.T) {
-	_, err := ReadConfig(tmpTestFile)
+func TestParseGoodConfig(t *testing.T) {
+	_, err := ReadConfig(tmpTestGoodFile)
 	assert.Nil(t, err, "should succeed")
+}
+
+func TestParseBadConfig(t *testing.T) {
+	_, err := ReadConfig(tmpTestBadFile)
+	assert.NotNil(t, err, "should fail")
 }
