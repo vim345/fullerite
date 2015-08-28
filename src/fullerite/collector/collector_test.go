@@ -26,5 +26,8 @@ func TestNew(t *testing.T) {
 			name+"Collector",
 			"String() should append Collector to the name for "+name,
 		)
+
+		c.SetInterval(999)
+		assert.Equal(c.Interval(), 999)
 	}
 }
