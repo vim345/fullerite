@@ -31,3 +31,8 @@ func TestNew(t *testing.T) {
 		assert.Equal(c.Interval(), 999)
 	}
 }
+
+func TestNewInvalidCollector(t *testing.T) {
+	c := collector.New("INVALID COLLECTOR")
+	assert.Nil(t, c, "should not create a Collector")
+}
