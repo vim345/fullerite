@@ -49,6 +49,11 @@ func (s *SignalFx) Configure(configMap map[string]interface{}) {
 	s.ConfigureCommonParams(&configMap)
 }
 
+// Endpoint returns SignalFx' API endpoint
+func (s *SignalFx) Endpoint() string {
+	return s.endpoint
+}
+
 // Run send metrics in the channel to SignalFx.
 func (s *SignalFx) Run() {
 	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
