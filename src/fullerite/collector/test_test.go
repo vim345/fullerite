@@ -34,6 +34,23 @@ func TestTestConfigure(t *testing.T) {
 	)
 }
 
+func TestTestConfigureMetricName(t *testing.T) {
+	config := make(map[string]interface{})
+	config["metricName"] = "lala"
+	test := collector.NewTest()
+	test.Configure(config)
+
+	go test.Collect()
+	time.Sleep(1)
+
+	select {
+	case m := <-test.Channel():
+		assert.Equal(t, m.Name, config["metricName"])
+	case <-time.After(1 * time.Second):
+		t.Fail()
+	}
+}
+
 func TestTestCollect(t *testing.T) {
 	config := make(map[string]interface{})
 	test := collector.NewTest()
