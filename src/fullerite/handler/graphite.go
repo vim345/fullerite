@@ -30,6 +30,16 @@ func NewGraphite() *Graphite {
 	return g
 }
 
+// Server returns the Graphite server's name or IP
+func (g *Graphite) Server() string {
+	return g.server
+}
+
+// Port returns the Graphite server's port number
+func (g *Graphite) Port() string {
+	return g.port
+}
+
 // Configure accepts the different configuration options for the Graphite handler
 func (g *Graphite) Configure(configMap map[string]interface{}) {
 	if server, exists := configMap["server"]; exists == true {
