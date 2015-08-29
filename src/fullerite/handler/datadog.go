@@ -60,13 +60,12 @@ func (d *Datadog) Configure(configMap map[string]interface{}) {
 	} else {
 		d.log.Error("There was no endpoint specified for the Datadog Handler, there won't be any emissions")
 	}
-	if timeout, exists := configMap["timeout"]; exists == true {
-		d.timeout = time.Duration(timeout.(float64)) * time.Second
-	}
-	if bufferSize, exists := configMap["max_buffer_size"]; exists == true {
-		d.maxBufferSize = int(bufferSize.(float64))
-	}
 	d.ConfigureCommonParams(&configMap)
+}
+
+// Endpoint returns the Datadog API endpoint
+func (d *Datadog) Endpoint() string {
+	return d.endpoint
 }
 
 // Run runs the Datadog handler
