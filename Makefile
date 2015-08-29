@@ -5,12 +5,14 @@ SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
-PKGS           := $(BEATIT) $(FULLERITE)  $(FULLERITE)/config $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector
+PKGS           := $(BEATIT) $(FULLERITE) $(FULLERITE)/config $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector
 SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
 OS	       := $(shell /usr/bin/lsb_release -si 2> /dev/null)
 
-
+space :=
+space +=
+comma := ,
 
 # symlinks confuse go tools, let's not mess with it and use -L
 GOPATH  := $(shell pwd -L)
@@ -48,6 +50,13 @@ tests: deps
 	@echo Testing $(FULLERITE)
 	@go get golang.org/x/tools/cmd/cover
 	@$(foreach pkg, $(PKGS), go test -cover $(pkg);)
+
+coverage_report: deps
+	@echo Creating a coverage rport for $(FULLERITE)
+	@$(foreach pkg, $(PKGS), go test -coverprofile=coverage.out -coverpkg=$(subst $(space),$(comma),$(PKGS)) $(pkg);)
+	@go tool cover -html=coverage.out
+
+
 
 fmt: $(SOURCES)
 	@$(foreach pkg, $(PKGS), go fmt $(pkg);)
