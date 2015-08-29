@@ -65,8 +65,6 @@ func TestDiamondCollect(t *testing.T) {
 	}
 }
 
-
-
 func connectToDiamondCollector(d *collector.Diamond) (net.Conn, error) {
 	// emit a Diamond metric
 	var (
