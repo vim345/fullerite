@@ -111,7 +111,7 @@ func (d *Datadog) Run() {
 
 func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint datadogMetric) {
 	dog := new(datadogMetric)
-	dog.Metric = incomingMetric.Name
+	dog.Metric = d.Prefix() + incomingMetric.Name
 	dog.Points = makeDatadogPoints(incomingMetric)
 	dog.MetricType = incomingMetric.MetricType
 	if host, ok := incomingMetric.GetDimensionValue("host", d.DefaultDimensions()); ok {
