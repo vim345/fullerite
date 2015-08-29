@@ -58,6 +58,16 @@ func (k *Kairos) Configure(configMap map[string]interface{}) {
 	k.ConfigureCommonParams(&configMap)
 }
 
+// Server returns the Kairos server's hostname or IP address
+func (k *Kairos) Server() string {
+	return k.server
+}
+
+// Port returns the Kairos server's port number
+func (k *Kairos) Port() string {
+	return k.port
+}
+
 // Run runs the Kairos handler
 func (k *Kairos) Run() {
 	datapoints := make([]kairosMetric, 0, k.maxBufferSize)
