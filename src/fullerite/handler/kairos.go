@@ -111,7 +111,7 @@ func (k *Kairos) Run() {
 
 func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint kairosMetric) {
 	km := new(kairosMetric)
-	km.Name = incomingMetric.Name
+	km.Name = k.Prefix() + incomingMetric.Name
 	km.Value = incomingMetric.Value
 	km.MetricType = "double"
 	km.Timestamp = time.Now().Unix() * 1000 // Kairos require timestamps to be milliseconds
