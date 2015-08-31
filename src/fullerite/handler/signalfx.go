@@ -13,11 +13,17 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+const (
+	maxIdleConnections = 20
+)
+
 // SignalFx Handler
 type SignalFx struct {
 	BaseHandler
 	endpoint  string
 	authToken string
+	transport *http.Transport
+	client    *http.Client
 }
 
 // NewSignalFx returns a new SignalFx handler.
@@ -136,6 +142,7 @@ func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
 
 func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	s.log.Info("Starting to emit ", len(datapoints), " datapoints")
+	s.setupHTTPClient()
 
 	if len(datapoints) == 0 {
 		s.log.Warn("Skipping send because of an empty payload")
@@ -163,14 +170,9 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	}
 	req.Header.Set("X-SF-TOKEN", s.authToken)
 	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Connection", "Keep-Alive")
 
-	transport := http.Transport{
-		Dial: s.dialTimeout,
-	}
-	client := &http.Client{
-		Transport: &transport,
-	}
-	rsp, err := client.Do(req)
+	rsp, err := s.client.Do(req)
 	if err != nil {
 		s.log.Error("Failed to complete POST ", err)
 		return
@@ -187,6 +189,20 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	}
 
 	s.log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
+}
+
+func (s *SignalFx) setupHTTPClient() {
+	if s.transport == nil {
+		s.transport = &http.Transport{
+			Dial:                s.dialTimeout,
+			MaxIdleConnsPerHost: maxIdleConnections,
+		}
+	}
+	if s.client == nil {
+		s.client = &http.Client{
+			Transport: s.transport,
+		}
+	}
 }
 
 func (s *SignalFx) dialTimeout(network, addr string) (net.Conn, error) {
