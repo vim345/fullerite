@@ -35,6 +35,8 @@ func New(name string) Collector {
 		collector = NewDiamond()
 	case "Fullerite":
 		collector = NewFullerite()
+	case "ProcStatus":
+		collector = NewProcStatus()
 	default:
 		defaultLog.Error("Cannot create collector", name)
 		return nil
