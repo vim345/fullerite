@@ -65,7 +65,7 @@ func (f ProcStatus) getMetrics(pid string) []metric.Metric {
 	// Read from /proc/<pid>/status
 	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "status"))
 	if err != nil {
-		f.log.Warn("Error while getting process stats", err)
+		f.log.Warn("Error while getting process stats: ", err)
 		return nil
 	}
 
@@ -89,7 +89,7 @@ func (f ProcStatus) getMetrics(pid string) []metric.Metric {
 	if field, ok := fields["VmSize:"]; ok && len(field) > 1 {
 		value, err := strconv.ParseFloat(field[1], 64)
 		if err != nil {
-			f.log.Warn("Error while reading VmSize", err)
+			f.log.Warn("Error while reading VmSize: ", err)
 		} else {
 			// VmSize is in hardcoded to be kiB
 			// http://unix.stackexchange.com/questions/199482/does-proc-pid-status-always-use-kb
@@ -105,7 +105,7 @@ func (f ProcStatus) procStatusMetrics() []metric.Metric {
 	c := exec.Command("pgrep", f.processName)
 	out, err := c.Output()
 	if err != nil {
-		f.log.Warn("Error while getting process ids", err)
+		f.log.Warn("Error while getting process ids: ", err)
 		return nil
 	}
 
