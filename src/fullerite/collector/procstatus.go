@@ -4,13 +4,12 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 
-	"io/ioutil"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/prometheus/procfs"
 )
 
 // ProcStatus collector type
@@ -52,51 +51,44 @@ func (f ProcStatus) Collect() {
 	}
 }
 
-func procStatusPoint(name string, value float64, pid string, processName string) (m metric.Metric) {
+func procStatusPoint(name string, value float64, dimensions map[string]string) (m metric.Metric) {
 	m = metric.New(name)
 	m.Value = value
 	m.AddDimension("collector", "fullerite")
-	m.AddDimension("pid", pid)
-	m.AddDimension("processName", processName)
+	for k, v := range dimensions {
+		m.AddDimension(k, v)
+	}
 	return m
 }
 
 func (f ProcStatus) getMetrics(pid string) []metric.Metric {
-	// Read from /proc/<pid>/status
-	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "status"))
+	i, err := strconv.Atoi(pid)
 	if err != nil {
-		f.log.Warn("Error while getting process stats: ", err)
+		f.log.Warnf("Error parsing pid %s: %v", pid, err)
 		return nil
 	}
 
+	proc, err := procfs.NewProc(i)
+	if err != nil {
+		f.log.Warn("Error creating Proc: ", err)
+		return nil
+	}
+
+	stat, err := proc.NewStat()
+	if err != nil {
+		f.log.Warn("Error getting stats: ", err)
+		return nil
+	}
+
+	dim := map[string]string{
+		"processName": stat.Comm,
+		"pid":         pid,
+	}
 	ret := []metric.Metric{}
 
-	// Parse file into fields
-	fields := make(map[string][]string)
-	lines := strings.Split(string(contents), "\n")
-	for _, line := range lines {
-		if len(line) == 0 {
-			continue
-		}
+	m := procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim)
+	ret = append(ret, m)
 
-		field := strings.Fields(line)
-		fields[field[0]] = field
-	}
-
-	// Gather dimensions
-	processName := fields["Name:"][1]
-
-	if field, ok := fields["VmSize:"]; ok && len(field) > 1 {
-		value, err := strconv.ParseFloat(field[1], 64)
-		if err != nil {
-			f.log.Warn("Error while reading VmSize: ", err)
-		} else {
-			// VmSize is in hardcoded to be kiB
-			// http://unix.stackexchange.com/questions/199482/does-proc-pid-status-always-use-kb
-			m := procStatusPoint("VmSize", value*1024, pid, processName)
-			ret = append(ret, m)
-		}
-	}
 	return ret
 }
 
