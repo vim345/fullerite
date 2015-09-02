@@ -1,5 +1,3 @@
-// +build linux
-
 package collector_test
 
 import (
