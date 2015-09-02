@@ -53,7 +53,7 @@ func (g *Graphite) Configure(configMap map[string]interface{}) {
 	} else {
 		g.log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
 	}
-	g.ConfigureCommonParams(&configMap)
+	g.configureCommonParams(configMap)
 }
 
 // Run sends metrics in the channel to the graphite server.

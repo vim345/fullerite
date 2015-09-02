@@ -73,18 +73,18 @@ type BaseHandler struct {
 	log               *logrus.Entry
 }
 
-// ConfigureCommonParams will extract the common parameters that are used and set them in the handler
-func (handler *BaseHandler) ConfigureCommonParams(configMap *map[string]interface{}) {
-	if asInterface, exists := (*configMap)["timeout"]; exists == true {
+// configureCommonParams will extract the common parameters that are used and set them in the handler
+func (handler *BaseHandler) configureCommonParams(configMap map[string]interface{}) {
+	if asInterface, exists := configMap["timeout"]; exists == true {
 		timeout := config.GetAsFloat(asInterface, DefaultTimeoutSec)
 		handler.timeout = time.Duration(timeout) * time.Second
 	}
 
-	if asInterface, exists := (*configMap)["max_buffer_size"]; exists == true {
+	if asInterface, exists := configMap["max_buffer_size"]; exists == true {
 		handler.maxBufferSize = config.GetAsInt(asInterface, DefaultBufferSize)
 	}
 
-	if asInterface, exists := (*configMap)["interval"]; exists == true {
+	if asInterface, exists := configMap["interval"]; exists == true {
 		handler.interval = config.GetAsInt(asInterface, DefaultInterval)
 	}
 }

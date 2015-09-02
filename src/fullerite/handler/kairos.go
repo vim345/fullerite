@@ -55,7 +55,7 @@ func (k *Kairos) Configure(configMap map[string]interface{}) {
 	} else {
 		k.log.Error("There was no port specified for the Kairos Handler, there won't be any emissions")
 	}
-	k.ConfigureCommonParams(&configMap)
+	k.configureCommonParams(configMap)
 }
 
 // Server returns the Kairos server's hostname or IP address

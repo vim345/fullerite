@@ -46,7 +46,7 @@ func (s *SignalFx) Configure(configMap map[string]interface{}) {
 		s.log.Error("There was no endpoint specified for the SignalFx Handler, there won't be any emissions")
 	}
 
-	s.ConfigureCommonParams(&configMap)
+	s.configureCommonParams(configMap)
 }
 
 // Endpoint returns SignalFx' API endpoint

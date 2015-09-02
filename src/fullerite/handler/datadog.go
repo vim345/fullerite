@@ -60,7 +60,7 @@ func (d *Datadog) Configure(configMap map[string]interface{}) {
 	} else {
 		d.log.Error("There was no endpoint specified for the Datadog Handler, there won't be any emissions")
 	}
-	d.ConfigureCommonParams(&configMap)
+	d.configureCommonParams(configMap)
 }
 
 // Endpoint returns the Datadog API endpoint
