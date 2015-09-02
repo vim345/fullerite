@@ -18,35 +18,35 @@ type ProcStatus struct {
 }
 
 // ProcessName returns ProcStatus collectors process name
-func (f ProcStatus) ProcessName() string {
-	return f.processName
+func (ps ProcStatus) ProcessName() string {
+	return ps.processName
 }
 
 // NewProcStatus creates a new Test collector.
 func NewProcStatus() *ProcStatus {
-	f := new(ProcStatus)
-	f.name = "ProcStatus"
-	f.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "ProcStatus"})
-	f.channel = make(chan metric.Metric)
-	f.interval = DefaultCollectionInterval
-	f.processName = ""
-	return f
+	ps := new(ProcStatus)
+	ps.name = "ProcStatus"
+	ps.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "ProcStatus"})
+	ps.channel = make(chan metric.Metric)
+	ps.interval = DefaultCollectionInterval
+	ps.processName = ""
+	return ps
 }
 
 // Configure this takes a dictionary of values with which the handler can configure itself
-func (f *ProcStatus) Configure(configMap map[string]interface{}) {
+func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
 	if interval, exists := configMap["interval"]; exists == true {
-		f.interval = config.GetAsInt(interval, DefaultCollectionInterval)
+		ps.interval = config.GetAsInt(interval, DefaultCollectionInterval)
 	}
 	if processName, exists := configMap["processName"]; exists == true {
-		f.processName = processName.(string)
+		ps.processName = processName.(string)
 	}
 }
 
 // Collect produces some random test metrics.
-func (f ProcStatus) Collect() {
-	for _, m := range f.procStatusMetrics() {
-		f.Channel() <- m
+func (ps ProcStatus) Collect() {
+	for _, m := range ps.procStatusMetrics() {
+		ps.Channel() <- m
 	}
 }
 
@@ -60,10 +60,10 @@ func procStatusPoint(name string, value float64, dimensions map[string]string) (
 	return m
 }
 
-func (f ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
+func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 	stat, err := proc.NewStat()
 	if err != nil {
-		f.log.Warn("Error getting stats: ", err)
+		ps.log.Warn("Error getting stats: ", err)
 		return nil
 	}
 
@@ -80,10 +80,10 @@ func (f ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 	return ret
 }
 
-func (f ProcStatus) procStatusMetrics() []metric.Metric {
+func (ps ProcStatus) procStatusMetrics() []metric.Metric {
 	procs, err := procfs.AllProcs()
 	if err != nil {
-		f.log.Warn("Error getting processes: ", err)
+		ps.log.Warn("Error getting processes: ", err)
 		return nil
 	}
 
@@ -92,12 +92,12 @@ func (f ProcStatus) procStatusMetrics() []metric.Metric {
 	for _, proc := range procs {
 		cmd, err := proc.CmdLine()
 		if err != nil {
-			f.log.Warn("Error getting command line: ", err)
+			ps.log.Warn("Error getting command line: ", err)
 			continue
 		}
 
-		if len(f.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], f.processName) {
-			ret = append(ret, f.getMetrics(proc)...)
+		if len(ps.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], ps.processName) {
+			ret = append(ret, ps.getMetrics(proc)...)
 		}
 	}
 
