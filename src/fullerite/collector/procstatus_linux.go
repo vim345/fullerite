@@ -42,8 +42,8 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 
 	ret := []metric.Metric{}
 
-	m := procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim)
-	ret = append(ret, m)
+	ret = append(ret, procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim))
+	ret = append(ret, procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim))
 
 	return ret
 }
