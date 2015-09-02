@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 
 	"github.com/Sirupsen/logrus"
@@ -50,6 +51,12 @@ type BaseCollector struct {
 	name     string
 	interval int
 	log      *logrus.Entry
+}
+
+func (collector *BaseCollector) configureCommonParams(configMap map[string]interface{}) {
+	if interval, exists := configMap["interval"]; exists == true {
+		collector.interval = config.GetAsInt(interval, DefaultCollectionInterval)
+	}
 }
 
 // Channel : the channel on which the collector should send metrics

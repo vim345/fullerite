@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fullerite/config"
 	"fullerite/metric"
 
 	"runtime"
@@ -26,9 +25,7 @@ func NewFullerite() *Fullerite {
 
 // Configure this takes a dictionary of values with which the handler can configure itself
 func (f *Fullerite) Configure(configMap map[string]interface{}) {
-	if interval, exists := configMap["interval"]; exists == true {
-		f.interval = config.GetAsInt(interval, DefaultCollectionInterval)
-	}
+	f.configureCommonParams(configMap)
 }
 
 // Collect produces some random test metrics.

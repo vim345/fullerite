@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fullerite/config"
 	"fullerite/metric"
 
 	"bufio"
@@ -45,9 +44,7 @@ func (d *Diamond) Configure(configMap map[string]interface{}) {
 	if port, exists := configMap["port"]; exists == true {
 		d.port = port.(string)
 	}
-	if interval, exists := configMap["interval"]; exists == true {
-		d.interval = config.GetAsInt(interval, DefaultCollectionInterval)
-	}
+	d.configureCommonParams(configMap)
 }
 
 // Port returns Diamond collectors listen port

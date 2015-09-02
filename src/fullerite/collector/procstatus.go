@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fullerite/config"
 	"fullerite/metric"
 
 	"strconv"
@@ -35,12 +34,10 @@ func NewProcStatus() *ProcStatus {
 
 // Configure this takes a dictionary of values with which the handler can configure itself
 func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
-	if interval, exists := configMap["interval"]; exists == true {
-		ps.interval = config.GetAsInt(interval, DefaultCollectionInterval)
-	}
 	if processName, exists := configMap["processName"]; exists == true {
 		ps.processName = processName.(string)
 	}
+	ps.configureCommonParams(configMap)
 }
 
 // Collect produces some random test metrics.

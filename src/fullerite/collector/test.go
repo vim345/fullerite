@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fullerite/config"
 	"fullerite/metric"
 
 	"math/rand"
@@ -31,9 +30,7 @@ func (t *Test) Configure(configMap map[string]interface{}) {
 	if metricName, exists := configMap["metricName"]; exists == true {
 		t.metricName = metricName.(string)
 	}
-	if interval, exists := configMap["interval"]; exists == true {
-		t.interval = config.GetAsInt(interval, DefaultCollectionInterval)
-	}
+	t.configureCommonParams(configMap)
 }
 
 // Collect produces some random test metrics.
