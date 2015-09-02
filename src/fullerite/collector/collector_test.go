@@ -10,7 +10,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	names := []string{"Test", "Diamond", "Fullerite"}
+	names := []string{"Test", "Diamond", "Fullerite", "ProcStatus"}
 	for _, name := range names {
 		c := collector.New(name)
 		assert := assert.New(t)
