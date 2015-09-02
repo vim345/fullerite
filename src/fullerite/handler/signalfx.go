@@ -61,7 +61,7 @@ func (s *SignalFx) Run() {
 	lastEmission := time.Now()
 	lastHandlerMetricsEmission := lastEmission
 	for incomingMetric := range s.Channel() {
-		datapoint := s.convertToProto(&incomingMetric)
+		datapoint := s.convertToProto(incomingMetric)
 		s.log.Debug("SignalFx datapoint: ", datapoint)
 		datapoints = append(datapoints, datapoint)
 
@@ -75,7 +75,7 @@ func (s *SignalFx) Run() {
 			m := s.makeEmissionTimeMetric()
 			s.resetEmissionTimes()
 			m.AddDimension("handler", "SignalFx")
-			datapoints = append(datapoints, s.convertToProto(&m))
+			datapoints = append(datapoints, s.convertToProto(m))
 		}
 
 		if doEmit {
@@ -94,7 +94,7 @@ func (s *SignalFx) Run() {
 	}
 }
 
-func (s *SignalFx) convertToProto(incomingMetric *metric.Metric) *DataPoint {
+func (s *SignalFx) convertToProto(incomingMetric metric.Metric) *DataPoint {
 	// Create a new values for the Datapoint that requires pointers.
 	outname := s.Prefix() + incomingMetric.Name
 	value := incomingMetric.Value
