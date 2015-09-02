@@ -21,7 +21,7 @@ type Kairos struct {
 	port   string
 }
 
-type kairosMetric struct {
+type KairosMetric struct {
 	Name       string            `json:"name"`
 	Timestamp  int64             `json:"timestamp"`
 	MetricType string            `json:"type"`
@@ -70,7 +70,7 @@ func (k *Kairos) Port() string {
 
 // Run runs the Kairos handler
 func (k *Kairos) Run() {
-	datapoints := make([]kairosMetric, 0, k.maxBufferSize)
+	datapoints := make([]KairosMetric, 0, k.maxBufferSize)
 
 	lastEmission := time.Now()
 	lastHandlerMetricsEmission := lastEmission
@@ -103,14 +103,14 @@ func (k *Kairos) Run() {
 			k.emissionTimes = append(k.emissionTimes, emissionTimeInSeconds)
 
 			// reset datapoints
-			datapoints = make([]kairosMetric, 0, k.maxBufferSize)
+			datapoints = make([]KairosMetric, 0, k.maxBufferSize)
 		}
 
 	}
 }
 
-func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint kairosMetric) {
-	km := new(kairosMetric)
+func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint KairosMetric) {
+	km := new(KairosMetric)
 	km.Name = k.Prefix() + incomingMetric.Name
 	km.Value = incomingMetric.Value
 	km.MetricType = "double"
@@ -119,7 +119,7 @@ func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint kairos
 	return *km
 }
 
-func (k *Kairos) emitMetrics(series []kairosMetric) {
+func (k *Kairos) emitMetrics(series []KairosMetric) {
 	k.log.Info("Starting to emit ", len(series), " datapoints")
 
 	if len(series) == 0 {
