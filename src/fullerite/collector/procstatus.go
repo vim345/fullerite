@@ -4,7 +4,6 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -61,19 +60,7 @@ func procStatusPoint(name string, value float64, dimensions map[string]string) (
 	return m
 }
 
-func (f ProcStatus) getMetrics(pid string) []metric.Metric {
-	i, err := strconv.Atoi(pid)
-	if err != nil {
-		f.log.Warnf("Error parsing pid %s: %v", pid, err)
-		return nil
-	}
-
-	proc, err := procfs.NewProc(i)
-	if err != nil {
-		f.log.Warn("Error creating Proc: ", err)
-		return nil
-	}
-
+func (f ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 	stat, err := proc.NewStat()
 	if err != nil {
 		f.log.Warn("Error getting stats: ", err)
@@ -82,8 +69,9 @@ func (f ProcStatus) getMetrics(pid string) []metric.Metric {
 
 	dim := map[string]string{
 		"processName": stat.Comm,
-		"pid":         pid,
+		"pid":         strconv.Itoa(stat.PID),
 	}
+
 	ret := []metric.Metric{}
 
 	m := procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim)
@@ -93,23 +81,25 @@ func (f ProcStatus) getMetrics(pid string) []metric.Metric {
 }
 
 func (f ProcStatus) procStatusMetrics() []metric.Metric {
-	// Get pids
-	c := exec.Command("pgrep", f.processName)
-	out, err := c.Output()
+	procs, err := procfs.AllProcs()
 	if err != nil {
-		f.log.Warn("Error while getting process ids: ", err)
+		f.log.Warn("Error getting processes: ", err)
 		return nil
 	}
 
 	ret := []metric.Metric{}
 
-	pids := strings.Split(string(out), "\n")
-	for _, pid := range pids {
-		if len(pid) == 0 {
+	for _, proc := range procs {
+		cmd, err := proc.CmdLine()
+		if err != nil {
+			f.log.Warn("Error getting command line: ", err)
 			continue
 		}
 
-		ret = append(ret, f.getMetrics(pid)...)
+		if len(f.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], f.processName) {
+			ret = append(ret, f.getMetrics(proc)...)
+		}
 	}
+
 	return ret
 }
