@@ -157,6 +157,7 @@ func (handler *BaseHandler) makeEmissionTimeMetric() metric.Metric {
 	}
 	m := metric.New("HandlerEmitTiming")
 	m.Value = value / float64(len(handler.emissionTimes))
+	m.AddDimension("handler", handler.name)
 	return m
 }
 
@@ -167,6 +168,7 @@ func (handler *BaseHandler) resetEmissionTimes() {
 func (handler *BaseHandler) makeMetricsSentMetric() metric.Metric {
 	m := metric.New("MetricsSent")
 	m.Value = float64(handler.metricsSent)
+	m.AddDimension("handler", handler.name)
 	return m
 }
 
@@ -177,6 +179,7 @@ func (handler *BaseHandler) resetMetricsSent() {
 func (handler *BaseHandler) makeMetricsDroppedMetric() metric.Metric {
 	m := metric.New("MetricsDropped")
 	m.Value = float64(handler.metricsDropped)
+	m.AddDimension("handler", handler.name)
 	return m
 }
 

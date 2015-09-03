@@ -92,21 +92,16 @@ func (k *Kairos) Run() {
 			// Report HandlerEmitTiming
 			m := k.makeEmissionTimeMetric()
 			k.resetEmissionTimes()
-			m.AddDimension("handler", "Kairos")
 			datapoints = append(datapoints, k.convertToKairos(m))
 
 			// Report setrics sent
 			metricsSent := k.makeMetricsDroppedMetric()
 			k.resetMetricsSent()
-			metricsSent.AddDimension("application", "fullerite")
-			metricsSent.AddDimension("handler", "kairos")
 			datapoints = append(datapoints, k.convertToKairos(metricsSent))
 
 			// Report dropped metrics
 			metricsDropped := k.makeMetricsDroppedMetric()
 			k.resetMetricsDropped()
-			metricsDropped.AddDimension("application", "fullerite")
-			metricsDropped.AddDimension("handler", "kairos")
 			datapoints = append(datapoints, k.convertToKairos(metricsDropped))
 		}
 
@@ -121,7 +116,7 @@ func (k *Kairos) Run() {
 			k.emissionTimes = append(k.emissionTimes, emissionTimeInSeconds)
 
 			if result {
-					k.metricsSent += len(datapoints)
+				k.metricsSent += len(datapoints)
 			} else {
 				k.metricsDropped += len(datapoints)
 			}
