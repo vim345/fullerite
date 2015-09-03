@@ -70,6 +70,8 @@ type BaseHandler struct {
 	source            string
 	defaultDimensions map[string]string
 	emissionTimes     []float64
+	metricsSent       int
+	metricsDropped    int
 	log               *logrus.Entry
 }
 
@@ -160,4 +162,24 @@ func (handler *BaseHandler) makeEmissionTimeMetric() metric.Metric {
 
 func (handler *BaseHandler) resetEmissionTimes() {
 	handler.emissionTimes = make([]float64, 0)
+}
+
+func (handler *BaseHandler) makeMetricsSentMetric() metric.Metric {
+	m := metric.New("MetricsSent")
+	m.Value = float64(handler.metricsSent)
+	return m
+}
+
+func (handler *BaseHandler) resetMetricsSent() {
+	handler.metricsSent = 0
+}
+
+func (handler *BaseHandler) makeMetricsDroppedMetric() metric.Metric {
+	m := metric.New("MetricsDropped")
+	m.Value = float64(handler.metricsDropped)
+	return m
+}
+
+func (handler *BaseHandler) resetMetricsDropped() {
+	handler.metricsDropped = 0
 }
