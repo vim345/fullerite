@@ -92,12 +92,18 @@ func (s *SignalFx) Run() {
 		if doEmit {
 			// emit datapoints
 			beforeEmission := time.Now()
-			s.emitMetrics(datapoints)
+			result := s.emitMetrics(datapoints)
 			lastEmission = time.Now()
 
 			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
 			s.log.Info("POST to SignalFx took ", emissionTimeInSeconds, " seconds")
 			s.emissionTimes = append(s.emissionTimes, emissionTimeInSeconds)
+
+			if result {
+				s.metricsSent += len(datapoints)
+			} else {
+				s.metricsDropped += len(datapoints)
+			}
 
 			// reset datapoints
 			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
@@ -145,12 +151,12 @@ func (s *SignalFx) convertToProto(incomingMetric metric.Metric) *DataPoint {
 	return datapoint
 }
 
-func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
+func (s *SignalFx) emitMetrics(datapoints []*DataPoint) bool {
 	s.log.Info("Starting to emit ", len(datapoints), " datapoints")
 
 	if len(datapoints) == 0 {
 		s.log.Warn("Skipping send because of an empty payload")
-		return
+		return false
 	}
 
 	payload := new(DataPointUploadMessage)
@@ -159,18 +165,18 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	if s.authToken == "" || s.endpoint == "" {
 		s.log.Warn("Skipping emission because we're missing the auth token ",
 			"or the endpoint, payload would have been ", payload)
-		return
+		return false
 	}
 	serialized, err := proto.Marshal(payload)
 	if err != nil {
 		s.log.Error("Failed to serailize payload ", payload)
-		return
+		return false
 	}
 
 	req, err := http.NewRequest("POST", s.endpoint, bytes.NewBuffer(serialized))
 	if err != nil {
 		s.log.Error("Failed to create a request to endpoint ", s.endpoint)
-		return
+		return false
 	}
 	req.Header.Set("X-SF-TOKEN", s.authToken)
 	req.Header.Set("Content-Type", "application/x-protobuf")
@@ -184,7 +190,7 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 	rsp, err := client.Do(req)
 	if err != nil {
 		s.log.Error("Failed to complete POST ", err)
-		return
+		return false
 	}
 
 	defer rsp.Body.Close()
@@ -194,10 +200,11 @@ func (s *SignalFx) emitMetrics(datapoints []*DataPoint) {
 			" status was ", rsp.Status,
 			" rsp body was ", string(body),
 			" payload was ", payload)
-		return
+		return false
 	}
 
 	s.log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
+	return true
 }
 
 func (s *SignalFx) dialTimeout(network, addr string) (net.Conn, error) {
