@@ -177,15 +177,14 @@ func (k *Kairos) emitMetrics(series []KairosMetric) bool {
 	if rsp.StatusCode == http.StatusNoContent {
 		k.log.Info("Successfully sent ", len(series), " datapoints to Kairos")
 		return true
-	} else {
-		body, _ := ioutil.ReadAll(rsp.Body)
-		k.log.Error("Failed to post to Kairos @", apiURL,
-			" status was ", rsp.Status,
-			" rsp body was ", string(body),
-			" payload was ", string(payload))
-		return false
 	}
 
+	body, _ := ioutil.ReadAll(rsp.Body)
+	k.log.Error("Failed to post to Kairos @", apiURL,
+		" status was ", rsp.Status,
+		" rsp body was ", string(body),
+		" payload was ", string(payload))
+	return false
 }
 
 func (k *Kairos) dialTimeout(network, addr string) (net.Conn, error) {
