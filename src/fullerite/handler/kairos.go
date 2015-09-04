@@ -40,8 +40,6 @@ func NewKairos() *Kairos {
 	k.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Kairos"})
 	k.channel = make(chan metric.Metric)
 	k.emissionTimes = make([]float64, 0)
-	k.metricsSent = 0
-	k.metricsDropped = 0
 	return k
 }
 
@@ -95,7 +93,7 @@ func (k *Kairos) Run() {
 			datapoints = append(datapoints, k.convertToKairos(m))
 
 			// Report setrics sent
-			metricsSent := k.makeMetricsDroppedMetric()
+			metricsSent := k.makeMetricsSentMetric()
 			k.resetMetricsSent()
 			datapoints = append(datapoints, k.convertToKairos(metricsSent))
 

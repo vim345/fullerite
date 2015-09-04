@@ -79,7 +79,7 @@ func (s *SignalFx) Run() {
 			datapoints = append(datapoints, s.convertToProto(m))
 
 			// Report setrics sent
-			metricsSent := s.makeMetricsDroppedMetric()
+			metricsSent := s.makeMetricsSentMetric()
 			s.resetMetricsSent()
 			datapoints = append(datapoints, s.convertToProto(metricsSent))
 
