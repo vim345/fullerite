@@ -138,7 +138,7 @@ func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint Kairos
 	return *km
 }
 
-func (k *Kairos) emitMetrics(series []KairosMetric) (bool) {
+func (k *Kairos) emitMetrics(series []KairosMetric) bool {
 	k.log.Info("Starting to emit ", len(series), " datapoints")
 
 	if len(series) == 0 {
