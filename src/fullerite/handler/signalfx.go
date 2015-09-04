@@ -72,10 +72,21 @@ func (s *SignalFx) Run() {
 
 		if emitHandlerIntervalPassed {
 			lastHandlerMetricsEmission = time.Now()
+
+			// Report HandlerEmitTiming
 			m := s.makeEmissionTimeMetric()
 			s.resetEmissionTimes()
-			m.AddDimension("handler", "SignalFx")
 			datapoints = append(datapoints, s.convertToProto(m))
+
+			// Report setrics sent
+			metricsSent := s.makeMetricsDroppedMetric()
+			s.resetMetricsSent()
+			datapoints = append(datapoints, s.convertToProto(metricsSent))
+
+			// Report dropped metrics
+			metricsDropped := s.makeMetricsDroppedMetric()
+			s.resetMetricsDropped()
+			datapoints = append(datapoints, s.convertToProto(metricsDropped))
 		}
 
 		if doEmit {
