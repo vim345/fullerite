@@ -68,45 +68,9 @@ func (d *Datadog) Endpoint() string {
 	return d.endpoint
 }
 
-// Run runs the Datadog handler
+// Run runs the handler main loop
 func (d *Datadog) Run() {
-	datapoints := make([]datadogMetric, 0, d.maxBufferSize)
-
-	lastEmission := time.Now()
-	lastHandlerMetricsEmission := lastEmission
-	for incomingMetric := range d.Channel() {
-		datapoint := d.convertToDatadog(incomingMetric)
-		d.log.Debug("Datadog datapoint: ", datapoint)
-		datapoints = append(datapoints, datapoint)
-
-		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(d.interval)
-		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(d.interval)
-		bufferSizeLimitReached := len(datapoints) >= d.maxBufferSize
-		doEmit := emitIntervalPassed || bufferSizeLimitReached
-
-		if emitHandlerIntervalPassed {
-			lastHandlerMetricsEmission = time.Now()
-			m := d.makeEmissionTimeMetric()
-			d.resetEmissionTimes()
-			m.AddDimension("handler", "Datadog")
-			datapoints = append(datapoints, d.convertToDatadog(m))
-		}
-
-		if doEmit {
-			// emit datapoints
-			beforeEmission := time.Now()
-			d.emitMetrics(datapoints)
-			lastEmission = time.Now()
-
-			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			d.log.Info("POST to Datadog took ", emissionTimeInSeconds, " seconds")
-			d.emissionTimes = append(d.emissionTimes, emissionTimeInSeconds)
-
-			// reset datapoints
-			datapoints = make([]datadogMetric, 0, d.maxBufferSize)
-		}
-
-	}
+	d.run(d.EmitMetrics)
 }
 
 func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint datadogMetric) {
@@ -123,12 +87,18 @@ func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint data
 	return *dog
 }
 
-func (d *Datadog) emitMetrics(series []datadogMetric) {
-	d.log.Info("Starting to emit ", len(series), " datapoints")
+// EmitMetrics sends given metrics to Datadog
+func (d *Datadog) EmitMetrics(metrics []metric.Metric) bool {
+	d.log.Info("Starting to emit ", len(metrics), " metrics")
 
-	if len(series) == 0 {
+	if len(metrics) == 0 {
 		d.log.Warn("Skipping send because of an empty payload")
-		return
+		return false
+	}
+
+	series := make([]datadogMetric, 0, len(metrics))
+	for _, m := range metrics {
+		series = append(series, d.convertToDatadog(m))
 	}
 
 	p := datadogPayload{Series: series}
@@ -136,14 +106,14 @@ func (d *Datadog) emitMetrics(series []datadogMetric) {
 	if err != nil {
 		d.log.Error("Failed marshaling datapoints to Datadog format")
 		d.log.Error("Dropping Datadog datapoints ", series)
-		return
+		return false
 	}
 
 	apiURL := fmt.Sprintf("%s/series?api_key=%s", d.endpoint, d.apiKey)
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payload))
 	if err != nil {
 		d.log.Error("Failed to create a request to endpoint ", d.endpoint)
-		return
+		return false
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -156,21 +126,21 @@ func (d *Datadog) emitMetrics(series []datadogMetric) {
 	rsp, err := client.Do(req)
 	if err != nil {
 		d.log.Error("Failed to complete POST ", err)
-		return
+		return false
 	}
 
 	defer rsp.Body.Close()
 	if (rsp.StatusCode == http.StatusOK) || (rsp.StatusCode == http.StatusAccepted) {
 		d.log.Info("Successfully sent ", len(series), " datapoints to Datadog")
-	} else {
-		body, _ := ioutil.ReadAll(rsp.Body)
-		d.log.Error("Failed to post to Datadog @", d.endpoint,
-			" status was ", rsp.Status,
-			" rsp body was ", string(body),
-			" payload was ", string(payload))
-		return
+		return true
 	}
 
+	body, _ := ioutil.ReadAll(rsp.Body)
+	d.log.Error("Failed to post to Datadog @", d.endpoint,
+		" status was ", rsp.Status,
+		" rsp body was ", string(body),
+		" payload was ", string(payload))
+	return false
 }
 
 func (d *Datadog) dialTimeout(network, addr string) (net.Conn, error) {

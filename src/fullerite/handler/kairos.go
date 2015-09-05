@@ -69,61 +69,9 @@ func (k *Kairos) Port() string {
 	return k.port
 }
 
-// Run runs the Kairos handler
+// Run runs the handler main loop
 func (k *Kairos) Run() {
-	datapoints := make([]KairosMetric, 0, k.maxBufferSize)
-
-	lastEmission := time.Now()
-	lastHandlerMetricsEmission := lastEmission
-	for incomingMetric := range k.Channel() {
-		datapoint := k.convertToKairos(incomingMetric)
-		k.log.Debug("Kairos datapoint: ", datapoint)
-		datapoints = append(datapoints, datapoint)
-
-		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(k.interval)
-		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(k.interval)
-		bufferSizeLimitReached := len(datapoints) >= k.maxBufferSize
-		doEmit := emitIntervalPassed || bufferSizeLimitReached
-
-		if emitHandlerIntervalPassed {
-			lastHandlerMetricsEmission = time.Now()
-			// Report HandlerEmitTiming
-			m := k.makeEmissionTimeMetric()
-			k.resetEmissionTimes()
-			datapoints = append(datapoints, k.convertToKairos(m))
-
-			// Report setrics sent
-			metricsSent := k.makeMetricsSentMetric()
-			k.resetMetricsSent()
-			datapoints = append(datapoints, k.convertToKairos(metricsSent))
-
-			// Report dropped metrics
-			metricsDropped := k.makeMetricsDroppedMetric()
-			k.resetMetricsDropped()
-			datapoints = append(datapoints, k.convertToKairos(metricsDropped))
-		}
-
-		if doEmit {
-			// emit datapoints
-			beforeEmission := time.Now()
-			result := k.emitMetrics(datapoints)
-			lastEmission = time.Now()
-
-			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			k.log.Info("POST to Kairos took ", emissionTimeInSeconds, " seconds")
-			k.emissionTimes = append(k.emissionTimes, emissionTimeInSeconds)
-
-			if result {
-				k.metricsSent += len(datapoints)
-			} else {
-				k.metricsDropped += len(datapoints)
-			}
-
-			// reset datapoints
-			datapoints = make([]KairosMetric, 0, k.maxBufferSize)
-		}
-
-	}
+	k.run(k.EmitMetrics)
 }
 
 func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint KairosMetric) {
@@ -136,12 +84,18 @@ func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint Kairos
 	return *km
 }
 
-func (k *Kairos) emitMetrics(series []KairosMetric) bool {
-	k.log.Info("Starting to emit ", len(series), " datapoints")
+// EmitMetrics sends given metrics to KairosDB
+func (k *Kairos) EmitMetrics(metrics []metric.Metric) bool {
+	k.log.Info("Starting to emit ", len(metrics), " metrics")
 
-	if len(series) == 0 {
+	if len(metrics) == 0 {
 		k.log.Warn("Skipping send because of an empty payload")
 		return false
+	}
+
+	series := make([]KairosMetric, 0, len(metrics))
+	for _, m := range metrics {
+		series = append(series, k.convertToKairos(m))
 	}
 
 	payload, err := json.Marshal(series)

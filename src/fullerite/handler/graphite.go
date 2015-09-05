@@ -56,45 +56,9 @@ func (g *Graphite) Configure(configMap map[string]interface{}) {
 	g.configureCommonParams(configMap)
 }
 
-// Run sends metrics in the channel to the graphite server.
+// Run runs the handler main loop
 func (g *Graphite) Run() {
-	datapoints := make([]string, 0, g.maxBufferSize)
-
-	lastEmission := time.Now()
-	lastHandlerMetricsEmission := lastEmission
-	for incomingMetric := range g.Channel() {
-		datapoint := g.convertToGraphite(incomingMetric)
-		g.log.Debug("Graphite datapoint: ", datapoint)
-		datapoints = append(datapoints, datapoint)
-
-		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(g.interval)
-		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(g.interval)
-		bufferSizeLimitReached := len(datapoints) >= g.maxBufferSize
-		doEmit := emitIntervalPassed || bufferSizeLimitReached
-
-		if emitHandlerIntervalPassed {
-			lastHandlerMetricsEmission = time.Now()
-			m := g.makeEmissionTimeMetric()
-			g.resetEmissionTimes()
-			m.AddDimension("handler", "Graphite")
-			datapoints = append(datapoints, g.convertToGraphite(m))
-		}
-
-		if doEmit {
-			// emit datapoints
-			beforeEmission := time.Now()
-			g.emitMetrics(datapoints)
-			lastEmission = time.Now()
-
-			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			g.log.Info("Sending to Graphite took ", emissionTimeInSeconds, " seconds")
-			g.emissionTimes = append(g.emissionTimes, emissionTimeInSeconds)
-
-			// reset datapoints
-			datapoints = make([]string, 0, g.maxBufferSize)
-		}
-
-	}
+	g.run(g.EmitMetrics)
 }
 
 func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint string) {
@@ -114,21 +78,24 @@ func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint st
 	return datapoint
 }
 
-func (g *Graphite) emitMetrics(datapoints []string) {
-	g.log.Info("Starting to emit ", len(datapoints), " datapoints")
+// EmitMetrics sends given metrics to Graphite
+func (g *Graphite) EmitMetrics(metrics []metric.Metric) bool {
+	g.log.Info("Starting to emit ", len(metrics), " metrics")
 
-	if len(datapoints) == 0 {
+	if len(metrics) == 0 {
 		g.log.Warn("Skipping send because of an empty payload")
-		return
+		return false
 	}
 
 	addr := fmt.Sprintf("%s:%s", g.server, g.port)
 	conn, err := net.DialTimeout("tcp", addr, g.timeout)
 	if err != nil {
 		g.log.Error("Failed to connect ", addr)
-	} else {
-		for _, datapoint := range datapoints {
-			fmt.Fprintf(conn, datapoint)
-		}
+		return false
 	}
+
+	for _, m := range metrics {
+		fmt.Fprintf(conn, g.convertToGraphite(m))
+	}
+	return true
 }

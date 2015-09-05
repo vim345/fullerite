@@ -54,61 +54,9 @@ func (s *SignalFx) Endpoint() string {
 	return s.endpoint
 }
 
-// Run send metrics in the channel to SignalFx.
+// Run runs the handler main loop
 func (s *SignalFx) Run() {
-	datapoints := make([]*DataPoint, 0, s.maxBufferSize)
-
-	lastEmission := time.Now()
-	lastHandlerMetricsEmission := lastEmission
-	for incomingMetric := range s.Channel() {
-		datapoint := s.convertToProto(incomingMetric)
-		s.log.Debug("SignalFx datapoint: ", datapoint)
-		datapoints = append(datapoints, datapoint)
-
-		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(s.interval)
-		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(s.interval)
-		bufferSizeLimitReached := len(datapoints) >= s.maxBufferSize
-		doEmit := emitIntervalPassed || bufferSizeLimitReached
-
-		if emitHandlerIntervalPassed {
-			lastHandlerMetricsEmission = time.Now()
-
-			// Report HandlerEmitTiming
-			m := s.makeEmissionTimeMetric()
-			s.resetEmissionTimes()
-			datapoints = append(datapoints, s.convertToProto(m))
-
-			// Report setrics sent
-			metricsSent := s.makeMetricsSentMetric()
-			s.resetMetricsSent()
-			datapoints = append(datapoints, s.convertToProto(metricsSent))
-
-			// Report dropped metrics
-			metricsDropped := s.makeMetricsDroppedMetric()
-			s.resetMetricsDropped()
-			datapoints = append(datapoints, s.convertToProto(metricsDropped))
-		}
-
-		if doEmit {
-			// emit datapoints
-			beforeEmission := time.Now()
-			result := s.emitMetrics(datapoints)
-			lastEmission = time.Now()
-
-			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
-			s.log.Info("POST to SignalFx took ", emissionTimeInSeconds, " seconds")
-			s.emissionTimes = append(s.emissionTimes, emissionTimeInSeconds)
-
-			if result {
-				s.metricsSent += len(datapoints)
-			} else {
-				s.metricsDropped += len(datapoints)
-			}
-
-			// reset datapoints
-			datapoints = make([]*DataPoint, 0, s.maxBufferSize)
-		}
-	}
+	s.run(s.EmitMetrics)
 }
 
 func (s *SignalFx) convertToProto(incomingMetric metric.Metric) *DataPoint {
@@ -151,12 +99,18 @@ func (s *SignalFx) convertToProto(incomingMetric metric.Metric) *DataPoint {
 	return datapoint
 }
 
-func (s *SignalFx) emitMetrics(datapoints []*DataPoint) bool {
-	s.log.Info("Starting to emit ", len(datapoints), " datapoints")
+// EmitMetrics sends given metrics to SignalFx
+func (s *SignalFx) EmitMetrics(metrics []metric.Metric) bool {
+	s.log.Info("Starting to emit ", len(metrics), " metrics")
 
-	if len(datapoints) == 0 {
+	if len(metrics) == 0 {
 		s.log.Warn("Skipping send because of an empty payload")
 		return false
+	}
+
+	datapoints := make([]*DataPoint, 0, len(metrics))
+	for _, m := range metrics {
+		datapoints = append(datapoints, s.convertToProto(m))
 	}
 
 	payload := new(DataPointUploadMessage)

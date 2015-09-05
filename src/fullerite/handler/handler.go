@@ -57,6 +57,8 @@ type Handler interface {
 
 	DefaultDimensions() map[string]string
 	SetDefaultDimensions(map[string]string)
+
+	EmitMetrics([]metric.Metric) bool
 }
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
@@ -185,4 +187,55 @@ func (handler *BaseHandler) makeMetricsDroppedMetric() metric.Metric {
 
 func (handler *BaseHandler) resetMetricsDropped() {
 	handler.metricsDropped = 0
+}
+
+func (handler *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
+	metrics := make([]metric.Metric, 0, handler.maxBufferSize)
+
+	lastEmission := time.Now()
+	lastHandlerMetricsEmission := lastEmission
+	for incomingMetric := range handler.Channel() {
+		handler.log.Debug(handler.name, " metric: ", incomingMetric)
+		metrics = append(metrics, incomingMetric)
+
+		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(handler.interval)
+		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(handler.interval)
+		bufferSizeLimitReached := len(metrics) >= handler.maxBufferSize
+		doEmit := emitIntervalPassed || bufferSizeLimitReached
+
+		if emitHandlerIntervalPassed {
+			lastHandlerMetricsEmission = time.Now()
+
+			// Report HandlerEmitTiming
+			metrics = append(metrics, handler.makeEmissionTimeMetric())
+			handler.resetEmissionTimes()
+
+			// Report setrics sent
+			metrics = append(metrics, handler.makeMetricsSentMetric())
+			handler.resetMetricsSent()
+
+			// Report dropped metrics
+			metrics = append(metrics, handler.makeMetricsDroppedMetric())
+			handler.resetMetricsDropped()
+		}
+
+		if doEmit {
+			beforeEmission := time.Now()
+			result := emitFunc(metrics)
+			lastEmission = time.Now()
+
+			emissionTimeInSeconds := lastEmission.Sub(beforeEmission).Seconds()
+			handler.log.Info("POST to ", handler.name, " took ", emissionTimeInSeconds, " seconds")
+			handler.emissionTimes = append(handler.emissionTimes, emissionTimeInSeconds)
+
+			if result {
+				handler.metricsSent += len(metrics)
+			} else {
+				handler.metricsDropped += len(metrics)
+			}
+
+			// reset metrics
+			metrics = make([]metric.Metric, 0, handler.maxBufferSize)
+		}
+	}
 }
