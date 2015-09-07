@@ -203,22 +203,6 @@ func (handler *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 		bufferSizeLimitReached := len(metrics) >= handler.maxBufferSize
 		doEmit := emitIntervalPassed || bufferSizeLimitReached
 
-		if emitHandlerIntervalPassed {
-			lastHandlerMetricsEmission = time.Now()
-
-			// Report HandlerEmitTiming
-			metrics = append(metrics, handler.makeEmissionTimeMetric())
-			handler.resetEmissionTimes()
-
-			// Report setrics sent
-			metrics = append(metrics, handler.makeMetricsSentMetric())
-			handler.resetMetricsSent()
-
-			// Report dropped metrics
-			metrics = append(metrics, handler.makeMetricsDroppedMetric())
-			handler.resetMetricsDropped()
-		}
-
 		if doEmit {
 			beforeEmission := time.Now()
 			result := emitFunc(metrics)
@@ -236,6 +220,22 @@ func (handler *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 
 			// reset metrics
 			metrics = make([]metric.Metric, 0, handler.maxBufferSize)
+		}
+
+		if emitHandlerIntervalPassed {
+			lastHandlerMetricsEmission = time.Now()
+
+			// Report HandlerEmitTiming
+			metrics = append(metrics, handler.makeEmissionTimeMetric())
+			handler.resetEmissionTimes()
+
+			// Report setrics sent
+			metrics = append(metrics, handler.makeMetricsSentMetric())
+			handler.resetMetricsSent()
+
+			// Report dropped metrics
+			metrics = append(metrics, handler.makeMetricsDroppedMetric())
+			handler.resetMetricsDropped()
 		}
 	}
 }
