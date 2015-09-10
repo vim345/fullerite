@@ -6,3 +6,5 @@ src/golang.org/*
 *.deb
 *.secret
 *.pyc
+*.DS_Store
+.project
