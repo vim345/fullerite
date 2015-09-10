@@ -40,10 +40,10 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 		"pid":         strconv.Itoa(stat.PID),
 	}
 
-	ret := []metric.Metric{}
-
-	ret = append(ret, procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim))
-	ret = append(ret, procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim))
+	ret := []metric.Metric{
+		procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim),
+		procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim),
+	}
 
 	return ret
 }

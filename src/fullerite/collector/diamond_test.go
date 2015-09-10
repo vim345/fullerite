@@ -1,8 +1,8 @@
-package collector_test
+package collector
 
 import (
-	"fullerite/collector"
 	"fullerite/metric"
+	"test_utils"
 
 	"encoding/json"
 	"fmt"
@@ -10,19 +10,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDiamondConfigureEmptyConfig(t *testing.T) {
 	config := make(map[string]interface{})
-	d := collector.NewDiamond()
+
+	d := NewDiamond(nil, 12, nil)
 	d.Configure(config)
 
 	assert.Equal(t,
 		d.Interval(),
-		collector.DefaultCollectionInterval,
+		12,
 		"should be the default collection interval",
 	)
 }
@@ -31,7 +31,7 @@ func TestDiamondConfigure(t *testing.T) {
 	config := make(map[string]interface{})
 	config["interval"] = 9999
 	config["port"] = "0"
-	d := collector.NewDiamond()
+	d := NewDiamond(nil, 12, nil)
 	d.Configure(config)
 
 	assert := assert.New(t)
@@ -40,12 +40,13 @@ func TestDiamondConfigure(t *testing.T) {
 }
 
 func TestDiamondCollect(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-
 	config := make(map[string]interface{})
 	config["port"] = "0"
 
-	d := collector.NewDiamond()
+	testChannel := make(chan metric.Metric)
+	testLog := test_utils.BuildLogger()
+
+	d := NewDiamond(testChannel, 123, testLog)
 	d.Configure(config)
 
 	// start collecting Diamond metrics
@@ -65,7 +66,7 @@ func TestDiamondCollect(t *testing.T) {
 	}
 }
 
-func connectToDiamondCollector(d *collector.Diamond) (net.Conn, error) {
+func connectToDiamondCollector(d *Diamond) (net.Conn, error) {
 	// emit a Diamond metric
 	var (
 		conn net.Conn

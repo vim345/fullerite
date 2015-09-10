@@ -4,7 +4,7 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 	DefaultCollectionInterval = 10
 )
 
-var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector"})
+var defaultLog = l.WithFields(l.Fields{"app": "fullerite", "pkg": "collector"})
 
 // Collector defines the interface of a generic collector.
 type Collector interface {
@@ -29,15 +29,19 @@ type Collector interface {
 // New creates a new Collector based on the requested collector name.
 func New(name string) Collector {
 	var collector Collector
+
+	channel := make(chan metric.Metric)
+	collectorLog := defaultLog.WithFields(l.Fields{"collector": name})
+
 	switch name {
 	case "Test":
-		collector = NewTest()
+		collector = NewTest(channel, DefaultCollectionInterval, collectorLog)
 	case "Diamond":
-		collector = NewDiamond()
+		collector = NewDiamond(channel, DefaultCollectionInterval, collectorLog)
 	case "Fullerite":
-		collector = NewFullerite()
+		collector = NewFullerite(channel, DefaultCollectionInterval, collectorLog)
 	case "ProcStatus":
-		collector = NewProcStatus()
+		collector = NewProcStatus(channel, DefaultCollectionInterval, collectorLog)
 	default:
 		defaultLog.Error("Cannot create collector", name)
 		return nil
@@ -50,7 +54,7 @@ type BaseCollector struct {
 	channel  chan metric.Metric
 	name     string
 	interval int
-	log      *logrus.Entry
+	log      *l.Entry
 }
 
 func (collector *BaseCollector) configureCommonParams(configMap map[string]interface{}) {

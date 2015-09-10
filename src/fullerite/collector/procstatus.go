@@ -3,7 +3,7 @@ package collector
 import (
 	"fullerite/metric"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 // ProcStatus collector type
@@ -18,13 +18,16 @@ func (ps ProcStatus) ProcessName() string {
 }
 
 // NewProcStatus creates a new Test collector.
-func NewProcStatus() *ProcStatus {
+func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry) *ProcStatus {
 	ps := new(ProcStatus)
+
+	ps.log = log
+	ps.channel = channel
+	ps.interval = initialInterval
+
 	ps.name = "ProcStatus"
-	ps.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "ProcStatus"})
-	ps.channel = make(chan metric.Metric)
-	ps.interval = DefaultCollectionInterval
 	ps.processName = ""
+
 	return ps
 }
 

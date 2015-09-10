@@ -1,10 +1,8 @@
 // +build linux
 
-package collector_test
+package collector
 
 import (
-	"fullerite/collector"
-
 	"testing"
 	"time"
 )
@@ -13,7 +11,7 @@ func TestProcStatusCollect(t *testing.T) {
 	config := make(map[string]interface{})
 	config["interval"] = 9999
 
-	ps := collector.NewProcStatus()
+	ps := NewProcStatus()
 	ps.Configure(config)
 
 	go ps.Collect()

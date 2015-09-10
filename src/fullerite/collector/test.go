@@ -5,23 +5,33 @@ import (
 
 	"math/rand"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
+
+type valueGenerator func() float64
+
+func generateRandomValue() float64 {
+	return rand.Float64()
+}
 
 // Test collector type
 type Test struct {
 	BaseCollector
 	metricName string
+	generator  valueGenerator
 }
 
 // NewTest creates a new Test collector.
-func NewTest() *Test {
+func NewTest(channel chan metric.Metric, initialInterval int, log *l.Entry) *Test {
 	t := new(Test)
+
+	t.log = log
+	t.channel = channel
+	t.interval = initialInterval
+
 	t.name = "Test"
-	t.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "Test"})
-	t.channel = make(chan metric.Metric)
-	t.interval = DefaultCollectionInterval
 	t.metricName = "TestMetric"
+	t.generator = generateRandomValue
 	return t
 }
 
@@ -36,7 +46,7 @@ func (t *Test) Configure(configMap map[string]interface{}) {
 // Collect produces some random test metrics.
 func (t Test) Collect() {
 	metric := metric.New(t.metricName)
-	metric.Value = rand.Float64()
+	metric.Value = t.generator()
 	metric.AddDimension("testing", "yes")
 	t.Channel() <- metric
 	t.log.Debug(metric)

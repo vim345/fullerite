@@ -1,7 +1,8 @@
-package collector_test
+package collector
 
 import (
-	"fullerite/collector"
+	"fullerite/metric"
+	"test_utils"
 
 	"testing"
 	"time"
@@ -11,12 +12,13 @@ import (
 
 func TestFulleriteConfigureEmptyConfig(t *testing.T) {
 	config := make(map[string]interface{})
-	f := collector.NewFullerite()
+
+	f := NewFullerite(nil, 123, nil)
 	f.Configure(config)
 
 	assert.Equal(t,
 		f.Interval(),
-		collector.DefaultCollectionInterval,
+		123,
 		"should be the default collection interval",
 	)
 }
@@ -24,7 +26,8 @@ func TestFulleriteConfigureEmptyConfig(t *testing.T) {
 func TestFulleriteConfigure(t *testing.T) {
 	config := make(map[string]interface{})
 	config["interval"] = 9999
-	f := collector.NewFullerite()
+
+	f := NewFullerite(nil, 123, nil)
 	f.Configure(config)
 
 	assert.Equal(t,
@@ -36,9 +39,11 @@ func TestFulleriteConfigure(t *testing.T) {
 
 func TestFulleriteCollect(t *testing.T) {
 	config := make(map[string]interface{})
-	config["interval"] = 9999
 
-	f := collector.NewFullerite()
+	testChannel := make(chan metric.Metric)
+	testLog := test_utils.BuildLogger()
+
+	f := NewFullerite(testChannel, 123, testLog)
 	f.Configure(config)
 
 	go f.Collect()
