@@ -199,11 +199,9 @@ func (handler *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 		metrics = append(metrics, incomingMetric)
 
 		emitIntervalPassed := time.Since(lastEmission).Seconds() >= float64(handler.interval)
-		emitHandlerIntervalPassed := time.Since(lastHandlerMetricsEmission).Seconds() >= float64(handler.interval)
 		bufferSizeLimitReached := len(metrics) >= handler.maxBufferSize
-		doEmit := emitIntervalPassed || bufferSizeLimitReached
 
-		if doEmit {
+		if emitIntervalPassed || bufferSizeLimitReached {
 			beforeEmission := time.Now()
 			result := emitFunc(metrics)
 			lastEmission = time.Now()
@@ -222,7 +220,8 @@ func (handler *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 			metrics = make([]metric.Metric, 0, handler.maxBufferSize)
 		}
 
-		if emitHandlerIntervalPassed {
+		// create handler metrics at fixed intervals
+		if time.Since(lastHandlerMetricsEmission).Seconds() >= float64(handler.interval) {
 			lastHandlerMetricsEmission = time.Now()
 
 			// Report HandlerEmitTiming
