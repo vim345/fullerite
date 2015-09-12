@@ -8,7 +8,7 @@ import (
 
 // ProcStatus collector type
 type ProcStatus struct {
-	BaseCollector
+	baseCollector
 	processName string
 }
 

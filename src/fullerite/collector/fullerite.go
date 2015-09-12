@@ -8,35 +8,11 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
-// ----------------------------------------------------------------------------
-// utility methods
-// ----------------------------------------------------------------------------
-
-// See https://golang.org/src/runtime/mstats.go?s=3251:5102#L82
-func getMemStats() *runtime.MemStats {
-	stats := new(runtime.MemStats)
-	runtime.ReadMemStats(stats)
-	return stats
-}
-
-func buildSimpleMetric(name string, value uint64) (m metric.Metric) {
-	m = metric.New(name)
-	m.Value = float64(value)
-	m.AddDimension("collector", "fullerite")
-	return m
-}
-
-func buildCounter(name string, value uint64) (m metric.Metric) {
-	m = buildSimpleMetric(name, value)
-	m.MetricType = metric.Counter
-	return m
-}
-
 type memStatRetriever func() *runtime.MemStats
 
 // Fullerite collector type
 type Fullerite struct {
-	BaseCollector
+	baseCollector
 	memStats memStatRetriever
 }
 
@@ -98,4 +74,28 @@ func (f Fullerite) getGoMetrics() []metric.Metric {
 	}
 
 	return ret
+}
+
+// ----------------------------------------------------------------------------
+// utility methods
+// ----------------------------------------------------------------------------
+
+// See https://golang.org/src/runtime/mstats.go?s=3251:5102#L82
+func getMemStats() *runtime.MemStats {
+	stats := new(runtime.MemStats)
+	runtime.ReadMemStats(stats)
+	return stats
+}
+
+func buildSimpleMetric(name string, value uint64) (m metric.Metric) {
+	m = metric.New(name)
+	m.Value = float64(value)
+	m.AddDimension("collector", "fullerite")
+	return m
+}
+
+func buildCounter(name string, value uint64) (m metric.Metric) {
+	m = buildSimpleMetric(name, value)
+	m.MetricType = metric.Counter
+	return m
 }

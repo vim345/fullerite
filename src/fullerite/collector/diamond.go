@@ -20,7 +20,7 @@ const (
 
 // Diamond collector type
 type Diamond struct {
-	BaseCollector
+	baseCollector
 	port          string
 	serverStarted bool
 	incoming      chan []byte

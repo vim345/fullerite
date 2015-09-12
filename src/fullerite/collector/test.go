@@ -16,7 +16,7 @@ func generateRandomValue() float64 {
 
 // Test collector type
 type Test struct {
-	BaseCollector
+	baseCollector
 	metricName string
 	generator  valueGenerator
 }
