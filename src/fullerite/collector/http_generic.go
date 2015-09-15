@@ -9,7 +9,7 @@ import (
 type errorHandler func(error)
 type responseHandler func(*http.Response) []metric.Metric
 
-type baseHttpCollector struct {
+type baseHTTPCollector struct {
 	baseCollector
 
 	rspHandler responseHandler
@@ -19,7 +19,7 @@ type baseHttpCollector struct {
 }
 
 // Collect first queries the config'd endpoint and then passes the results to the handler functions
-func (base baseHttpCollector) Collect() {
+func (base baseHTTPCollector) Collect() {
 	base.log.Info("Starting to collect metrics from ", base.endpoint)
 
 	metrics := base.makeRequest()
@@ -35,7 +35,7 @@ func (base baseHttpCollector) Collect() {
 }
 
 // makeRequest is what is responsible for actually doing the HTTP GET
-func (base baseHttpCollector) makeRequest() []metric.Metric {
+func (base baseHTTPCollector) makeRequest() []metric.Metric {
 	if base.endpoint == "" {
 		base.log.Warn("Ignoring attempt to make request because no endpoint provided")
 	}

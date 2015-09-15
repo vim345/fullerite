@@ -37,7 +37,6 @@ func NewSignalFx(
 	inst.log = log
 	inst.channel = channel
 
-	inst.emissionTimes = make([]float64, 0)
 	return inst
 }
 
