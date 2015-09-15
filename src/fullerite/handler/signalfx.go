@@ -64,7 +64,7 @@ func (s *SignalFx) Endpoint() string {
 
 // Run runs the handler main loop
 func (s *SignalFx) Run() {
-	s.run(s.EmitMetrics)
+	s.run(s.emitMetrics)
 }
 
 func (s *SignalFx) convertToProto(incomingMetric metric.Metric) *DataPoint {
@@ -107,8 +107,7 @@ func (s *SignalFx) convertToProto(incomingMetric metric.Metric) *DataPoint {
 	return datapoint
 }
 
-// EmitMetrics sends given metrics to SignalFx
-func (s *SignalFx) EmitMetrics(metrics []metric.Metric) bool {
+func (s *SignalFx) emitMetrics(metrics []metric.Metric) bool {
 	s.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

@@ -78,7 +78,7 @@ func (d *Datadog) Endpoint() string {
 
 // Run runs the handler main loop
 func (d *Datadog) Run() {
-	d.run(d.EmitMetrics)
+	d.run(d.emitMetrics)
 }
 
 func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint datadogMetric) {
@@ -95,8 +95,7 @@ func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint data
 	return *dog
 }
 
-// EmitMetrics sends given metrics to Datadog
-func (d *Datadog) EmitMetrics(metrics []metric.Metric) bool {
+func (d *Datadog) emitMetrics(metrics []metric.Metric) bool {
 	d.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

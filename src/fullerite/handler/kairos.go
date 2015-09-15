@@ -79,7 +79,7 @@ func (k *Kairos) Port() string {
 
 // Run runs the handler main loop
 func (k *Kairos) Run() {
-	k.run(k.EmitMetrics)
+	k.run(k.emitMetrics)
 }
 
 func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint KairosMetric) {
@@ -92,8 +92,7 @@ func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint Kairos
 	return *km
 }
 
-// EmitMetrics sends given metrics to KairosDB
-func (k *Kairos) EmitMetrics(metrics []metric.Metric) bool {
+func (k *Kairos) emitMetrics(metrics []metric.Metric) bool {
 	k.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

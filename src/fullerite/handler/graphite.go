@@ -67,7 +67,7 @@ func (g *Graphite) Configure(configMap map[string]interface{}) {
 
 // Run runs the handler main loop
 func (g *Graphite) Run() {
-	g.run(g.EmitMetrics)
+	g.run(g.emitMetrics)
 }
 
 func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint string) {
@@ -87,8 +87,7 @@ func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint st
 	return datapoint
 }
 
-// EmitMetrics sends given metrics to Graphite
-func (g *Graphite) EmitMetrics(metrics []metric.Metric) bool {
+func (g *Graphite) emitMetrics(metrics []metric.Metric) bool {
 	g.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

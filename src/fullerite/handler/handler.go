@@ -62,8 +62,6 @@ type Handler interface {
 
 	DefaultDimensions() map[string]string
 	SetDefaultDimensions(map[string]string)
-
-	EmitMetrics([]metric.Metric) bool
 }
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
