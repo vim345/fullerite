@@ -5,7 +5,7 @@ import (
 	"fullerite/metric"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 // Some sane values to default things to
@@ -15,20 +15,25 @@ const (
 	DefaultInterval   = 10
 )
 
-var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler"})
+var defaultLog = l.WithFields(l.Fields{"app": "fullerite", "pkg": "handler"})
 
 // New creates a new Handler based on the requested handler name.
 func New(name string) Handler {
 	var handler Handler
+
+	channel := make(chan metric.Metric)
+	handlerLog := defaultLog.WithFields(l.Fields{"handler": name})
+	timeout := time.Duration(DefaultTimeoutSec * time.Second)
+
 	switch name {
 	case "Graphite":
-		handler = NewGraphite()
+		handler = NewGraphite(channel, DefaultInterval, DefaultBufferSize, timeout, handlerLog)
 	case "SignalFx":
-		handler = NewSignalFx()
+		handler = NewSignalFx(channel, DefaultInterval, DefaultBufferSize, timeout, handlerLog)
 	case "Datadog":
-		handler = NewDatadog()
+		handler = NewDatadog(channel, DefaultInterval, DefaultBufferSize, timeout, handlerLog)
 	case "Kairos":
-		handler = NewKairos()
+		handler = NewKairos(channel, DefaultInterval, DefaultBufferSize, timeout, handlerLog)
 	default:
 		defaultLog.Error("Cannot create handler ", name)
 		return nil
@@ -74,7 +79,7 @@ type BaseHandler struct {
 	emissionTimes     []float64
 	metricsSent       int
 	metricsDropped    int
-	log               *logrus.Entry
+	log               *l.Entry
 }
 
 // configureCommonParams will extract the common parameters that are used and set them in the handler

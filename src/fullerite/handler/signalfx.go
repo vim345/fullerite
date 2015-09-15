@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -21,16 +21,24 @@ type SignalFx struct {
 }
 
 // NewSignalFx returns a new SignalFx handler.
-func NewSignalFx() *SignalFx {
-	s := new(SignalFx)
-	s.name = "SignalFx"
-	s.interval = DefaultInterval
-	s.maxBufferSize = DefaultBufferSize
-	s.timeout = time.Duration(DefaultTimeoutSec * time.Second)
-	s.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "SignalFx"})
-	s.channel = make(chan metric.Metric)
-	s.emissionTimes = make([]float64, 0)
-	return s
+func NewSignalFx(
+	channel chan metric.Metric,
+	initialInterval int,
+	initialBufferSize int,
+	initialTimeout time.Duration,
+	log *l.Entry) *SignalFx {
+
+	inst := new(SignalFx)
+	inst.name = "SignalFx"
+
+	inst.interval = initialInterval
+	inst.maxBufferSize = initialBufferSize
+	inst.timeout = initialTimeout
+	inst.log = log
+	inst.channel = channel
+
+	inst.emissionTimes = make([]float64, 0)
+	return inst
 }
 
 // Configure accepts the different configuration options for the signalfx handler

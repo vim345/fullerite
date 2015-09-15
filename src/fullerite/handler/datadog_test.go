@@ -1,49 +1,45 @@
-package handler_test
+package handler
 
 import (
-	"fullerite/handler"
+	"fullerite/metric"
 
 	"testing"
+	"time"
 
+	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
+func getTestDataDogHandler(interval, buffsize, timeoutsec int) *Datadog {
+	testChannel := make(chan metric.Metric)
+	testLog := l.WithField("testing", "datadog_handler")
+	timeout := time.Duration(timeoutsec) * time.Second
+
+	return NewDatadog(testChannel, interval, buffsize, timeout, testLog)
+}
+
 func TestDatadogConfigureEmptyConfig(t *testing.T) {
-	config := make(map[string]interface{})
-	d := handler.NewDatadog()
+	config := map[string]interface{}{}
+
+	d := getTestDataDogHandler(12, 13, 14)
 	d.Configure(config)
 
-	assert.Equal(t,
-		d.Interval(),
-		handler.DefaultInterval,
-		"should be the default interval",
-	)
+	assert.Equal(t, 12, d.Interval())
+	assert.Equal(t, 13, d.MaxBufferSize())
 }
 
 func TestDatadogConfigure(t *testing.T) {
-	config := make(map[string]interface{})
-	config["interval"] = "10"
-	config["timeout"] = "10"
-	config["max_buffer_size"] = "100"
-	config["endpoint"] = "datadog.server"
+	config := map[string]interface{}{
+		"interval":        "10",
+		"timeout":         "10",
+		"max_buffer_size": "100",
+		"endpoint":        "datadog.server",
+	}
 
-	d := handler.NewDatadog()
+	d := getTestDataDogHandler(12, 13, 14)
 	d.Configure(config)
 
-	assert := assert.New(t)
-	assert.Equal(
-		d.Interval(),
-		10,
-		"should be the set value",
-	)
-	assert.Equal(
-		d.MaxBufferSize(),
-		100,
-		"should be the set value",
-	)
-	assert.Equal(
-		d.Endpoint(),
-		config["endpoint"],
-		"should be the set value",
-	)
+	assert.Equal(t, 10, d.Interval())
+	assert.Equal(t, 100, d.MaxBufferSize())
+	assert.Equal(t, "datadog.server", d.Endpoint())
 }
