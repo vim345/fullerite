@@ -81,7 +81,14 @@ func TestSanitizeDimensionNameColon(t *testing.T) {
 	m.AddDimension("DirtyDimension:", "dimension value")
 	assert := assert.New(t)
 
-	value, ok := m.GetDimensionValue("DirtyDimension:", defaultDimensions)
+	value, ok := m.Dimensions["DirtyDimension-"]
+	assert.Equal("dimension value", value, "dimension value does not match")
+	assert.True(ok)
+
+	value, ok = m.Dimensions["DirtyDimension:"]
+	assert.False(ok)
+
+	value, ok = m.GetDimensionValue("DirtyDimension:", defaultDimensions)
 	assert.Equal("dimension value", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -104,7 +111,14 @@ func TestSanitizeDimensionNameEqual(t *testing.T) {
 	m.AddDimension("DirtyDimension=", "dimension value")
 	assert := assert.New(t)
 
-	value, ok := m.GetDimensionValue("DirtyDimension=", defaultDimensions)
+	value, ok := m.Dimensions["DirtyDimension-"]
+	assert.Equal("dimension value", value, "dimension value does not match")
+	assert.True(ok)
+
+	value, ok = m.Dimensions["DirtyDimension="]
+	assert.False(ok)
+
+	value, ok = m.GetDimensionValue("DirtyDimension=", defaultDimensions)
 	assert.Equal("dimension value", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -127,7 +141,11 @@ func TestSanitizeDimensionValueColon(t *testing.T) {
 	m.AddDimension("TestDimension", "dirty value:")
 	assert := assert.New(t)
 
-	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
+	value, ok := m.Dimensions["TestDimension"]
+	assert.Equal("dirty value-", value, "dimension value does not match")
+	assert.True(ok)
+
+	value, ok = m.GetDimensionValue("TestDimension", defaultDimensions)
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -143,7 +161,11 @@ func TestSanitizeDimensionValueEqual(t *testing.T) {
 	m.AddDimension("TestDimension", "dirty value=")
 	assert := assert.New(t)
 
-	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
+	value, ok := m.Dimensions["TestDimension"]
+	assert.Equal("dirty value-", value, "dimension value does not match")
+	assert.True(ok)
+
+	value, ok = m.GetDimensionValue("TestDimension", defaultDimensions)
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok)
 
