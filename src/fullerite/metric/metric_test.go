@@ -83,19 +83,19 @@ func TestSanitizeDimensionNameColon(t *testing.T) {
 
 	value, ok := m.GetDimensionValue("DirtyDimension:", defaultDimensions)
 	assert.Equal("dimension value", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	value, ok = m.GetDimensionValue("DirtyDimension-", defaultDimensions)
 	assert.Equal("dimension value", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	dimensions := m.GetDimensions(defaultDimensions)
 	value, ok = dimensions["DirtyDimension:"]
-	assert.False(ok, "should fail")
+	assert.False(ok)
 
 	value, ok = dimensions["DirtyDimension-"]
 	assert.Equal("dimension value", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 }
 
 func TestSanitizeDimensionNameEqual(t *testing.T) {
@@ -106,19 +106,19 @@ func TestSanitizeDimensionNameEqual(t *testing.T) {
 
 	value, ok := m.GetDimensionValue("DirtyDimension=", defaultDimensions)
 	assert.Equal("dimension value", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	value, ok = m.GetDimensionValue("DirtyDimension-", defaultDimensions)
 	assert.Equal("dimension value", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	dimensions := m.GetDimensions(defaultDimensions)
 	value, ok = dimensions["DirtyDimension="]
-	assert.False(ok, "should fail")
+	assert.False(ok)
 
 	value, ok = dimensions["DirtyDimension-"]
 	assert.Equal("dimension value", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 }
 
 func TestSanitizeDimensionValueColon(t *testing.T) {
@@ -129,12 +129,12 @@ func TestSanitizeDimensionValueColon(t *testing.T) {
 
 	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
 	assert.Equal("dirty value-", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	dimensions := m.GetDimensions(defaultDimensions)
 	value, ok = dimensions["TestDimension"]
 	assert.Equal("dirty value-", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 }
 
 func TestSanitizeDimensionValueEqual(t *testing.T) {
@@ -145,12 +145,12 @@ func TestSanitizeDimensionValueEqual(t *testing.T) {
 
 	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
 	assert.Equal("dirty value-", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	dimensions := m.GetDimensions(defaultDimensions)
 	value, ok = dimensions["TestDimension"]
 	assert.Equal("dirty value-", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 }
 
 func TestSanitizeMultiple(t *testing.T) {
@@ -164,33 +164,33 @@ func TestSanitizeMultiple(t *testing.T) {
 
 	value, ok := m.GetDimensionValue(":=Dirty==::Dimension=:", defaultDimensions)
 	assert.Equal("--dirty----value--", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	value, ok = m.GetDimensionValue("--Dirty----Dimension--", defaultDimensions)
 	assert.Equal("--dirty----value--", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	value, ok = m.GetDimensionValue(":=Dirty==::Dimension=:2", defaultDimensions)
 	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	value, ok = m.GetDimensionValue("--Dirty----Dimension--2", defaultDimensions)
 	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	dimensions := m.GetDimensions(defaultDimensions)
 
 	value, ok = dimensions[":=Dirty==::Dimension=:"]
-	assert.False(ok, "should fail")
+	assert.False(ok)
 
 	value, ok = dimensions[":=Dirty==::Dimension=:2"]
-	assert.False(ok, "should fail")
+	assert.False(ok)
 
 	value, ok = dimensions["--Dirty----Dimension--"]
 	assert.Equal("--dirty----value--", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 
 	value, ok = dimensions["--Dirty----Dimension--2"]
 	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
-	assert.True(ok, "should succeed")
+	assert.True(ok)
 }
