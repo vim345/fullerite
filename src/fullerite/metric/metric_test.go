@@ -28,14 +28,14 @@ func TestAddDimension(t *testing.T) {
 }
 
 func TestGetDimensionsWithNoDimensions(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 
 	assert.Equal(t, len(m.GetDimensions(defaultDimensions)), 0)
 }
 
 func TestGetDimensionsWithDimensions(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	defaultDimensions["DefaultDim"] = "default value"
 	m := metric.New("TestMetric")
 	m.AddDimension("TestDimension", "test value")
@@ -45,7 +45,7 @@ func TestGetDimensionsWithDimensions(t *testing.T) {
 }
 
 func TestGetDimensionValueFound(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	m.AddDimension("TestDimension", "test value")
 	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
@@ -56,7 +56,7 @@ func TestGetDimensionValueFound(t *testing.T) {
 }
 
 func TestGetDimensionValueNotFound(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
 
@@ -76,7 +76,7 @@ func TestSanitizeMetricNameEqual(t *testing.T) {
 }
 
 func TestSanitizeDimensionNameColon(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	m.AddDimension("DirtyDimension:", "dimension value")
 	assert := assert.New(t)
@@ -99,7 +99,7 @@ func TestSanitizeDimensionNameColon(t *testing.T) {
 }
 
 func TestSanitizeDimensionNameEqual(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	m.AddDimension("DirtyDimension=", "dimension value")
 	assert := assert.New(t)
@@ -122,7 +122,7 @@ func TestSanitizeDimensionNameEqual(t *testing.T) {
 }
 
 func TestSanitizeDimensionValueColon(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	m.AddDimension("TestDimension", "dirty value:")
 	assert := assert.New(t)
@@ -138,7 +138,7 @@ func TestSanitizeDimensionValueColon(t *testing.T) {
 }
 
 func TestSanitizeDimensionValueEqual(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	m.AddDimension("TestDimension", "dirty value=")
 	assert := assert.New(t)
@@ -154,7 +154,7 @@ func TestSanitizeDimensionValueEqual(t *testing.T) {
 }
 
 func TestSanitizeMultiple(t *testing.T) {
-	defaultDimensions := make(map[string]string, 0)
+	defaultDimensions := make(map[string]string)
 	m := metric.New(":=Dirty==::Metric=:")
 	m.AddDimension(":=Dirty==::Dimension=:", ":=dirty==::value=:")
 	m.AddDimension(":=Dirty==::Dimension=:2", ":=another==dirty::value=:")
