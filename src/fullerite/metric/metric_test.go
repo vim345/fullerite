@@ -152,3 +152,45 @@ func TestSanitizeDimensionValueEqual(t *testing.T) {
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok, "should succeed")
 }
+
+func TestSanitizeMultiple(t *testing.T) {
+	defaultDimensions := make(map[string]string, 0)
+	m := metric.New(":=Dirty==::Metric=:")
+	m.AddDimension(":=Dirty==::Dimension=:", ":=dirty==::value=:")
+	m.AddDimension(":=Dirty==::Dimension=:2", ":=another==dirty::value=:")
+	assert := assert.New(t)
+
+	assert.Equal("--Dirty----Metric--", m.Name, "metric name should be sanitized")
+
+	value, ok := m.GetDimensionValue(":=Dirty==::Dimension=:", defaultDimensions)
+	assert.Equal("--dirty----value--", value, "dimension value does not match")
+	assert.True(ok, "should succeed")
+
+	value, ok = m.GetDimensionValue("--Dirty----Dimension--", defaultDimensions)
+	assert.Equal("--dirty----value--", value, "dimension value does not match")
+	assert.True(ok, "should succeed")
+
+	value, ok = m.GetDimensionValue(":=Dirty==::Dimension=:2", defaultDimensions)
+	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
+	assert.True(ok, "should succeed")
+
+	value, ok = m.GetDimensionValue("--Dirty----Dimension--2", defaultDimensions)
+	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
+	assert.True(ok, "should succeed")
+
+	dimensions := m.GetDimensions(defaultDimensions)
+
+	value, ok = dimensions[":=Dirty==::Dimension=:"]
+	assert.False(ok, "should fail")
+
+	value, ok = dimensions[":=Dirty==::Dimension=:2"]
+	assert.False(ok, "should fail")
+
+	value, ok = dimensions["--Dirty----Dimension--"]
+	assert.Equal("--dirty----value--", value, "dimension value does not match")
+	assert.True(ok, "should succeed")
+
+	value, ok = dimensions["--Dirty----Dimension--2"]
+	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
+	assert.True(ok, "should succeed")
+}
