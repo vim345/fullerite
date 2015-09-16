@@ -15,11 +15,3 @@ fullerite is also able to run [Diamond](https://github.com/python-diamond/Diamon
  * [Kairos](https://github.com/kairosdb/kairosdb)
  * [SignalFx](https://www.signalfx.com)
  * [Datadog](https://www.datadoghq.com)
-
-# beatit
-
-A command line tool to test fullerite handlers and metric stores they write to.
-
-    beatit -c test.conf --graphite -l error -t 100 --dps 500 --time 60
-
-Above command runs 100 graphite handlers and tries sending 500 data points per second to each handler for 60 seconds.
