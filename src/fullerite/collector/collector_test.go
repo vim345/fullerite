@@ -11,22 +11,23 @@ func TestNew(t *testing.T) {
 	names := []string{"Test", "Diamond", "Fullerite", "ProcStatus"}
 	for _, name := range names {
 		c := New(name)
-		assert := assert.New(t)
-		assert.NotNil(c, "should create a Collector for "+name)
-		assert.Equal(c.Name(), name)
+		assert.NotNil(t, c, "should create a Collector for "+name)
+		assert.Equal(t, name, c.Name())
 		assert.Equal(
-			c.Interval(),
+			t,
 			DefaultCollectionInterval,
+			c.Interval(),
 			"should be the default collection interval for "+name,
 		)
 		assert.Equal(
-			fmt.Sprintf("%s", c),
+			t,
 			name+"Collector",
+			fmt.Sprintf("%s", c),
 			"String() should append Collector to the name for "+name,
 		)
 
 		c.SetInterval(999)
-		assert.Equal(999, c.Interval(), "should have set the interval")
+		assert.Equal(t, 999, c.Interval(), "should have set the interval")
 	}
 }
 
