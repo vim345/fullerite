@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -20,21 +20,23 @@ const (
 
 // Diamond collector type
 type Diamond struct {
-	BaseCollector
+	baseCollector
 	port          string
 	serverStarted bool
 	incoming      chan []byte
 }
 
 // NewDiamond creates a new Diamond collector.
-func NewDiamond() *Diamond {
+func NewDiamond(channel chan metric.Metric, initialInterval int, log *l.Entry) *Diamond {
 	d := new(Diamond)
+
+	d.log = log
+	d.channel = channel
+	d.interval = initialInterval
+
 	d.name = "Diamond"
-	d.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector", "collector": "Diamond"})
 	d.incoming = make(chan []byte)
-	d.channel = make(chan metric.Metric)
 	d.port = DefaultDiamondCollectorPort
-	d.interval = DefaultCollectionInterval
 	d.serverStarted = false
 	return d
 }

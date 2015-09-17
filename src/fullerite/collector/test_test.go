@@ -1,7 +1,8 @@
-package collector_test
+package collector
 
 import (
-	"fullerite/collector"
+	"fullerite/metric"
+	"test_utils"
 
 	"testing"
 	"time"
@@ -11,12 +12,12 @@ import (
 
 func TestTestConfigureEmptyConfig(t *testing.T) {
 	config := make(map[string]interface{})
-	test := collector.NewTest()
+	test := NewTest(nil, 123, nil)
 	test.Configure(config)
 
 	assert.Equal(t,
 		test.Interval(),
-		collector.DefaultCollectionInterval,
+		123,
 		"should be the default collection interval",
 	)
 }
@@ -24,7 +25,9 @@ func TestTestConfigureEmptyConfig(t *testing.T) {
 func TestTestConfigure(t *testing.T) {
 	config := make(map[string]interface{})
 	config["interval"] = 9999
-	test := collector.NewTest()
+
+	// the channel and logger don't matter
+	test := NewTest(nil, 12, nil)
 	test.Configure(config)
 
 	assert.Equal(t,
@@ -37,15 +40,19 @@ func TestTestConfigure(t *testing.T) {
 func TestTestConfigureMetricName(t *testing.T) {
 	config := make(map[string]interface{})
 	config["metricName"] = "lala"
-	test := collector.NewTest()
+
+	testChannel := make(chan metric.Metric)
+	testLogger := test_utils.BuildLogger()
+
+	test := NewTest(testChannel, 123, testLogger)
 	test.Configure(config)
 
 	go test.Collect()
-	time.Sleep(1)
 
 	select {
 	case m := <-test.Channel():
-		assert.Equal(t, m.Name, config["metricName"])
+		// don't test for the value - only metric name
+		assert.Equal(t, m.Name, "lala")
 	case <-time.After(1 * time.Second):
 		t.Fail()
 	}
@@ -53,13 +60,24 @@ func TestTestConfigureMetricName(t *testing.T) {
 
 func TestTestCollect(t *testing.T) {
 	config := make(map[string]interface{})
-	test := collector.NewTest()
+
+	testChannel := make(chan metric.Metric)
+	testLogger := test_utils.BuildLogger()
+
+	// conforms to the valueGenerator interface in the collector
+	mockGen := func() float64 {
+		return 4.0
+	}
+
+	test := NewTest(testChannel, 123, testLogger)
 	test.Configure(config)
+	test.generator = mockGen
 
 	go test.Collect()
 
 	select {
-	case <-test.Channel():
+	case m := <-test.Channel():
+		assert.Equal(t, 4.0, m.Value)
 		return
 	case <-time.After(2 * time.Second):
 		t.Fail()

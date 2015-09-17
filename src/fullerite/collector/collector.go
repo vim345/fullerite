@@ -4,7 +4,7 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 	DefaultCollectionInterval = 10
 )
 
-var defaultLog = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "collector"})
+var defaultLog = l.WithFields(l.Fields{"app": "fullerite", "pkg": "collector"})
 
 // Collector defines the interface of a generic collector.
 type Collector interface {
@@ -29,15 +29,19 @@ type Collector interface {
 // New creates a new Collector based on the requested collector name.
 func New(name string) Collector {
 	var collector Collector
+
+	channel := make(chan metric.Metric)
+	collectorLog := defaultLog.WithFields(l.Fields{"collector": name})
+
 	switch name {
 	case "Test":
-		collector = NewTest()
+		collector = NewTest(channel, DefaultCollectionInterval, collectorLog)
 	case "Diamond":
-		collector = NewDiamond()
+		collector = NewDiamond(channel, DefaultCollectionInterval, collectorLog)
 	case "Fullerite":
-		collector = NewFullerite()
+		collector = NewFullerite(channel, DefaultCollectionInterval, collectorLog)
 	case "ProcStatus":
-		collector = NewProcStatus()
+		collector = NewProcStatus(channel, DefaultCollectionInterval, collectorLog)
 	default:
 		defaultLog.Error("Cannot create collector", name)
 		return nil
@@ -45,41 +49,43 @@ func New(name string) Collector {
 	return collector
 }
 
-// BaseCollector is to handle the common components used in a collector
-type BaseCollector struct {
+type baseCollector struct {
+	// fulfill most of the rote parts of the collector interface
 	channel  chan metric.Metric
 	name     string
 	interval int
-	log      *logrus.Entry
+
+	// intentionally exported
+	log *l.Entry
 }
 
-func (collector *BaseCollector) configureCommonParams(configMap map[string]interface{}) {
+func (col *baseCollector) configureCommonParams(configMap map[string]interface{}) {
 	if interval, exists := configMap["interval"]; exists == true {
-		collector.interval = config.GetAsInt(interval, DefaultCollectionInterval)
+		col.interval = config.GetAsInt(interval, DefaultCollectionInterval)
 	}
 }
 
+// SetInterval : set the interval to collect on
+func (col *baseCollector) SetInterval(interval int) {
+	col.interval = interval
+}
+
 // Channel : the channel on which the collector should send metrics
-func (collector *BaseCollector) Channel() chan metric.Metric {
-	return collector.channel
+func (col baseCollector) Channel() chan metric.Metric {
+	return col.channel
 }
 
 // Name : the name of the collector
-func (collector *BaseCollector) Name() string {
-	return collector.name
+func (col baseCollector) Name() string {
+	return col.name
 }
 
 // Interval : the interval to collect the metrics on
-func (collector *BaseCollector) Interval() int {
-	return collector.interval
-}
-
-// SetInterval : set the interval to collect on
-func (collector *BaseCollector) SetInterval(interval int) {
-	collector.interval = interval
+func (col baseCollector) Interval() int {
+	return col.interval
 }
 
 // String returns the collector name in printable format.
-func (collector *BaseCollector) String() string {
-	return collector.Name() + "Collector"
+func (col baseCollector) String() string {
+	return col.Name() + "Collector"
 }

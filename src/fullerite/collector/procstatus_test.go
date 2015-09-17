@@ -1,8 +1,6 @@
-package collector_test
+package collector
 
 import (
-	"fullerite/collector"
-
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,12 +8,13 @@ import (
 
 func TestProcStatusConfigureEmptyConfig(t *testing.T) {
 	config := make(map[string]interface{})
-	ps := collector.NewProcStatus()
+
+	ps := NewProcStatus(nil, 123, nil)
 	ps.Configure(config)
 
 	assert.Equal(t,
 		ps.Interval(),
-		collector.DefaultCollectionInterval,
+		123,
 		"should be the default collection interval",
 	)
 	assert.Equal(t,
@@ -29,7 +28,8 @@ func TestProcStatusConfigure(t *testing.T) {
 	config := make(map[string]interface{})
 	config["interval"] = 9999
 	config["processName"] = "fullerite"
-	ps := collector.NewProcStatus()
+
+	ps := NewProcStatus(nil, 123, nil)
 	ps.Configure(config)
 
 	assert.Equal(t,
@@ -37,6 +37,7 @@ func TestProcStatusConfigure(t *testing.T) {
 		9999,
 		"should be the defined interval",
 	)
+
 	assert.Equal(t,
 		ps.ProcessName(),
 		"fullerite",
