@@ -6,7 +6,6 @@ HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
 PKGS           := $(BEATIT) $(FULLERITE) $(FULLERITE)/config $(FULLERITE)/metric $(FULLERITE)/handler $(FULLERITE)/collector
-SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*/*.go))
 SOURCES        := $(foreach pkg, $(PKGS), $(wildcard $(SRCDIR)/$(pkg)/*.go))
 SOURCES        := $(filter-out $(GEN_PROTO_SFX), $(SOURCES))
 OS	       := $(shell /usr/bin/lsb_release -si 2> /dev/null)
