@@ -2,6 +2,7 @@ package main
 
 import (
 	"fullerite/config"
+	"fullerite/internalserver"
 	"fullerite/metric"
 
 	"os"
@@ -101,6 +102,9 @@ func start(ctx *cli.Context) {
 	}
 	collectors := startCollectors(c)
 	handlers := startHandlers(c)
+
+	go internalserver.RunServer(&c, &handlers)
+
 	metrics := make(chan metric.Metric)
 	readFromCollectors(collectors, metrics)
 	for metric := range metrics {

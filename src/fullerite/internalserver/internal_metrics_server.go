@@ -5,6 +5,8 @@ import (
 	"fullerite/handler"
 
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 
@@ -12,27 +14,55 @@ import (
 )
 
 const (
-	DefaultPort        = 19090
-	DefaultMetricsPath = "/metrics"
+	defaultPort        = 19090
+	defaultMetricsPath = "/metrics"
 )
 
 type internalServer struct {
 	log      *l.Entry
 	handlers *[]handler.Handler
+	port     int
+	path     string
 }
 
+// ResponseFormat is the structure of the response from an http request
 type ResponseFormat struct {
 	Memory   handler.InternalMetrics
 	Handlers map[string]handler.InternalMetrics
 }
 
+// RunServer starts a server on the specified port listening for the provided path
 func RunServer(cfg *config.Config, handlers *[]handler.Handler) {
 	srv := internalServer{}
-	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internal_server"})
+	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver["})
 	srv.handlers = handlers
 
-	// port := config.GetAsInt(cfg.InternalMetricsPort, DefaultPort)
-	http.HandleFunc("/"+DefaultMetricsPath, srv.handleInternalMetricsRequest)
+	internalConfig := cfg.InternalServerConfig
+	srv.configure(&internalConfig)
+
+	http.HandleFunc(srv.path, srv.handleInternalMetricsRequest)
+
+	srv.log.Info(fmt.Sprintf("Starting to run internal metrics server on port %d on path %s", srv.port, srv.path))
+	addr := fmt.Sprintf(":%d", srv.port)
+	err := http.ListenAndServe(addr, nil)
+	if err != nil {
+		srv.log.Error("Failed to start internal server: ", err)
+	}
+}
+
+func (srv *internalServer) configure(cfgMap *map[string]interface{}) {
+
+	if val, exists := (*cfgMap)["port"]; exists == true {
+		srv.port = config.GetAsInt(val, defaultPort)
+	} else {
+		srv.port = defaultPort
+	}
+
+	if val, exists := (*cfgMap)["path"]; exists == true {
+		srv.path = val.(string)
+	} else {
+		srv.path = defaultMetricsPath
+	}
 }
 
 // this is what services the request. The response will be JSON formatted like this:
@@ -62,9 +92,10 @@ func RunServer(cfg *config.Config, handlers *[]handler.Handler) {
 func (srv internalServer) handleInternalMetricsRequest(writer http.ResponseWriter, req *http.Request) {
 	srv.log.Debug("Starting to handle request for internal metrics, checking ", len(*srv.handlers), " handlers")
 
-	// rspString := srv.buildResponse()
+	rspString := string(*srv.buildResponse())
 
-	// TODO
+	srv.log.Debug("Finished building response: ", rspString)
+	io.WriteString(writer, rspString)
 }
 
 // responsible for querying each handler and serializing the total response

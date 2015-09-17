@@ -19,7 +19,7 @@ type Config struct {
 	Handlers              map[string]map[string]interface{} `json:"handlers"`
 	Collectors            map[string]map[string]interface{} `json:"collectors"`
 	DefaultDimensions     map[string]string                 `json:"defaultDimensions"`
-	InternalMetricsPort   string                            `json:"internalMetricsPort"`
+	InternalServerConfig  map[string]interface{}            `json:"internalServer"`
 }
 
 // ReadConfig reads a fullerite configuration file
