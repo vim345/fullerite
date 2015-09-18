@@ -79,12 +79,12 @@ func (inst fulleriteHTTP) handleResponse(rsp *http.Response) []metric.Metric {
 	return results
 }
 
-func buildMetrics(counters *map[string]float64, isCounter bool) []metric.Metric {
+func (inst fulleriteHTTP) buildMetrics(counters *map[string]float64, isCounter bool) []metric.Metric {
 	results := make([]metric.Metric, 0, len(*counters))
 	for key, val := range *counters {
 		m := metric.New(key)
 		m.Value = val
-		m.AddDimension("collector", "fullerite_http")
+		m.AddDimension("collector", inst.Name())
 		if isCounter {
 			m.MetricType = metric.Counter
 		}
@@ -112,13 +112,13 @@ func (inst fulleriteHTTP) parseResponseText(raw *[]byte) ([]metric.Metric, error
 
 	results := []metric.Metric{}
 	// first all the memory parts create metrics
-	memCounters := buildMetrics(&parsedRsp.Memory.Counters, true)
-	memGauges := buildMetrics(&parsedRsp.Memory.Gauges, false)
+	memCounters := inst.buildMetrics(&parsedRsp.Memory.Counters, true)
+	memGauges := inst.buildMetrics(&parsedRsp.Memory.Gauges, false)
 	results = append(results, memCounters...)
 	results = append(results, memGauges...)
 	for handler, metrics := range parsedRsp.Handlers {
-		handlerCounters := buildMetrics(&metrics.Counters, true)
-		handlerGauges := buildMetrics(&metrics.Gauges, false)
+		handlerCounters := inst.buildMetrics(&metrics.Counters, true)
+		handlerGauges := inst.buildMetrics(&metrics.Gauges, false)
 		appendHandlerDim(&handlerCounters, handler)
 		appendHandlerDim(&handlerGauges, handler)
 
