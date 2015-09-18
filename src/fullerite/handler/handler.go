@@ -170,11 +170,14 @@ func (base BaseHandler) String() string {
 // InternalMetrics : Returns the internal metrics that are being collected by this handler
 func (base BaseHandler) InternalMetrics() InternalMetrics {
 	// now we calculate the average emission seconds for
-	var totalTime float64
-	for e := base.emissionTimes.Front(); e != nil; e = e.Next() {
-		totalTime += e.Value.(emissionTiming).duration.Seconds()
+	avg := 0.0
+	if base.emissionTimes.Len() > 0 {
+		var totalTime float64
+		for e := base.emissionTimes.Front(); e != nil; e = e.Next() {
+			totalTime += e.Value.(emissionTiming).duration.Seconds()
+		}
+		avg = totalTime / float64(base.emissionTimes.Len())
 	}
-	avg := totalTime / float64(base.emissionTimes.Len())
 
 	counters := map[string]float64{
 		"totalEmissions": float64(base.totalEmissions),

@@ -111,3 +111,24 @@ func TestInternalMetrics(t *testing.T) {
 	}
 	assert.Equal(t, expected, results)
 }
+
+func TestInternalMetricsWithNan(t *testing.T) {
+	base := BaseHandler{}
+	fmt.Println(base.InternalMetrics())
+
+	expected := InternalMetrics{
+		Counters: map[string]float64{
+			"metricsDropped": 0,
+			"metricsSent":    0,
+			"totalEmissions": 0,
+		},
+		Gauges: map[string]float64{
+			"averageEmissionTiming": 0,
+			"emissionsInWindow":     0,
+			"intervalLength":        0,
+		},
+	}
+	im := base.InternalMetrics()
+	assert.Equal(t, expected, im)
+
+}
