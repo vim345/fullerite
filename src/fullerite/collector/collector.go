@@ -43,7 +43,7 @@ func New(name string) Collector {
 	case "ProcStatus":
 		collector = NewProcStatus(channel, DefaultCollectionInterval, collectorLog)
 	case "FulleriteHTTP":
-		collector = NewFulleriteHTTPCollector(channel, DefaultCollectionInterval, collectorLog)
+		collector = newFulleriteHTTPCollector(channel, DefaultCollectionInterval, collectorLog)
 	default:
 		defaultLog.Error("Cannot create collector", name)
 		return nil
