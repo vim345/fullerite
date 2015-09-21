@@ -12,11 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getTestInstance() *fulleriteHttp {
+func getTestInstance() *fulleriteHTTP {
 	testChannel := make(chan metric.Metric)
 	testLog = l.WithFields(l.Fields{"testing": "fullerite_http"})
 
-	inst := NewFulleriteHttpCollector(testChannel, 12, testLog)
+	inst := NewFulleriteHTTPCollector(testChannel, 12, testLog)
+
 	return inst
 }
 
@@ -26,7 +27,7 @@ type noopCloser struct {
 
 func (n noopCloser) Close() error { return nil }
 
-func buildTestHttpResponse(body string) *http.Response {
+func buildTestHTTPResponse(body string) *http.Response {
 	rsp := new(http.Response)
 
 	rsp.Body = noopCloser{bytes.NewBufferString(body)}
@@ -34,7 +35,7 @@ func buildTestHttpResponse(body string) *http.Response {
 	return rsp
 }
 
-func TestMakeNewFulleriteHttp(t *testing.T) {
+func TestMakeNewFulleriteHTTP(t *testing.T) {
 	inst := getTestInstance()
 	assert.NotNil(t, inst)
 
@@ -43,7 +44,7 @@ func TestMakeNewFulleriteHttp(t *testing.T) {
 	assert.NotNil(t, inst.rspHandler)
 }
 
-func TestConfigureFulleriteHttp(t *testing.T) {
+func TestConfigureFulleriteHTTP(t *testing.T) {
 	config := make(map[string]interface{})
 	config["endpoint"] = "http://somewhere:234/marp"
 	config["interval"] = 123
@@ -55,8 +56,8 @@ func TestConfigureFulleriteHttp(t *testing.T) {
 	assert.Equal(t, 123, inst.Interval())
 }
 
-func TestHandleBadInputFulleriteHttp(t *testing.T) {
-	rsp := buildTestHttpResponse("teststring")
+func TestHandleBadInputFulleriteHTTP(t *testing.T) {
+	rsp := buildTestHTTPResponse("teststring")
 
 	inst := getTestInstance()
 	results := inst.rspHandler(rsp)
@@ -75,7 +76,7 @@ func TestHandleNotJson(t *testing.T) {
 	assert.Equal(t, 0, len(metrics))
 }
 
-func TestHandlePopulatedResponseFulleriteHttp(t *testing.T) {
+func TestHandlePopulatedResponseFulleriteHTTP(t *testing.T) {
 	testString := `
 	{
     	"somemetric": 42,

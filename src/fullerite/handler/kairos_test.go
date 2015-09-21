@@ -1,7 +1,6 @@
-package handler_test
+package handler
 
 import (
-	"fullerite/handler"
 	"fullerite/metric"
 
 	"encoding/json"
@@ -11,71 +10,59 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
+func getTestKairosHandler(interval, buffsize, timeoutsec int) *Kairos {
+	testChannel := make(chan metric.Metric)
+	testLog := l.WithField("testing", "kairos_handler")
+	timeout := time.Duration(timeoutsec) * time.Second
+
+	return NewKairos(testChannel, interval, buffsize, timeout, testLog)
+}
+
 func TestKairosConfigureEmptyConfig(t *testing.T) {
 	config := make(map[string]interface{})
-	k := handler.NewKairos()
+	k := getTestKairosHandler(12, 13, 14)
 	k.Configure(config)
 
-	assert.Equal(t,
-		k.Interval(),
-		handler.DefaultInterval,
-		"should be the default interval",
-	)
+	assert.Equal(t, 12, k.Interval())
 }
 
 func TestKairosConfigure(t *testing.T) {
-	config := make(map[string]interface{})
-	config["interval"] = "10"
-	config["timeout"] = "10"
-	config["max_buffer_size"] = "100"
-	config["server"] = "kairos.server"
-	config["port"] = "10101"
+	config := map[string]interface{}{
+		"interval":        "10",
+		"timeout":         "10",
+		"max_buffer_size": "100",
+		"server":          "kairos.server",
+		"port":            "10101",
+	}
 
-	k := handler.NewKairos()
+	k := getTestKairosHandler(12, 13, 14)
 	k.Configure(config)
 
-	assert := assert.New(t)
-	assert.Equal(
-		k.Interval(),
-		10,
-		"should be the set value",
-	)
-	assert.Equal(
-		k.MaxBufferSize(),
-		100,
-		"should be the set value",
-	)
-	assert.Equal(
-		k.Server(),
-		config["server"],
-		"should be the set value",
-	)
-	assert.Equal(
-		k.Port(),
-		config["port"],
-		"should be the set value",
-	)
+	assert.Equal(t, 10, k.Interval())
+	assert.Equal(t, 100, k.MaxBufferSize())
+	assert.Equal(t, "kairos.server", k.Server())
+	assert.Equal(t, "10101", k.Port())
 }
 
 func TestKairosRun(t *testing.T) {
-	assert := assert.New(t)
-
 	wait := make(chan bool)
 	// Mock Kairos server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
-		assert.Nil(err)
+		assert.Nil(t, err)
 
-		kairosMetrics := make([]handler.KairosMetric, 1)
+		kairosMetrics := make([]KairosMetric, 1)
 		err = json.Unmarshal(body, &kairosMetrics)
-		assert.Nil(err)
+		assert.Nil(t, err)
 
-		assert.Equal(kairosMetrics[0].Name, "Test")
-		assert.Equal(r.Header["Content-Type"], []string{"application/json"})
+		assert.Equal(t, kairosMetrics[0].Name, "Test")
+		assert.Equal(t, r.Header["Content-Type"], []string{"application/json"})
 
 		wait <- true
 	}))
@@ -84,13 +71,15 @@ func TestKairosRun(t *testing.T) {
 	url, _ := url.Parse(ts.URL)
 	urlParts := strings.Split(url.Host, ":")
 
-	config := make(map[string]interface{})
-	config["interval"] = "1"
-	config["timeout"] = "1"
-	config["max_buffer_size"] = "1"
-	config["server"] = urlParts[0]
-	config["port"] = urlParts[1]
-	k := handler.NewKairos()
+	config := map[string]interface{}{
+		"interval":        "1",
+		"timeout":         "1",
+		"max_buffer_size": "1",
+		"server":          urlParts[0],
+		"port":            urlParts[1],
+	}
+
+	k := getTestKairosHandler(12, 13, 14)
 	k.Configure(config)
 
 	go k.Run()

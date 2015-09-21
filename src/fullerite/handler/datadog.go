@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 // Datadog handler
@@ -36,16 +36,22 @@ type datadogMetric struct {
 type datadogPoint [2]float64
 
 // NewDatadog returns a new Datadog handler
-func NewDatadog() *Datadog {
-	d := new(Datadog)
-	d.name = "Datadog"
-	d.maxBufferSize = DefaultBufferSize
-	d.interval = DefaultInterval
-	d.timeout = time.Duration(DefaultTimeoutSec * time.Second)
-	d.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Datadog"})
-	d.channel = make(chan metric.Metric)
-	d.emissionTimes = make([]float64, 0)
-	return d
+func NewDatadog(
+	channel chan metric.Metric,
+	initialInterval int,
+	initialBufferSize int,
+	initialTimeout time.Duration,
+	log *l.Entry) *Datadog {
+
+	inst := new(Datadog)
+	inst.name = "Datadog"
+
+	inst.interval = initialInterval
+	inst.maxBufferSize = initialBufferSize
+	inst.timeout = initialTimeout
+	inst.log = log
+	inst.channel = channel
+	return inst
 }
 
 // Configure the Datadog handler
@@ -70,7 +76,7 @@ func (d *Datadog) Endpoint() string {
 
 // Run runs the handler main loop
 func (d *Datadog) Run() {
-	d.run(d.EmitMetrics)
+	d.run(d.emitMetrics)
 }
 
 func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint datadogMetric) {
@@ -87,8 +93,7 @@ func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint data
 	return *dog
 }
 
-// EmitMetrics sends given metrics to Datadog
-func (d *Datadog) EmitMetrics(metrics []metric.Metric) bool {
+func (d *Datadog) emitMetrics(metrics []metric.Metric) bool {
 	d.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

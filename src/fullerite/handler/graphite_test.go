@@ -1,55 +1,45 @@
-package handler_test
+package handler
 
 import (
-	"fullerite/handler"
+	"fullerite/metric"
 
 	"testing"
+	"time"
 
+	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
+func getTestGraphiteHandler(interval, buffsize, timeoutsec int) *Graphite {
+	testChannel := make(chan metric.Metric)
+	testLog := l.WithField("testing", "graphite_handler")
+	timeout := time.Duration(timeoutsec) * time.Second
+
+	return NewGraphite(testChannel, interval, buffsize, timeout, testLog)
+}
+
 func TestGraphiteConfigureEmptyConfig(t *testing.T) {
 	config := make(map[string]interface{})
-	g := handler.NewGraphite()
+	g := getTestGraphiteHandler(12, 13, 14)
 	g.Configure(config)
 
-	assert.Equal(t,
-		g.Interval(),
-		handler.DefaultInterval,
-		"should be the default interval",
-	)
+	assert.Equal(t, 12, g.Interval())
 }
 
 func TestGraphiteConfigure(t *testing.T) {
-	config := make(map[string]interface{})
-	config["interval"] = "10"
-	config["timeout"] = "10"
-	config["max_buffer_size"] = "100"
-	config["server"] = "test_server"
-	config["port"] = "10101"
+	config := map[string]interface{}{
+		"interval":        "10",
+		"timeout":         "10",
+		"max_buffer_size": "100",
+		"server":          "test_server",
+		"port":            "10101",
+	}
 
-	g := handler.NewGraphite()
+	g := getTestGraphiteHandler(12, 13, 14)
 	g.Configure(config)
 
-	assert := assert.New(t)
-	assert.Equal(
-		g.Interval(),
-		10,
-		"should be the set value",
-	)
-	assert.Equal(
-		g.MaxBufferSize(),
-		100,
-		"should be the set value",
-	)
-	assert.Equal(
-		g.Server(),
-		config["server"],
-		"should be the set value",
-	)
-	assert.Equal(
-		g.Port(),
-		config["port"],
-		"should be the set value",
-	)
+	assert.Equal(t, 10, g.Interval())
+	assert.Equal(t, 100, g.MaxBufferSize())
+	assert.Equal(t, "test_server", g.Server())
+	assert.Equal(t, "10101", g.Port())
 }

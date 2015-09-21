@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 // Kairos handler
@@ -31,16 +31,23 @@ type KairosMetric struct {
 }
 
 // NewKairos returns a new Kairos handler
-func NewKairos() *Kairos {
-	k := new(Kairos)
-	k.name = "Kairos"
-	k.interval = DefaultInterval
-	k.maxBufferSize = DefaultBufferSize
-	k.timeout = time.Duration(DefaultTimeoutSec * time.Second)
-	k.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Kairos"})
-	k.channel = make(chan metric.Metric)
-	k.emissionTimes = make([]float64, 0)
-	return k
+func NewKairos(
+	channel chan metric.Metric,
+	initialInterval int,
+	initialBufferSize int,
+	initialTimeout time.Duration,
+	log *l.Entry) *Kairos {
+
+	inst := new(Kairos)
+	inst.name = "Kairos"
+
+	inst.interval = initialInterval
+	inst.maxBufferSize = initialBufferSize
+	inst.timeout = initialTimeout
+	inst.log = log
+	inst.channel = channel
+
+	return inst
 }
 
 // Configure the Kairos handler
@@ -71,7 +78,7 @@ func (k *Kairos) Port() string {
 
 // Run runs the handler main loop
 func (k *Kairos) Run() {
-	k.run(k.EmitMetrics)
+	k.run(k.emitMetrics)
 }
 
 func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint KairosMetric) {
@@ -84,8 +91,7 @@ func (k *Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint Kairos
 	return *km
 }
 
-// EmitMetrics sends given metrics to KairosDB
-func (k *Kairos) EmitMetrics(metrics []metric.Metric) bool {
+func (k *Kairos) emitMetrics(metrics []metric.Metric) bool {
 	k.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

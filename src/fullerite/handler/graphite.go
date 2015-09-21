@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	l "github.com/Sirupsen/logrus"
 )
 
 // Graphite type
@@ -18,16 +18,23 @@ type Graphite struct {
 }
 
 // NewGraphite returns a new Graphite handler.
-func NewGraphite() *Graphite {
-	g := new(Graphite)
-	g.name = "Graphite"
-	g.interval = DefaultInterval
-	g.maxBufferSize = DefaultBufferSize
-	g.timeout = time.Duration(DefaultTimeoutSec * time.Second)
-	g.log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "handler", "handler": "Graphite"})
-	g.channel = make(chan metric.Metric)
-	g.emissionTimes = make([]float64, 0)
-	return g
+func NewGraphite(
+	channel chan metric.Metric,
+	initialInterval int,
+	initialBufferSize int,
+	initialTimeout time.Duration,
+	log *l.Entry) *Graphite {
+
+	inst := new(Graphite)
+	inst.name = "Graphite"
+
+	inst.interval = initialInterval
+	inst.maxBufferSize = initialBufferSize
+	inst.timeout = initialTimeout
+	inst.log = log
+	inst.channel = channel
+
+	return inst
 }
 
 // Server returns the Graphite server's name or IP
@@ -58,7 +65,7 @@ func (g *Graphite) Configure(configMap map[string]interface{}) {
 
 // Run runs the handler main loop
 func (g *Graphite) Run() {
-	g.run(g.EmitMetrics)
+	g.run(g.emitMetrics)
 }
 
 func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint string) {
@@ -78,8 +85,7 @@ func (g *Graphite) convertToGraphite(incomingMetric metric.Metric) (datapoint st
 	return datapoint
 }
 
-// EmitMetrics sends given metrics to Graphite
-func (g *Graphite) EmitMetrics(metrics []metric.Metric) bool {
+func (g *Graphite) emitMetrics(metrics []metric.Metric) bool {
 	g.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {

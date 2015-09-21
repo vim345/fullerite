@@ -15,8 +15,8 @@ import (
 
 var testLog = l.WithFields(l.Fields{"testing": "http_generic"})
 
-func buildBaseHttpCollector(endpoint string) *baseHttpCollector {
-	col := new(baseHttpCollector)
+func buildBaseHTTPCollector(endpoint string) *baseHTTPCollector {
+	col := new(baseHTTPCollector)
 	col.endpoint = endpoint
 	col.log = testLog
 	col.channel = make(chan metric.Metric)
@@ -42,13 +42,26 @@ func ensureEmpty(c chan metric.Metric) bool {
 	return true
 }
 
+func TestMisConfig(t *testing.T) {
+	col := buildBaseHTTPCollector("")
+	col.errHandler = func(err error) {
+		t.FailNow()
+	}
+	col.rspHandler = func(rsp *http.Response) []metric.Metric {
+		t.FailNow()
+		return nil
+	}
+
+	go col.Collect()
+}
+
 func TestWorkingGenericHTTP(t *testing.T) {
 	// setup the server
 	expectedResponse := "This should come back to me"
 	server := buildServer(expectedResponse)
 	defer server.Close()
 
-	col := buildBaseHttpCollector(server.URL)
+	col := buildBaseHTTPCollector(server.URL)
 	col.errHandler = func(err error) {
 		testLog.Error("Should not have caused an error")
 		t.FailNow()

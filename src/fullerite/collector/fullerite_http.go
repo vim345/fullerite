@@ -19,18 +19,19 @@ const (
 )
 
 // collects stats from fullerite's http endpoint
-type fulleriteHttp struct {
-	baseHttpCollector
+type fulleriteHTTP struct {
+	baseHTTPCollector
 }
 
-func NewFulleriteHttpCollector(channel chan metric.Metric, initialInterval int, log *l.Entry) *fulleriteHttp {
-	inst := new(fulleriteHttp)
+// NewFulleriteHTTPCollector returns a collector meant to query fullerite's HTTP interface
+func NewFulleriteHTTPCollector(channel chan metric.Metric, initialInterval int, log *l.Entry) *fulleriteHTTP {
+	inst := new(fulleriteHTTP)
 
 	inst.log = log
 	inst.channel = channel
 	inst.interval = initialInterval
 
-	inst.name = "FulleriteHttp"
+	inst.name = "FulleriteHTTP"
 
 	inst.endpoint = fmt.Sprintf("%s://%s:%d/%s",
 		defaultFulleriteProtocol,
@@ -44,7 +45,7 @@ func NewFulleriteHttpCollector(channel chan metric.Metric, initialInterval int, 
 	return inst
 }
 
-func (inst *fulleriteHttp) Configure(configMap map[string]interface{}) {
+func (inst *fulleriteHTTP) Configure(configMap map[string]interface{}) {
 	if endpoint, exists := configMap["endpoint"]; exists == true {
 		inst.endpoint = endpoint.(string)
 	}
@@ -52,13 +53,13 @@ func (inst *fulleriteHttp) Configure(configMap map[string]interface{}) {
 	inst.configureCommonParams(configMap)
 }
 
-func (inst fulleriteHttp) handleError(err error) {
+func (inst fulleriteHTTP) handleError(err error) {
 	inst.log.Error("Failed to make GET to ", inst.endpoint, " error is: ", err)
 }
 
 // handleResponse assumes the format of the response is a JSON dictionary. It then converts
 // them to individual metrics.
-func (inst fulleriteHttp) handleResponse(rsp *http.Response) []metric.Metric {
+func (inst fulleriteHTTP) handleResponse(rsp *http.Response) []metric.Metric {
 	results := []metric.Metric{}
 
 	txt, err := ioutil.ReadAll(rsp.Body)
@@ -80,7 +81,7 @@ func (inst fulleriteHttp) handleResponse(rsp *http.Response) []metric.Metric {
 // parseResponseText takes the raw JSON string and parses that into metrics. The
 // format of the JSON string is assumed to be a dictionary and then each key
 // creates a metric.
-func (inst fulleriteHttp) parseResponseText(raw *[]byte) ([]metric.Metric, error) {
+func (inst fulleriteHTTP) parseResponseText(raw *[]byte) ([]metric.Metric, error) {
 	var parsedMap map[string]float64
 
 	err := json.Unmarshal(*raw, &parsedMap)
