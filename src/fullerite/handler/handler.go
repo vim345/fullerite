@@ -169,25 +169,25 @@ func (base BaseHandler) String() string {
 
 // InternalMetrics : Returns the internal metrics that are being collected by this handler
 func (base BaseHandler) InternalMetrics() InternalMetrics {
-	// now we calculate the average emission seconds for
-	avg := 0.0
-	if base.emissionTimes.Len() > 0 {
-		var totalTime float64
-		for e := base.emissionTimes.Front(); e != nil; e = e.Next() {
-			totalTime += e.Value.(emissionTiming).duration.Seconds()
-		}
-		avg = totalTime / float64(base.emissionTimes.Len())
-	}
-
 	counters := map[string]float64{
 		"totalEmissions": float64(base.totalEmissions),
 		"metricsDropped": float64(base.metricsDropped),
 		"metricsSent":    float64(base.metricsSent),
 	}
 	gauges := map[string]float64{
-		"averageEmissionTiming": avg,
-		"intervalLength":        float64(base.interval),
-		"emissionsInWindow":     float64(base.emissionTimes.Len()),
+		"intervalLength":    float64(base.interval),
+		"emissionsInWindow": float64(base.emissionTimes.Len()),
+	}
+
+	// now we calculate the average emission seconds for
+	if base.emissionTimes.Len() > 0 {
+		avg := 0.0
+		var totalTime float64
+		for e := base.emissionTimes.Front(); e != nil; e = e.Next() {
+			totalTime += e.Value.(emissionTiming).duration.Seconds()
+		}
+		avg = totalTime / float64(base.emissionTimes.Len())
+		gauges["averageEmissionTiming"] = avg
 	}
 
 	return InternalMetrics{

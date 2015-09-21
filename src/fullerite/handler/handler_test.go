@@ -122,10 +122,11 @@ func TestInternalMetricsWithNan(t *testing.T) {
 			"metricsSent":    0,
 			"totalEmissions": 0,
 		},
+		// specifically missing the averageEmissionTiming
+		// because we have no emissions yet
 		Gauges: map[string]float64{
-			"averageEmissionTiming": 0,
-			"emissionsInWindow":     0,
-			"intervalLength":        0,
+			"emissionsInWindow": 0,
+			"intervalLength":    0,
 		},
 	}
 	im := base.InternalMetrics()
