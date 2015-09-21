@@ -38,6 +38,7 @@ func (base baseHTTPCollector) Collect() {
 func (base baseHTTPCollector) makeRequest() []metric.Metric {
 	if base.endpoint == "" {
 		base.log.Warn("Ignoring attempt to make request because no endpoint provided")
+		return []metric.Metric{}
 	}
 
 	rsp, err := http.Get(base.endpoint)
