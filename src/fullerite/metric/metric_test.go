@@ -316,3 +316,18 @@ func TestSanitizeDimensionNameOverwriteCleanDirty(t *testing.T) {
 
 	assert.Equal(1, len(dimensions), "only 1 dimension should exist")
 }
+
+func TestAddDimensions(t *testing.T) {
+	m1 := metric.New("TestMetric")
+	m2 := metric.New("TestMetric")
+
+	dimensions := map[string]string{
+		"TestDimension":    "TestValue",
+		"Dirty:=Dimension": "Dirty:=Value",
+	}
+	m1.AddDimension("TestDimension", "TestValue")
+	m1.AddDimension("Dirty:=Dimension", "Dirty:=Value")
+	m2.AddDimensions(dimensions)
+
+	assert.Equal(t, m1, m2)
+}

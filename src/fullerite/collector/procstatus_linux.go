@@ -22,9 +22,7 @@ func procStatusPoint(name string, value float64, dimensions map[string]string) (
 	m = metric.New(name)
 	m.Value = value
 	m.AddDimension("collector", "fullerite")
-	for k, v := range dimensions {
-		m.AddDimension(k, v)
-	}
+	m.AddDimensions(dimensions)
 	return m
 }
 
