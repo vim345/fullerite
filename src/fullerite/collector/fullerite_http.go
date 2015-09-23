@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fullerite/internalserver"
 	"fullerite/metric"
 
 	"encoding/json"
@@ -24,7 +25,7 @@ type fulleriteHTTP struct {
 }
 
 // NewFulleriteHTTPCollector returns a collector meant to query fullerite's HTTP interface
-func NewFulleriteHTTPCollector(channel chan metric.Metric, initialInterval int, log *l.Entry) *fulleriteHTTP {
+func newFulleriteHTTPCollector(channel chan metric.Metric, initialInterval int, log *l.Entry) *fulleriteHTTP {
 	inst := new(fulleriteHTTP)
 
 	inst.log = log
@@ -78,25 +79,51 @@ func (inst fulleriteHTTP) handleResponse(rsp *http.Response) []metric.Metric {
 	return results
 }
 
+func (inst fulleriteHTTP) buildMetrics(counters *map[string]float64, isCounter bool) []metric.Metric {
+	results := make([]metric.Metric, 0, len(*counters))
+	for key, val := range *counters {
+		m := metric.New(key)
+		m.Value = val
+		m.AddDimension("collector", inst.Name())
+		if isCounter {
+			m.MetricType = metric.Counter
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
 // parseResponseText takes the raw JSON string and parses that into metrics. The
 // format of the JSON string is assumed to be a dictionary and then each key
 // creates a metric.
 func (inst fulleriteHTTP) parseResponseText(raw *[]byte) ([]metric.Metric, error) {
-	var parsedMap map[string]float64
+	var parsedRsp internalserver.ResponseFormat
 
-	err := json.Unmarshal(*raw, &parsedMap)
+	err := json.Unmarshal(*raw, &parsedRsp)
 	if err != nil {
 		return []metric.Metric{}, err
 	}
 
-	// now we should parse each of the key/value pairs
-	inst.log.Debug("Starting to process the ", len(parsedMap), " keys in the parsed response")
+	appendHandlerDim := func(metrics *[]metric.Metric, handlerName string) {
+		for _, m := range *metrics {
+			m.AddDimension("handler", handlerName)
+		}
+	}
+
 	results := []metric.Metric{}
-	for key, value := range parsedMap {
-		m := metric.New(key)
-		m.Value = value
-		m.AddDimension("collector", "fullerite_http")
-		results = append(results, m)
+	// first all the memory parts create metrics
+	memCounters := inst.buildMetrics(&parsedRsp.Memory.Counters, true)
+	memGauges := inst.buildMetrics(&parsedRsp.Memory.Gauges, false)
+	results = append(results, memCounters...)
+	results = append(results, memGauges...)
+	for handler, metrics := range parsedRsp.Handlers {
+		handlerCounters := inst.buildMetrics(&metrics.Counters, true)
+		handlerGauges := inst.buildMetrics(&metrics.Gauges, false)
+		appendHandlerDim(&handlerCounters, handler)
+		appendHandlerDim(&handlerGauges, handler)
+
+		results = append(results, handlerCounters...)
+		results = append(results, handlerGauges...)
 	}
 
 	return results, nil

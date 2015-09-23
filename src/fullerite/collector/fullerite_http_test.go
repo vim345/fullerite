@@ -16,9 +16,39 @@ func getTestInstance() *fulleriteHTTP {
 	testChannel := make(chan metric.Metric)
 	testLog = l.WithFields(l.Fields{"testing": "fullerite_http"})
 
-	inst := NewFulleriteHTTPCollector(testChannel, 12, testLog)
+	inst := newFulleriteHTTPCollector(testChannel, 12, testLog)
 
 	return inst
+}
+
+func getTestResponse() string {
+	testString := `
+	{
+		"memory": {
+			"counters": {
+				"somemem": 23
+			}, "gauges": {
+				"somememgauge": 342.2
+			}
+		}, "handlers": {
+			"firsthandler": {
+				"counters": {
+					"firstcounter": 213
+				}, "gauges": {
+					"firstgauge": 123
+				}
+			}, "secondhandler": { 
+				"counters": {
+					"secondcounter": 234,
+					"secondsecondcounter": 53.2
+				}, "gauges": {
+					"secondgauge": 245.3
+				}
+			}
+		}
+	}
+	`
+	return testString
 }
 
 type noopCloser struct {
@@ -77,31 +107,48 @@ func TestHandleNotJson(t *testing.T) {
 }
 
 func TestHandlePopulatedResponseFulleriteHTTP(t *testing.T) {
-	testString := `
-	{
-    	"somemetric": 42,
-    	"anothermetric": 56.4
-	}
-	`
-	asBytes := []byte(testString)
+	asBytes := []byte(getTestResponse())
 
 	inst := getTestInstance()
 	metrics, err := inst.parseResponseText(&asBytes)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(metrics))
+	assert.Equal(t, 7, len(metrics))
+
+	empty := map[string]string{}
+	assertDimension := func(m *metric.Metric, key, val string) {
+		actual, exists := m.GetDimensionValue(key, empty)
+		assert.True(t, exists)
+		assert.Equal(t, val, actual)
+	}
 
 	for _, m := range metrics {
-		assert.Equal(t, 1, len(m.Dimensions))
-		dimVal, exists := m.GetDimensionValue("collector", map[string]string{})
-		assert.True(t, exists)
-		assert.Equal(t, "fullerite_http", dimVal)
-		if m.Name == "somemetric" {
-			assert.Equal(t, 42.0, m.Value)
-		} else if m.Name == "anothermetric" {
-			assert.Equal(t, 56.4, m.Value)
-		} else {
-			t.FailNow()
+		assertDimension(&m, "collector", "FulleriteHTTP")
+
+		switch m.Name {
+		case "somemem":
+			assert.Equal(t, 23.0, m.Value)
+			assert.Equal(t, metric.Counter, m.MetricType)
+		case "somememgauge":
+			assert.Equal(t, 342.2, m.Value)
+		case "firstcounter":
+			assert.Equal(t, 213.0, m.Value)
+			assert.Equal(t, metric.Counter, m.MetricType)
+			assertDimension(&m, "handler", "firsthandler")
+		case "firstgauge":
+			assert.Equal(t, 123.0, m.Value)
+			assertDimension(&m, "handler", "firsthandler")
+		case "secondcounter":
+			assert.Equal(t, 234.0, m.Value)
+			assertDimension(&m, "handler", "secondhandler")
+			assert.Equal(t, metric.Counter, m.MetricType)
+		case "secondsecondcounter":
+			assert.Equal(t, 53.2, m.Value)
+			assertDimension(&m, "handler", "secondhandler")
+			assert.Equal(t, metric.Counter, m.MetricType)
+		case "secondgauge":
+			assert.Equal(t, 245.3, m.Value)
+			assertDimension(&m, "handler", "secondhandler")
 		}
 	}
 }
