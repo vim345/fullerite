@@ -34,6 +34,13 @@ func (m *Metric) AddDimension(name, value string) {
 	m.Dimensions[sanitizeString(name)] = sanitizeString(value)
 }
 
+// AddDimensions adds multiple new dimensions to the Metric.
+func (m *Metric) AddDimensions(dimensions map[string]string) {
+	for k, v := range dimensions {
+		m.AddDimension(k, v)
+	}
+}
+
 // GetDimensions returns the dimensions of a metric merged with defaults. Defaults win.
 func (m *Metric) GetDimensions(defaults map[string]string) (dimensions map[string]string) {
 	dimensions = make(map[string]string)
