@@ -84,11 +84,16 @@ func (d *Datadog) convertToDatadog(incomingMetric metric.Metric) (datapoint data
 	dog.Metric = d.Prefix() + incomingMetric.Name
 	dog.Points = makeDatadogPoints(incomingMetric)
 	dog.MetricType = incomingMetric.MetricType
-	if host, ok := incomingMetric.GetDimensionValue("host", d.DefaultDimensions()); ok {
+
+	// first check the defaults
+	if host, ok := d.DefaultDimensions()["host"]; ok {
+		dog.Host = host
+	} else if host, ok := incomingMetric.GetDimensionValue("host"); ok {
 		dog.Host = host
 	} else {
 		dog.Host = "unknown"
 	}
+
 	dog.Tags = d.serializedDimensions(incomingMetric)
 	return *dog
 }

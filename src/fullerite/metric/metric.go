@@ -54,18 +54,22 @@ func (m *Metric) GetDimensions(defaults map[string]string) (dimensions map[strin
 }
 
 // GetDimensionValue returns the value of a dimension if it's set.
-func (m *Metric) GetDimensionValue(dimension string, defaults map[string]string) (value string, ok bool) {
+func (m *Metric) GetDimensionValue(dimension string) (value string, ok bool) {
 	dimension = sanitizeString(dimension)
-	for name, value := range m.GetDimensions(defaults) {
-		if name == dimension {
-			return value, true
-		}
-	}
-	return "", false
+	value, ok = m.Dimensions[dimension]
+	return
 }
 
 func sanitizeString(s string) string {
 	s = strings.Replace(s, "=", "-", -1)
 	s = strings.Replace(s, ":", "-", -1)
 	return s
+}
+
+func AddToAll(metrics *[]Metric, dims map[string]string) {
+	for _, m := range *metrics {
+		for key, value := range dims {
+			m.AddDimension(key, value)
+		}
+	}
 }
