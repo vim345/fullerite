@@ -44,6 +44,8 @@ func New(name string) Collector {
 		collector = NewProcStatus(channel, DefaultCollectionInterval, collectorLog)
 	case "FulleriteHTTP":
 		collector = newFulleriteHTTPCollector(channel, DefaultCollectionInterval, collectorLog)
+	case "NerveUWSGI":
+		collector = newNerveUWSGICollector(channel, DefaultCollectionInterval, collectorLog)
 	default:
 		defaultLog.Error("Cannot create collector", name)
 		return nil

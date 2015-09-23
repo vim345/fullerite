@@ -45,10 +45,9 @@ func TestGetDimensionsWithDimensions(t *testing.T) {
 }
 
 func TestGetDimensionValueFound(t *testing.T) {
-	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
 	m.AddDimension("TestDimension", "test value")
-	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
+	value, ok := m.GetDimensionValue("TestDimension")
 
 	assert := assert.New(t)
 	assert.Equal(value, "test value", "test value does not match")
@@ -56,9 +55,8 @@ func TestGetDimensionValueFound(t *testing.T) {
 }
 
 func TestGetDimensionValueNotFound(t *testing.T) {
-	defaultDimensions := make(map[string]string)
 	m := metric.New("TestMetric")
-	value, ok := m.GetDimensionValue("TestDimension", defaultDimensions)
+	value, ok := m.GetDimensionValue("TestDimension")
 
 	assert := assert.New(t)
 	assert.Equal(value, "", "non-existing value should be empty")
@@ -88,11 +86,11 @@ func TestSanitizeDimensionNameColon(t *testing.T) {
 	value, ok = m.Dimensions["DirtyDimension:"]
 	assert.False(ok)
 
-	value, ok = m.GetDimensionValue("DirtyDimension:", defaultDimensions)
+	value, ok = m.GetDimensionValue("DirtyDimension:")
 	assert.Equal("dimension value", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue("DirtyDimension-", defaultDimensions)
+	value, ok = m.GetDimensionValue("DirtyDimension-")
 	assert.Equal("dimension value", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -118,11 +116,11 @@ func TestSanitizeDimensionNameEqual(t *testing.T) {
 	value, ok = m.Dimensions["DirtyDimension="]
 	assert.False(ok)
 
-	value, ok = m.GetDimensionValue("DirtyDimension=", defaultDimensions)
+	value, ok = m.GetDimensionValue("DirtyDimension=")
 	assert.Equal("dimension value", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue("DirtyDimension-", defaultDimensions)
+	value, ok = m.GetDimensionValue("DirtyDimension-")
 	assert.Equal("dimension value", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -145,7 +143,7 @@ func TestSanitizeDimensionValueColon(t *testing.T) {
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue("TestDimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("TestDimension")
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -165,7 +163,7 @@ func TestSanitizeDimensionValueEqual(t *testing.T) {
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue("TestDimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("TestDimension")
 	assert.Equal("dirty value-", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -184,19 +182,19 @@ func TestSanitizeMultiple(t *testing.T) {
 
 	assert.Equal("--Dirty----Metric--", m.Name, "metric name should be sanitized")
 
-	value, ok := m.GetDimensionValue(":=Dirty==::Dimension=:", defaultDimensions)
+	value, ok := m.GetDimensionValue(":=Dirty==::Dimension=:")
 	assert.Equal("--dirty----value--", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue("--Dirty----Dimension--", defaultDimensions)
+	value, ok = m.GetDimensionValue("--Dirty----Dimension--")
 	assert.Equal("--dirty----value--", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue(":=Dirty==::Dimension=:2", defaultDimensions)
+	value, ok = m.GetDimensionValue(":=Dirty==::Dimension=:2")
 	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
 	assert.True(ok)
 
-	value, ok = m.GetDimensionValue("--Dirty----Dimension--2", defaultDimensions)
+	value, ok = m.GetDimensionValue("--Dirty----Dimension--2")
 	assert.Equal("--another--dirty--value--", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -233,13 +231,13 @@ func TestSanitizeDimensionNameOverwriteDirtyDirty(t *testing.T) {
 	value, ok = m.Dimensions["Test:Timension"]
 	assert.False(ok)
 
-	value, ok = m.GetDimensionValue("Test=Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test=Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
-	value, ok = m.GetDimensionValue("Test:Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test:Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
-	value, ok = m.GetDimensionValue("Test-Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test-Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -269,10 +267,10 @@ func TestSanitizeDimensionNameOverwriteDirtyClean(t *testing.T) {
 	value, ok = m.Dimensions["Test=Dimension"]
 	assert.False(ok)
 
-	value, ok = m.GetDimensionValue("Test=Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test=Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
-	value, ok = m.GetDimensionValue("Test-Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test-Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
 
@@ -300,10 +298,10 @@ func TestSanitizeDimensionNameOverwriteCleanDirty(t *testing.T) {
 	value, ok = m.Dimensions["Test=Dimension"]
 	assert.False(ok)
 
-	value, ok = m.GetDimensionValue("Test=Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test=Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
-	value, ok = m.GetDimensionValue("Test-Dimension", defaultDimensions)
+	value, ok = m.GetDimensionValue("Test-Dimension")
 	assert.Equal("second value", value, "dimension value does not match")
 	assert.True(ok)
 

@@ -115,9 +115,8 @@ func TestHandlePopulatedResponseFulleriteHTTP(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 7, len(metrics))
 
-	empty := map[string]string{}
 	assertDimension := func(m *metric.Metric, key, val string) {
-		actual, exists := m.GetDimensionValue(key, empty)
+		actual, exists := m.GetDimensionValue(key)
 		assert.True(t, exists)
 		assert.Equal(t, val, actual)
 	}
