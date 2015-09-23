@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,15 +119,15 @@ func (inst nerveUWSGICollector) Collect() {
 	}
 	inst.log.Debug("Finished parsing Nerve config into ", servicePortMap)
 
-	for serviceName, port := range servicePortMap {
-
-		endpoint := fmt.Sprintf("http://localhost:%d/%s", port, inst.queryPath)
-		go inst.queryService(serviceName, endpoint)
+	for port, serviceName := range servicePortMap {
+		go inst.queryService(serviceName, port)
 	}
 }
 
-func (inst *nerveUWSGICollector) queryService(serviceName, endpoint string) {
+func (inst *nerveUWSGICollector) queryService(serviceName string, port int) {
 	serviceLog := inst.log.WithField("service", serviceName)
+
+	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, inst.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 
 	rawResponse, err := queryEndpoint(endpoint, inst.timeout)
@@ -144,6 +145,7 @@ func (inst *nerveUWSGICollector) queryService(serviceName, endpoint string) {
 	metric.AddToAll(&metrics, map[string]string{
 		"collector": inst.Name(),
 		"service":   serviceName,
+		"port":      strconv.Itoa(port),
 	})
 
 	serviceLog.Debug("Sending ", len(metrics), " to channel")
@@ -164,8 +166,9 @@ func (col *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 }
 
 // parseNerveConfig is responsible for taking the JSON string coming in into a map of service:port
-// it will also filter based on only services runnign on this host
-func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map[string]int, error) {
+// it will also filter based on only services runnign on this host.
+// To deal with multi-tenancy we actually will return port:service
+func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map[int]string, error) {
 	parsed := new(releventNerveConfig)
 
 	// convert the ips into a map for membership tests
@@ -176,9 +179,9 @@ func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map
 
 	err := json.Unmarshal(*raw, parsed)
 	if err != nil {
-		return make(map[string]int), err
+		return make(map[int]string), err
 	}
-	results := make(map[string]int)
+	results := make(map[int]string)
 	for rawServiceName, serviceConfig := range parsed.Services {
 		host := strings.TrimSpace(serviceConfig["host"].(string))
 
@@ -187,7 +190,7 @@ func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map
 			name := strings.Split(rawServiceName, ".")[0]
 			port := config.GetAsInt(serviceConfig["port"], -1)
 			if port != -1 {
-				results[name] = port
+				results[port] = name
 			} else {
 				inst.log.Warn("Failed to get port from value ", serviceConfig["port"])
 			}

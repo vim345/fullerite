@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -19,61 +20,61 @@ import (
 func getTestNerveConfig() []byte {
 	raw := `
 	{
-     "heartbeat_path": "/var/run/nerve/heartbeat",
-     "instance_id": "srv1-devc",
-     "services": {
-			"example_service.main.norcal-devc.superregion:norcal-devc.13752.new": {
-			            "check_interval": 7.0,
-			            "checks": [
-			                {
-			                    "fall": 2,
-			                    "headers": {},
-			                    "host": "127.0.0.1",
-			                    "open_timeout": 6,
-			                    "port": 6666,
-			                    "rise": 1,
-			                    "timeout": 6,
-			                    "type": "http",
-			                    "uri": "/http/example_service.main/13752/status"
-			                }
-			            ],
-			            "host": "10.56.5.21",
-			            "port": 13752,
-			            "weight": 24,
-			            "zk_hosts": [
-			                "10.40.5.5:22181",
-			                "10.40.5.6:22181",
-			                "10.40.1.17:22181"
-			            ],
-			            "zk_path": "/nerve/superregion:norcal-devc/example_service.main"
-			        },
-			        "example_service.mesosstage_main.norcal-devc.superregion:norcal-devc.13752.new": {
-			            "check_interval": 7.0,
-			            "checks": [
-			                {
-			                    "fall": 2,
-			                    "headers": {},
-			                    "host": "127.0.0.1",
-			                    "open_timeout": 6,
-			                    "port": 6666,
-			                    "rise": 1,
-			                    "timeout": 6,
-			                    "type": "http",
-			                    "uri": "/http/example_service.mesosstage_main/13752/status"
-			                }
-			            ],
-			            "host": "10.56.5.21",
-			            "port": 13752,
-			            "weight": 24,
-			            "zk_hosts": [
-			                "10.40.5.5:22181",
-			                "10.40.5.6:22181",
-			                "10.40.1.17:22181"
-			            ],
-			            "zk_path": "/nerve/superregion:norcal-devc/example_service.mesosstage_main"
-			        }
-     		}
- 	}
+	    "heartbeat_path": "/var/run/nerve/heartbeat",
+	    "instance_id": "srv1-devc",
+	    "services": {
+	        "example_service.main.norcal-devc.superregion:norcal-devc.13752.new": {
+	            "check_interval": 7,
+	            "checks": [
+	                {
+	                    "fall": 2,
+	                    "headers": {},
+	                    "host": "127.0.0.1",
+	                    "open_timeout": 6,
+	                    "port": 6666,
+	                    "rise": 1,
+	                    "timeout": 6,
+	                    "type": "http",
+	                    "uri": "/http/example_service.main/13752/status"
+	                }
+	            ],
+	            "host": "10.56.5.21",
+	            "port": 13752,
+	            "weight": 24,
+	            "zk_hosts": [
+	                "10.40.5.5:22181",
+	                "10.40.5.6:22181",
+	                "10.40.1.17:22181"
+	            ],
+	            "zk_path": "/nerve/superregion:norcal-devc/example_service.main"
+	        },
+	        "example_service.mesosstage_main.norcal-devc.superregion:norcal-devc.13752.new": {
+	            "check_interval": 7,
+	            "checks": [
+	                {
+	                    "fall": 2,
+	                    "headers": {},
+	                    "host": "127.0.0.1",
+	                    "open_timeout": 6,
+	                    "port": 6666,
+	                    "rise": 1,
+	                    "timeout": 6,
+	                    "type": "http",
+	                    "uri": "/http/example_service.mesosstage_main/13752/status"
+	                }
+	            ],
+	            "host": "10.56.5.21",
+	            "port": 22222,
+	            "weight": 24,
+	            "zk_hosts": [
+	                "10.40.5.5:22181",
+	                "10.40.5.6:22181",
+	                "10.40.1.17:22181"
+	            ],
+	            "zk_path": "/nerve/superregion:norcal-devc/example_service.mesosstage_main"
+	        }
+	    }
+	}
 	`
 	return []byte(raw)
 }
@@ -143,6 +144,25 @@ func validateUWSGIResults(t *testing.T, actual []metric.Metric) {
 	}
 }
 
+func validateFullDimensions(t *testing.T, actual []metric.Metric, serviceName, port string) {
+	for _, m := range actual {
+		assert.Equal(t, 5, len(m.Dimensions))
+
+		val, exists := m.GetDimensionValue("collector")
+		assert.True(t, exists)
+		assert.Equal(t, "NerveUWSGI", val)
+
+		val, exists = m.GetDimensionValue("service")
+		assert.True(t, exists)
+		assert.Equal(t, serviceName, val)
+
+		val, exists = m.GetDimensionValue("port")
+		assert.True(t, exists)
+		assert.Equal(t, port, val)
+	}
+
+}
+
 func validateEmptyChannel(t *testing.T, c chan metric.Metric) {
 	close(c)
 	for m := range c {
@@ -150,14 +170,23 @@ func validateEmptyChannel(t *testing.T, c chan metric.Metric) {
 	}
 }
 
+func parseUrl(url string) (string, string) {
+	parts := strings.Split(url, ":")
+	ip := strings.Replace(parts[1], "/", "", -1)
+	port := parts[2]
+	return ip, port
+}
+
 func getTestNerveUWSGI() *nerveUWSGICollector {
 	return newNerveUWSGICollector(make(chan metric.Metric), 12, l.WithField("testing", "nerveuwsgi"))
 }
 
 func TestNerveConfigParsing(t *testing.T) {
-	expected := map[string]int{
-		"example_service": 13752,
+	expected := map[int]string{
+		22222: "example_service",
+		13752: "example_service",
 	}
+
 	cfgString := getTestNerveConfig()
 	results, err := getTestNerveUWSGI().parseNerveConfig(&cfgString, []string{"10.56.5.21"})
 	assert.Nil(t, err)
@@ -296,9 +325,7 @@ func TestNerveUWSGICollect(t *testing.T) {
 	defer server.Close()
 
 	// assume format is http://ipaddr:port
-	parts := strings.Split(server.URL, ":")
-	ip := strings.Replace(parts[1], "/", "", -1)
-	port := parts[2]
+	ip, port := parseUrl(server.URL)
 
 	minimalNerveConfig := make(map[string]map[string]map[string]interface{})
 	minimalNerveConfig["services"] = map[string]map[string]interface{}{
@@ -334,17 +361,62 @@ func TestNerveUWSGICollect(t *testing.T) {
 	}
 
 	validateUWSGIResults(t, actual)
-	for _, m := range actual {
-		assert.Equal(t, 4, len(m.Dimensions))
+	validateFullDimensions(t, actual, "test_service", port)
+	validateEmptyChannel(t, inst.Channel())
+}
 
-		val, exists := m.GetDimensionValue("collector")
-		assert.True(t, exists)
-		assert.Equal(t, "NerveUWSGI", val)
+func TestNonConflictingServiceQueries(t *testing.T) {
+	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		fmt.Fprint(w, getTestUWSGIResponse())
+	}))
+	defer goodServer.Close()
 
-		val, exists = m.GetDimensionValue("service")
-		assert.True(t, exists)
-		assert.Equal(t, "test_service", val)
+	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		time.Sleep(time.Duration(5) * time.Second) // much longer than the actual timeout
+	}))
+	defer badServer.Close()
+
+	goodIp, goodPort := parseUrl(goodServer.URL)
+	badIp, badPort := parseUrl(badServer.URL)
+
+	minimalNerveConfig := make(map[string]map[string]map[string]interface{})
+	minimalNerveConfig["services"] = map[string]map[string]interface{}{
+		"test_service.things.and.stuff": {
+			"host": goodIp,
+			"port": goodPort,
+		},
+		"other_service.does.lots.of.stuff": {
+			"host": badIp,
+			"port": badPort,
+		},
 	}
 
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath": tmpFile.Name(),
+		"queryPath":      "",
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	for i := 0; i < 5; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual)
+	validateFullDimensions(t, actual, "test_service", goodPort)
 	validateEmptyChannel(t, inst.Channel())
 }
