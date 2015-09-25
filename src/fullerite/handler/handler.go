@@ -89,6 +89,12 @@ type emissionTiming struct {
 	duration  time.Duration
 }
 
+type handlerEmissionStat struct {
+	timing  emissionTiming
+	size    int
+	success bool
+}
+
 // BaseHandler is class to handle the boiler plate parts of the handlers
 type BaseHandler struct {
 	channel           chan metric.Metric
@@ -240,6 +246,25 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	metrics := make([]metric.Metric, 0, base.maxBufferSize)
 
 	lastEmission := time.Now()
+
+	emissionStats := make(chan handlerEmissionStat)
+	// collect emission stats in a separate goroutine
+	go func() {
+		for stat := range emissionStats {
+			base.recordEmission(stat.timing.duration)
+
+			if stat.success {
+				base.metricsSent += uint64(stat.size)
+			} else {
+				base.metricsDropped += uint64(stat.size)
+			}
+
+			if stat.timing.timestamp.After(lastEmission) {
+				lastEmission = stat.timing.timestamp
+			}
+		}
+	}()
+
 	for incomingMetric := range base.Channel() {
 		base.log.Debug(base.name, " metric: ", incomingMetric)
 		metrics = append(metrics, incomingMetric)
@@ -248,23 +273,27 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 		bufferSizeLimitReached := len(metrics) >= base.maxBufferSize
 
 		if emitIntervalPassed || bufferSizeLimitReached {
-			beforeEmission := time.Now()
-			result := emitFunc(metrics)
-			lastEmission = time.Now()
-
-			emissionDuration := lastEmission.Sub(beforeEmission)
-
-			base.log.Info("POST to ", base.name, " took ", emissionDuration.Seconds(), " seconds")
-			base.recordEmission(emissionDuration)
-
-			if result {
-				base.metricsSent += uint64(len(metrics))
-			} else {
-				base.metricsDropped += uint64(len(metrics))
-			}
-
-			// reset metrics
+			metricsToBeEmitted := make([]metric.Metric, 0, len(metrics))
+			copy(metricsToBeEmitted, metrics)
+			// reset metrics, fire & forget
 			metrics = make([]metric.Metric, 0, base.maxBufferSize)
+
+			go base.runEmit(metricsToBeEmitted, emitFunc, emissionStats)
 		}
+
 	}
+}
+
+func (base *BaseHandler) runEmit(metrics []metric.Metric, emitFunc func([]metric.Metric) bool, stats chan handlerEmissionStat) {
+	beforeEmission := time.Now()
+	result := emitFunc(metrics)
+	afterEmission := time.Now()
+
+	emissionDuration := afterEmission.Sub(afterEmission)
+	timing := emissionTiming{beforeEmission, emissionDuration}
+	stat := handlerEmissionStat{timing, len(metrics), result}
+
+	stats <- stat
+
+	base.log.Info("POST to ", base.name, " took ", emissionDuration.Seconds(), " seconds")
 }
