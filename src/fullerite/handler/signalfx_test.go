@@ -85,5 +85,10 @@ func TestSignalFxRun(t *testing.T) {
 	m := metric.New("Test")
 	s.Channel() <- m
 
-	<-wait
+	select {
+	case <-wait:
+		// noop
+	case <-time.After(2 * time.Second):
+		t.Fatal("Failed to post and handle after 2 seconds")
+	}
 }

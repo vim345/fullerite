@@ -5,6 +5,7 @@ import (
 	"fullerite/metric"
 
 	"container/list"
+	"fmt"
 	"time"
 
 	l "github.com/Sirupsen/logrus"
@@ -85,8 +86,9 @@ type Handler interface {
 }
 
 type emissionTiming struct {
-	timestamp time.Time
-	duration  time.Duration
+	timestamp   time.Time
+	duration    time.Duration
+	metricsSent int
 }
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
@@ -196,30 +198,6 @@ func (base BaseHandler) InternalMetrics() InternalMetrics {
 	}
 }
 
-// manages the rolling window of emissions
-// the emissions are a timesorted list, and we purge things older than
-// the base handler's interval
-func (base *BaseHandler) recordEmission(emissionDuration time.Duration) {
-	base.totalEmissions++
-	now := time.Now()
-
-	timing := emissionTiming{now, emissionDuration}
-	base.emissionTimes.PushBack(timing)
-
-	// now kull the list of old times, iterate through the list until we find
-	// a timestamp that is within the interval
-	minTime := now.Add(time.Duration(-1*base.interval) * time.Second)
-	toRemove := []*list.Element{}
-	for e := base.emissionTimes.Front(); e.Value.(emissionTiming).timestamp.Before(minTime); e = e.Next() {
-		toRemove = append(toRemove, e)
-	}
-
-	for _, entry := range toRemove {
-		base.emissionTimes.Remove(entry)
-	}
-	base.log.Debug("We removed ", len(toRemove), " entries and now have ", base.emissionTimes.Len())
-}
-
 // configureCommonParams will extract the common parameters that are used and set them in the handler
 func (base *BaseHandler) configureCommonParams(configMap map[string]interface{}) {
 	if asInterface, exists := configMap["timeout"]; exists == true {
@@ -240,6 +218,9 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	metrics := make([]metric.Metric, 0, base.maxBufferSize)
 
 	lastEmission := time.Now()
+
+	emissionResults := make(chan emissionTiming)
+	go base.recordEmissions(emissionResults)
 	for incomingMetric := range base.Channel() {
 		base.log.Debug(base.name, " metric: ", incomingMetric)
 		metrics = append(metrics, incomingMetric)
@@ -248,23 +229,56 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 		bufferSizeLimitReached := len(metrics) >= base.maxBufferSize
 
 		if emitIntervalPassed || bufferSizeLimitReached {
-			beforeEmission := time.Now()
-			result := emitFunc(metrics)
-			lastEmission = time.Now()
-
-			emissionDuration := lastEmission.Sub(beforeEmission)
-
-			base.log.Info("POST to ", base.name, " took ", emissionDuration.Seconds(), " seconds")
-			base.recordEmission(emissionDuration)
-
-			if result {
-				base.metricsSent += uint64(len(metrics))
-			} else {
-				base.metricsDropped += uint64(len(metrics))
-			}
-
-			// reset metrics
+			toSend := make([]metric.Metric, len(metrics))
+			copy(toSend, metrics)
 			metrics = make([]metric.Metric, 0, base.maxBufferSize)
+			go base.emitAndTime(&toSend, emitFunc, emissionResults)
 		}
+	}
+}
+
+// manages the rolling window of emissions
+// the emissions are a timesorted list, and we purge things older than
+// the base handler's interval
+func (base *BaseHandler) recordEmissions(timingsChannel chan emissionTiming) {
+	for timing := range timingsChannel {
+		base.totalEmissions++
+		now := time.Now()
+
+		base.emissionTimes.PushBack(timing)
+
+		// now kull the list of old times, iterate through the list until we find
+		// a timestamp that is within the interval
+		minTime := now.Add(time.Duration(-1*base.interval) * time.Second)
+		toRemove := []*list.Element{}
+		for e := base.emissionTimes.Front(); e != nil && minTime.After(e.Value.(emissionTiming).timestamp); e = e.Next() {
+			toRemove = append(toRemove, e)
+		}
+
+		for _, entry := range toRemove {
+			base.emissionTimes.Remove(entry)
+		}
+		base.log.Debug("We removed ", len(toRemove), " entries and now have ", base.emissionTimes.Len())
+	}
+}
+
+func (base *BaseHandler) emitAndTime(metrics *[]metric.Metric, emitFunc func([]metric.Metric) bool, callbackChannel chan emissionTiming) {
+	beforeEmission := time.Now()
+	result := emitFunc(*metrics)
+	afterEmission := time.Now()
+
+	emissionDuration := afterEmission.Sub(beforeEmission)
+	timing := emissionTiming{
+		timestamp:   time.Now(),
+		duration:    emissionDuration,
+		metricsSent: len(*metrics),
+	}
+	base.log.Info(fmt.Sprintf("POST to %s took %f seconds", base.name, emissionDuration.Seconds()))
+	callbackChannel <- timing
+
+	if result {
+		base.metricsSent += uint64(len(*metrics))
+	} else {
+		base.metricsDropped += uint64(len(*metrics))
 	}
 }
