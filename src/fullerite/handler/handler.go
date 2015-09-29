@@ -233,6 +233,7 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 			copy(toSend, metrics)
 			metrics = make([]metric.Metric, 0, base.maxBufferSize)
 			go base.emitAndTime(&toSend, emitFunc, emissionResults)
+			lastEmission := time.Now()
 		}
 	}
 }
@@ -262,7 +263,12 @@ func (base *BaseHandler) recordEmissions(timingsChannel chan emissionTiming) {
 	}
 }
 
-func (base *BaseHandler) emitAndTime(metrics *[]metric.Metric, emitFunc func([]metric.Metric) bool, callbackChannel chan emissionTiming) {
+func (base *BaseHandler) emitAndTime(
+	metrics *[]metric.Metric,
+	emitFunc func([]metric.Metric) bool,
+	callbackChannel chan emissionTiming,
+) {
+	numMetrics := len(*metrics)
 	beforeEmission := time.Now()
 	result := emitFunc(*metrics)
 	afterEmission := time.Now()
@@ -271,14 +277,20 @@ func (base *BaseHandler) emitAndTime(metrics *[]metric.Metric, emitFunc func([]m
 	timing := emissionTiming{
 		timestamp:   time.Now(),
 		duration:    emissionDuration,
-		metricsSent: len(*metrics),
+		metricsSent: numMetrics,
 	}
-	base.log.Info(fmt.Sprintf("POST to %s took %f seconds", base.name, emissionDuration.Seconds()))
+	base.log.Info(
+		fmt.Sprintf("POST of %s metrics to %s took %f seconds",
+			numMetrics,
+			base.name,
+			emissionDuration.Seconds(),
+		),
+	)
 	callbackChannel <- timing
 
 	if result {
-		base.metricsSent += uint64(len(*metrics))
+		base.metricsSent += uint64(numMetrics)
 	} else {
-		base.metricsDropped += uint64(len(*metrics))
+		base.metricsDropped += uint64(numMetrics)
 	}
 }
