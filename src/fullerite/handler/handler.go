@@ -233,7 +233,7 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 			copy(toSend, metrics)
 			metrics = make([]metric.Metric, 0, base.maxBufferSize)
 			go base.emitAndTime(&toSend, emitFunc, emissionResults)
-			lastEmission := time.Now()
+			lastEmission = time.Now()
 		}
 	}
 }
