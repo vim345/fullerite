@@ -99,76 +99,76 @@ type nerveUWSGICollector struct {
 	timeout        int
 }
 
-func (inst nerveUWSGICollector) Collect() {
+func (n *nerveUWSGICollector) Collect() {
 	ips, err := getIps()
 	if err != nil {
-		inst.log.Warn("Failed to get IPs: ", err)
+		n.log.Warn("Failed to get IPs: ", err)
 		return
 	}
 
-	rawFileContents, err := ioutil.ReadFile(inst.configFilePath)
+	rawFileContents, err := ioutil.ReadFile(n.configFilePath)
 	if err != nil {
-		inst.log.Warn("Failed to read the contents of file ", inst.configFilePath, " because ", err)
+		n.log.Warn("Failed to read the contents of file ", n.configFilePath, " because ", err)
 		return
 	}
 
-	servicePortMap, err := inst.parseNerveConfig(&rawFileContents, ips)
+	servicePortMap, err := n.parseNerveConfig(&rawFileContents, ips)
 	if err != nil {
-		inst.log.Warn("Failed to parse the nerve config at ", inst.configFilePath, ": ", err)
+		n.log.Warn("Failed to parse the nerve config at ", n.configFilePath, ": ", err)
 		return
 	}
-	inst.log.Debug("Finished parsing Nerve config into ", servicePortMap)
+	n.log.Debug("Finished parsing Nerve config into ", servicePortMap)
 
 	for port, serviceName := range servicePortMap {
-		go inst.queryService(serviceName, port)
+		go n.queryService(serviceName, port)
 	}
 }
 
-func (inst *nerveUWSGICollector) queryService(serviceName string, port int) {
-	serviceLog := inst.log.WithField("service", serviceName)
+func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
+	serviceLog := n.log.WithField("service", serviceName)
 
-	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, inst.queryPath)
+	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 
-	rawResponse, err := queryEndpoint(endpoint, inst.timeout)
+	rawResponse, err := queryEndpoint(endpoint, n.timeout)
 	if err != nil {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
 		return
 	}
 
-	metrics, err := inst.parseUWSGIMetrics(&rawResponse)
+	metrics, err := parseUWSGIMetrics(&rawResponse)
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
 	}
 
 	metric.AddToAll(&metrics, map[string]string{
-		"collector": inst.Name(),
+		"collector": n.Name(),
 		"service":   serviceName,
 		"port":      strconv.Itoa(port),
 	})
 
 	serviceLog.Debug("Sending ", len(metrics), " to channel")
 	for _, m := range metrics {
-		inst.Channel() <- m
+		n.Channel() <- m
 	}
 }
 
-func (col *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
+func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["queryPath"]; exists == true {
-		col.queryPath = val.(string)
+		n.queryPath = val.(string)
 	}
 	if val, exists := configMap["configFilePath"]; exists == true {
-		col.configFilePath = val.(string)
+		n.configFilePath = val.(string)
 	}
 
-	col.configureCommonParams(configMap)
+	n.configureCommonParams(configMap)
 }
 
 // parseNerveConfig is responsible for taking the JSON string coming in into a map of service:port
 // it will also filter based on only services runnign on this host.
 // To deal with multi-tenancy we actually will return port:service
-func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map[int]string, error) {
+func (n *nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map[int]string, error) {
 	parsed := new(releventNerveConfig)
 
 	// convert the ips into a map for membership tests
@@ -192,7 +192,7 @@ func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map
 			if port != -1 {
 				results[port] = name
 			} else {
-				inst.log.Warn("Failed to get port from value ", serviceConfig["port"])
+				n.log.Warn("Failed to get port from value ", serviceConfig["port"])
 			}
 		}
 	}
@@ -203,7 +203,7 @@ func (inst nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map
 // parseUWSGIMetrics takes the json returned from the endpoint and converts
 // it into raw metrics. We first check that the metrics returned have a float value
 // otherwise we skip the metric.
-func (inst nerveUWSGICollector) parseUWSGIMetrics(raw *[]byte) ([]metric.Metric, error) {
+func parseUWSGIMetrics(raw *[]byte) ([]metric.Metric, error) {
 	parsed := new(uwsgiJSONFormat)
 
 	err := json.Unmarshal(*raw, parsed)

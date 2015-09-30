@@ -91,7 +91,7 @@ func getTestUWSGIResponse() string {
 	"timers": {
 		"some_timer": {
 			"average": 123
-		}, 
+		},
 		"othertimer": {
 			"mean": 345
 		}
@@ -170,7 +170,7 @@ func validateEmptyChannel(t *testing.T, c chan metric.Metric) {
 	}
 }
 
-func parseUrl(url string) (string, string) {
+func parseURL(url string) (string, string) {
 	parts := strings.Split(url, ":")
 	ip := strings.Replace(parts[1], "/", "", -1)
 	port := parts[2]
@@ -309,7 +309,7 @@ func TestUWSGIResponseConversion(t *testing.T) {
 	uwsgiRsp := []byte(getTestUWSGIResponse())
 
 	inst := getTestNerveUWSGI()
-	actual, err := inst.parseUWSGIMetrics(&uwsgiRsp)
+	actual, err := parseUWSGIMetrics(&uwsgiRsp)
 	assert.Nil(t, err)
 	validateUWSGIResults(t, actual)
 	for _, m := range actual {
@@ -325,7 +325,7 @@ func TestNerveUWSGICollect(t *testing.T) {
 	defer server.Close()
 
 	// assume format is http://ipaddr:port
-	ip, port := parseUrl(server.URL)
+	ip, port := parseURL(server.URL)
 
 	minimalNerveConfig := make(map[string]map[string]map[string]interface{})
 	minimalNerveConfig["services"] = map[string]map[string]interface{}{
@@ -376,8 +376,8 @@ func TestNonConflictingServiceQueries(t *testing.T) {
 	}))
 	defer badServer.Close()
 
-	goodIp, goodPort := parseUrl(goodServer.URL)
-	badIp, badPort := parseUrl(badServer.URL)
+	goodIP, goodPort := parseURL(goodServer.URL)
+	badIP, badPort := parseURL(badServer.URL)
 
 	minimalNerveConfig := make(map[string]map[string]map[string]interface{})
 	minimalNerveConfig["services"] = map[string]map[string]interface{}{

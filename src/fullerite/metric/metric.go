@@ -60,16 +60,17 @@ func (m *Metric) GetDimensionValue(dimension string) (value string, ok bool) {
 	return
 }
 
-func sanitizeString(s string) string {
-	s = strings.Replace(s, "=", "-", -1)
-	s = strings.Replace(s, ":", "-", -1)
-	return s
-}
-
+// AddToAll adds a map of dimensions to a list of metrics
 func AddToAll(metrics *[]Metric, dims map[string]string) {
 	for _, m := range *metrics {
 		for key, value := range dims {
 			m.AddDimension(key, value)
 		}
 	}
+}
+
+func sanitizeString(s string) string {
+	s = strings.Replace(s, "=", "-", -1)
+	s = strings.Replace(s, ":", "-", -1)
+	return s
 }
