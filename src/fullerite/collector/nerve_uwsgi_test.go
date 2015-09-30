@@ -91,7 +91,7 @@ func getTestUWSGIResponse() string {
 	"timers": {
 		"some_timer": {
 			"average": 123
-		}, 
+		},
 		"othertimer": {
 			"mean": 345
 		}

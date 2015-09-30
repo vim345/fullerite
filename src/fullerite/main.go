@@ -103,7 +103,8 @@ func start(ctx *cli.Context) {
 	collectors := startCollectors(c)
 	handlers := startHandlers(c)
 
-	go internalserver.RunServer(&c, &handlers)
+	internalServer := internalserver.New(c, handlers)
+	go internalServer.Run()
 
 	metrics := make(chan metric.Metric)
 	readFromCollectors(collectors, metrics)
