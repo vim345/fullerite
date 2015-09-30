@@ -308,7 +308,6 @@ func TestUWSGIMetricConversion(t *testing.T) {
 func TestUWSGIResponseConversion(t *testing.T) {
 	uwsgiRsp := []byte(getTestUWSGIResponse())
 
-	inst := getTestNerveUWSGI()
 	actual, err := parseUWSGIMetrics(&uwsgiRsp)
 	assert.Nil(t, err)
 	validateUWSGIResults(t, actual)
@@ -382,11 +381,11 @@ func TestNonConflictingServiceQueries(t *testing.T) {
 	minimalNerveConfig := make(map[string]map[string]map[string]interface{})
 	minimalNerveConfig["services"] = map[string]map[string]interface{}{
 		"test_service.things.and.stuff": {
-			"host": goodIp,
+			"host": goodIP,
 			"port": goodPort,
 		},
 		"other_service.does.lots.of.stuff": {
-			"host": badIp,
+			"host": badIP,
 			"port": badPort,
 		},
 	}
