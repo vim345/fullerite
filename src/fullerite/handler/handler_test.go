@@ -56,7 +56,7 @@ func TestEmissionAndRecord(t *testing.T) {
 
 	base := BaseHandler{}
 	base.log = l.WithField("testing", "basehandler")
-	go base.emitAndTime(&metrics, emitFunc, callbackChannel)
+	go base.emitAndTime(metrics, emitFunc, callbackChannel)
 
 	select {
 	case timing := <-callbackChannel:

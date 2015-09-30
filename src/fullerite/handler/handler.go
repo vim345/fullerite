@@ -229,10 +229,9 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 		bufferSizeLimitReached := len(metrics) >= base.maxBufferSize
 
 		if emitIntervalPassed || bufferSizeLimitReached {
-			toSend := make([]metric.Metric, len(metrics))
-			copy(toSend, metrics)
+			go base.emitAndTime(metrics, emitFunc, emissionResults)
+			// will get copied into this call, meaning it's ok to clear it
 			metrics = make([]metric.Metric, 0, base.maxBufferSize)
-			go base.emitAndTime(&toSend, emitFunc, emissionResults)
 			lastEmission = time.Now()
 		}
 	}
@@ -264,13 +263,13 @@ func (base *BaseHandler) recordEmissions(timingsChannel chan emissionTiming) {
 }
 
 func (base *BaseHandler) emitAndTime(
-	metrics *[]metric.Metric,
+	metrics []metric.Metric,
 	emitFunc func([]metric.Metric) bool,
 	callbackChannel chan emissionTiming,
 ) {
-	numMetrics := len(*metrics)
+	numMetrics := len(metrics)
 	beforeEmission := time.Now()
-	result := emitFunc(*metrics)
+	result := emitFunc(metrics)
 	afterEmission := time.Now()
 
 	emissionDuration := afterEmission.Sub(beforeEmission)
