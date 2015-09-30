@@ -61,7 +61,7 @@ func TestBuildResponse(t *testing.T) {
 
 	srv := internalServer{
 		log:      testLog,
-		handlers: testHandlers,
+		handlers: &testHandlers,
 	}
 
 	rsp := srv.buildResponse()
@@ -88,7 +88,7 @@ func TestBuildResponseMemory(t *testing.T) {
 
 	srv := internalServer{
 		log:      testLog,
-		handlers: emptyHandlers,
+		handlers: &emptyHandlers,
 	}
 
 	rspFormat := new(ResponseFormat)
@@ -121,7 +121,7 @@ func TestRespondToHttp(t *testing.T) {
 	)
 	testHandlers := []handler.Handler{h1, h2}
 
-	srv := New(cfg, testHandlers)
+	srv := New(cfg, &testHandlers)
 	go srv.Run()
 
 	time.Sleep(100 * time.Millisecond) // wait for server to bind on port

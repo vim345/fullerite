@@ -21,7 +21,7 @@ const (
 
 type internalServer struct {
 	log      *l.Entry
-	handlers []handler.Handler
+	handlers *[]handler.Handler
 	port     int
 	path     string
 }
@@ -33,7 +33,7 @@ type ResponseFormat struct {
 }
 
 // New createse a new internal server instance
-func New(cfg config.Config, handlers []handler.Handler) *internalServer {
+func New(cfg config.Config, handlers *[]handler.Handler) *internalServer {
 	srv := new(internalServer)
 	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver["})
 	srv.handlers = handlers
@@ -98,7 +98,7 @@ func (srv *internalServer) configure(cfgMap map[string]interface{}) {
 //	}
 //
 func (srv internalServer) handleInternalMetricsRequest(writer http.ResponseWriter, req *http.Request) {
-	srv.log.Debug("Starting to handle request for internal metrics, checking ", len(srv.handlers), " handlers")
+	srv.log.Debug("Starting to handle request for internal metrics, checking ", len(*srv.handlers), " handlers")
 
 	rspString := string(*srv.buildResponse())
 
@@ -111,7 +111,7 @@ func (srv internalServer) buildResponse() *[]byte {
 	memoryStats := getMemoryStats()
 
 	handlerStats := make(map[string]handler.InternalMetrics)
-	for _, inst := range srv.handlers {
+	for _, inst := range *srv.handlers {
 		handlerStats[inst.Name()] = inst.InternalMetrics()
 	}
 
