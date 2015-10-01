@@ -11,6 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func assertEmpty(t *testing.T, channel chan metric.Metric) {
+	close(channel)
+	for range channel {
+		t.Fatal("The channel was not empty")
+	}
+}
+
 func TestNewHandler(t *testing.T) {
 	names := []string{"Graphite", "Kairos", "SignalFx", "Datadog"}
 	for _, name := range names {
@@ -37,23 +44,51 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
+func TestEmissionAndRecord(t *testing.T) {
+	emitCalled := false
+
+	callbackChannel := make(chan emissionTiming)
+	emitFunc := func([]metric.Metric) bool {
+		emitCalled = true
+		return true
+	}
+	metrics := []metric.Metric{metric.New("example")}
+
+	base := BaseHandler{}
+	base.log = l.WithField("testing", "basehandler")
+	go base.emitAndTime(metrics, emitFunc, callbackChannel)
+
+	select {
+	case timing := <-callbackChannel:
+		assert.NotNil(t, timing)
+		assert.Equal(t, 1, timing.metricsSent)
+		assert.NotNil(t, timing.timestamp)
+		assert.NotNil(t, timing.duration)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Failed to read from the callback channel after 2 seconds")
+	}
+
+	assert.True(t, emitCalled)
+}
+
 func TestRecordTimings(t *testing.T) {
 	base := BaseHandler{}
 	base.log = l.WithField("testing", "basehandler")
-	base.interval = 1
+	base.interval = 2
 
 	minusTwoSec := -1 * 2 * time.Second
 	minusThreeSec := -1 * 3 * time.Second
 	someDur := time.Duration(5)
 
 	// create a list of emissions in order with some older than 1 second
-	base.emissionTimes.PushBack(emissionTiming{time.Now().Add(minusThreeSec), someDur})
-	base.emissionTimes.PushBack(emissionTiming{time.Now().Add(minusTwoSec), someDur})
-	base.emissionTimes.PushBack(emissionTiming{time.Now(), someDur})
+	timingsChannel := make(chan emissionTiming)
+	base.emissionTimes.PushBack(emissionTiming{time.Now().Add(minusThreeSec), someDur, 0})
+	base.emissionTimes.PushBack(emissionTiming{time.Now().Add(minusTwoSec), someDur, 0})
 
-	base.recordEmission(someDur)
+	go base.recordEmissions(timingsChannel)
+	timingsChannel <- emissionTiming{time.Now(), someDur, 0}
 
-	assert.Equal(t, 2, base.emissionTimes.Len())
+	assert.Equal(t, 1, base.emissionTimes.Len())
 }
 
 func TestHandlerRun(t *testing.T) {
@@ -64,7 +99,8 @@ func TestHandlerRun(t *testing.T) {
 	base.channel = make(chan metric.Metric)
 
 	emitCalled := false
-	emitFunc := func([]metric.Metric) bool {
+	emitFunc := func(metrics []metric.Metric) bool {
+		assert.Equal(t, 1, len(metrics))
 		emitCalled = true
 		return true
 	}
@@ -73,13 +109,13 @@ func TestHandlerRun(t *testing.T) {
 	go base.run(emitFunc)
 
 	base.channel <- metric.New("testMetric")
-	close(base.channel)
-
+	time.Sleep(1 * time.Second)
 	assert.True(t, emitCalled)
 	assert.Equal(t, 1, base.emissionTimes.Len())
 	assert.Equal(t, uint64(1), base.metricsSent)
 	assert.Equal(t, uint64(0), base.metricsDropped)
 	assert.Equal(t, uint64(1), base.totalEmissions)
+	assertEmpty(t, base.channel)
 }
 
 func TestInternalMetrics(t *testing.T) {
@@ -89,11 +125,11 @@ func TestInternalMetrics(t *testing.T) {
 	base.metricsSent = 2
 	base.interval = 4
 
-	timing := emissionTiming{time.Now(), 5 * time.Second}
+	timing := emissionTiming{time.Now(), 5 * time.Second, 0}
 	base.emissionTimes.PushBack(timing)
-	timing = emissionTiming{time.Now(), 10 * time.Second}
+	timing = emissionTiming{time.Now(), 10 * time.Second, 0}
 	base.emissionTimes.PushBack(timing)
-	timing = emissionTiming{time.Now(), 6 * time.Second}
+	timing = emissionTiming{time.Now(), 6 * time.Second, 0}
 	base.emissionTimes.PushBack(timing)
 
 	results := base.InternalMetrics()
@@ -114,7 +150,6 @@ func TestInternalMetrics(t *testing.T) {
 
 func TestInternalMetricsWithNan(t *testing.T) {
 	base := BaseHandler{}
-	fmt.Println(base.InternalMetrics())
 
 	expected := InternalMetrics{
 		Counters: map[string]float64{
@@ -131,5 +166,4 @@ func TestInternalMetricsWithNan(t *testing.T) {
 	}
 	im := base.InternalMetrics()
 	assert.Equal(t, expected, im)
-
 }

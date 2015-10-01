@@ -19,7 +19,8 @@ const (
 	defaultMetricsPath = "/metrics"
 )
 
-type internalServer struct {
+// InternalServer will collect from each handler the status and return it over HTTP
+type InternalServer struct {
 	log      *l.Entry
 	handlers *[]handler.Handler
 	port     int
@@ -33,16 +34,16 @@ type ResponseFormat struct {
 }
 
 // New createse a new internal server instance
-func New(cfg config.Config, handlers *[]handler.Handler) *internalServer {
-	srv := new(internalServer)
+func New(cfg config.Config, handlers *[]handler.Handler) *InternalServer {
+	srv := new(InternalServer)
 	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver["})
 	srv.handlers = handlers
 	srv.configure(cfg.InternalServerConfig)
 	return srv
 }
 
-// RunServer starts a server on the specified port listening for the provided path
-func (srv *internalServer) Run() {
+// Run starts a server on the specified port listening for the provided path
+func (srv *InternalServer) Run() {
 	srv.log.Info(fmt.Sprintf("Starting to run internal metrics server on port %d on path %s", srv.port, srv.path))
 	http.HandleFunc(srv.path, srv.handleInternalMetricsRequest)
 
@@ -58,7 +59,7 @@ func (srv *internalServer) Run() {
 	}
 }
 
-func (srv *internalServer) configure(cfgMap map[string]interface{}) {
+func (srv *InternalServer) configure(cfgMap map[string]interface{}) {
 
 	if val, exists := (cfgMap)["port"]; exists == true {
 		srv.port = config.GetAsInt(val, defaultPort)
@@ -97,7 +98,7 @@ func (srv *internalServer) configure(cfgMap map[string]interface{}) {
 //		}
 //	}
 //
-func (srv internalServer) handleInternalMetricsRequest(writer http.ResponseWriter, req *http.Request) {
+func (srv InternalServer) handleInternalMetricsRequest(writer http.ResponseWriter, req *http.Request) {
 	srv.log.Debug("Starting to handle request for internal metrics, checking ", len(*srv.handlers), " handlers")
 
 	rspString := string(*srv.buildResponse())
@@ -107,7 +108,7 @@ func (srv internalServer) handleInternalMetricsRequest(writer http.ResponseWrite
 }
 
 // responsible for querying each handler and serializing the total response
-func (srv internalServer) buildResponse() *[]byte {
+func (srv InternalServer) buildResponse() *[]byte {
 	memoryStats := getMemoryStats()
 
 	handlerStats := make(map[string]handler.InternalMetrics)
