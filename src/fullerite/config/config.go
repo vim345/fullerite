@@ -14,7 +14,7 @@ var log = logrus.WithFields(logrus.Fields{"app": "fullerite", "pkg": "config"})
 type Config struct {
 	Prefix                string                            `json:"prefix"`
 	Interval              interface{}                       `json:"interval"`
-	DiamondCollectorsPath string                            `json:"diamond_collectors_path"`
+	DiamondCollectorsPath string                            `json:"diamondCollectorsPath"`
 	DiamondCollectors     map[string]map[string]interface{} `json:"diamond_collectors"`
 	Handlers              map[string]map[string]interface{} `json:"handlers"`
 	Collectors            map[string]map[string]interface{} `json:"collectors"`

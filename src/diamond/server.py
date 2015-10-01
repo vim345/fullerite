@@ -73,7 +73,7 @@ class Server(object):
         ########################################################################
         self.config = load_config(self.configfile)
 
-        collectors = load_collectors(self.config['diamond_collectors_path'])
+        collectors = load_collectors(self.config['diamondCollectorsPath'])
 
         ########################################################################
         # Signals
@@ -170,7 +170,7 @@ class Server(object):
                 self.log.info('Reloading state due to HUP')
                 self.config = load_config(self.configfile)
                 collectors = load_collectors(
-                    self.config['diamond_collectors_path'])
+                    self.config['diamondCollectorsPath'])
 
 
 def main():

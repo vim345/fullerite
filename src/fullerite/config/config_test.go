@@ -25,7 +25,7 @@ var testGoodConfiguration = `{
         "host": "dev33-devc"
     },
 
-    "diamond_collectors_path": "src/diamond/collectors",
+    "diamondCollectorsPath": "src/diamond/collectors",
     "diamond_collectors": {
         "CPUCollector": {"enabled": true, "interval": 10},
         "PingCollector": {"enabled": true, "target_google": "google.com", "interval": 10, "bin": "/bin/ping"}
