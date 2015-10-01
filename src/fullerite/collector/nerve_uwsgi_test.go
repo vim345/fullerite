@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -371,7 +370,7 @@ func TestNonConflictingServiceQueries(t *testing.T) {
 	defer goodServer.Close()
 
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		time.Sleep(time.Duration(5) * time.Second) // much longer than the actual timeout
+		return // no response
 	}))
 	defer badServer.Close()
 
