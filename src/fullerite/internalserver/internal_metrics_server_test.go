@@ -59,7 +59,7 @@ func TestBuildResponse(t *testing.T) {
 	)
 	testHandlers := []handler.Handler{h}
 
-	srv := internalServer{
+	srv := InternalServer{
 		log:      testLog,
 		handlers: &testHandlers,
 	}
@@ -86,7 +86,7 @@ func TestBuildResponseMemory(t *testing.T) {
 	testLog := l.WithField("testing", "internal_server")
 	emptyHandlers := []handler.Handler{}
 
-	srv := internalServer{
+	srv := InternalServer{
 		log:      testLog,
 		handlers: &emptyHandlers,
 	}
