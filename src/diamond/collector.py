@@ -75,10 +75,10 @@ class Collector(object):
     def _connect(self):
         fullerite_addr = FULLERITE_ADDR
         try:
-            if 'fullerite_port' in self.config:
-                fullerite_addr = ('', int(self.config['fullerite_port']))
+            if 'fulleritePort' in self.config:
+                fullerite_addr = ('', int(self.config['fulleritePort']))
         except TypeError:
-            raise "Invalid fullerite port %s" % self.config['fullerite_port']
+            raise "Invalid fullerite port %s" % self.config['fulleritePort']
 
         self.log.debug("Connecting to fullerite at %s", fullerite_addr)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

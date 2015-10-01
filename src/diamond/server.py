@@ -103,10 +103,10 @@ class Server(object):
                     # diamond configuration. There are collectors that
                     # check if they are enabled.
                     #
-                    # We use "fullerite_port" in collectors to connect
+                    # We use "fulleritePort" in collectors to connect
                     # to the running fullerite instance.
                     config['enabled'] = True
-                    config['fullerite_port'] = self.config['fullerite_port']
+                    config['fulleritePort'] = self.config['fulleritePort']
                     config['interval'] = config.get('interval', self.config['interval'])
 
                     running_collectors.append(collector)

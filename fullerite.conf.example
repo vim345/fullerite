@@ -5,7 +5,7 @@
         "application": "fullerite",
         "host": "dev33-devc"
     },
-    "fullerite_port": 19191,
+    "fulleritePort": 19191,
 
     "diamondCollectorsPath": "src/diamond/collectors",
     "diamond_collectors": {
