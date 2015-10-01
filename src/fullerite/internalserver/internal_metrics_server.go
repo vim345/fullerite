@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"runtime"
 
@@ -31,34 +32,41 @@ type ResponseFormat struct {
 	Handlers map[string]handler.InternalMetrics
 }
 
-// RunServer starts a server on the specified port listening for the provided path
-func RunServer(cfg *config.Config, handlers *[]handler.Handler) {
-	srv := internalServer{}
+// New createse a new internal server instance
+func New(cfg config.Config, handlers *[]handler.Handler) *internalServer {
+	srv := new(internalServer)
 	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver["})
 	srv.handlers = handlers
+	srv.configure(cfg.InternalServerConfig)
+	return srv
+}
 
-	internalConfig := cfg.InternalServerConfig
-	srv.configure(&internalConfig)
-
+// RunServer starts a server on the specified port listening for the provided path
+func (srv *internalServer) Run() {
+	srv.log.Info(fmt.Sprintf("Starting to run internal metrics server on port %d on path %s", srv.port, srv.path))
 	http.HandleFunc(srv.path, srv.handleInternalMetricsRequest)
 
-	srv.log.Info(fmt.Sprintf("Starting to run internal metrics server on port %d on path %s", srv.port, srv.path))
-	addr := fmt.Sprintf(":%d", srv.port)
-	err := http.ListenAndServe(addr, nil)
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", srv.port))
 	if err != nil {
+		srv.log.Error("Failed to start internal server: ", err)
+	}
+
+	srv.port = ln.Addr().(*net.TCPAddr).Port // reset the port with the bind port number (would change if port 0 is used)
+
+	if http.Serve(ln, nil) != nil {
 		srv.log.Error("Failed to start internal server: ", err)
 	}
 }
 
-func (srv *internalServer) configure(cfgMap *map[string]interface{}) {
+func (srv *internalServer) configure(cfgMap map[string]interface{}) {
 
-	if val, exists := (*cfgMap)["port"]; exists == true {
+	if val, exists := (cfgMap)["port"]; exists == true {
 		srv.port = config.GetAsInt(val, defaultPort)
 	} else {
 		srv.port = defaultPort
 	}
 
-	if val, exists := (*cfgMap)["path"]; exists == true {
+	if val, exists := (cfgMap)["path"]; exists == true {
 		srv.path = val.(string)
 	} else {
 		srv.path = defaultMetricsPath

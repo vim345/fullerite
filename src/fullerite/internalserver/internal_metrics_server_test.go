@@ -7,10 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"regexp"
 	"testing"
+	"time"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -107,15 +106,8 @@ func TestBuildResponseMemory(t *testing.T) {
 }
 
 func TestRespondToHttp(t *testing.T) {
-	getPort := func() string {
-		l, _ := net.Listen("tcp", "")
-		defer l.Close()
-		port := regexp.MustCompile("[^0-9]").ReplaceAll([]byte(l.Addr().String()), []byte(""))
-		return string(port)
-	}
-	port := getPort()
 	cfg := config.Config{}
-	cfg.InternalServerConfig = map[string]interface{}{"port": port}
+	cfg.InternalServerConfig = map[string]interface{}{"port": 0}
 
 	h1 := buildTestHandler(
 		"firsthandler",
@@ -129,9 +121,11 @@ func TestRespondToHttp(t *testing.T) {
 	)
 	testHandlers := []handler.Handler{h1, h2}
 
-	go RunServer(&cfg, &testHandlers)
+	srv := New(cfg, &testHandlers)
+	go srv.Run()
 
-	rsp, err := http.Get(fmt.Sprintf("http://localhost:%s/metrics", port))
+	time.Sleep(100 * time.Millisecond) // wait for server to bind on port
+	rsp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", srv.port))
 	assert.Nil(t, err)
 	assert.Equal(t, 200, rsp.StatusCode)
 

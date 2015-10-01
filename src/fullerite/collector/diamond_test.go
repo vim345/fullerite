@@ -76,7 +76,7 @@ func connectToDiamondCollector(d *Diamond) (net.Conn, error) {
 		if conn, err = net.DialTimeout("tcp", "localhost:"+d.Port(), 2*time.Second); err == nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	return conn, err
 }
