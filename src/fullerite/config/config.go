@@ -15,7 +15,7 @@ type Config struct {
 	Prefix                string                            `json:"prefix"`
 	Interval              interface{}                       `json:"interval"`
 	DiamondCollectorsPath string                            `json:"diamondCollectorsPath"`
-	DiamondCollectors     map[string]map[string]interface{} `json:"diamond_collectors"`
+	DiamondCollectors     map[string]map[string]interface{} `json:"diamondCollectors"`
 	Handlers              map[string]map[string]interface{} `json:"handlers"`
 	Collectors            map[string]map[string]interface{} `json:"collectors"`
 	DefaultDimensions     map[string]string                 `json:"defaultDimensions"`

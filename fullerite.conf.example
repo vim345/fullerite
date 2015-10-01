@@ -8,7 +8,7 @@
     "fulleritePort": 19191,
 
     "diamondCollectorsPath": "src/diamond/collectors",
-    "diamond_collectors": {
+    "diamondCollectors": {
         "CPUCollector": {"interval": 10},
         "PingCollector": {"target_google": "google.com", "interval": 10, "bin": "/sbin/ping"}
     },

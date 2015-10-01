@@ -97,12 +97,12 @@ class Collector(object):
         if self.get_default_config() is not None:
             self.config.update(self.get_default_config())
 
-            if 'diamond_collectors' in config:
+            if 'diamondCollectors' in config:
                 if 'default' in config['collectors']:
-                    self.config.update(config['diamond_collectors']['default'])
+                    self.config.update(config['diamondCollectors']['default'])
 
-                if self.name in config['diamond_collectors']:
-                    self.config.update(config['diamond_collectors'][self.name])
+                if self.name in config['diamondCollectors']:
+                    self.config.update(config['diamondCollectors'][self.name])
         self.process_config()
 
     def process_config(self):

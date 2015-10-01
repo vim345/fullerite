@@ -96,7 +96,7 @@ class Server(object):
                 ##############################################################
 
                 running_collectors = []
-                for collector, config in self.config['diamond_collectors'].iteritems():
+                for collector, config in self.config['diamondCollectors'].iteritems():
                     # Inject keys to collector's configuration.
                     #
                     # "enabled" is requied to be compatible with
