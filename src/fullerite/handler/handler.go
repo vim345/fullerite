@@ -279,7 +279,7 @@ func (base *BaseHandler) emitAndTime(
 		metricsSent: numMetrics,
 	}
 	base.log.Info(
-		fmt.Sprintf("POST of %s metrics to %s took %f seconds",
+		fmt.Sprintf("POST of %d metrics to %s took %f seconds",
 			numMetrics,
 			base.name,
 			emissionDuration.Seconds(),
