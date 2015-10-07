@@ -73,7 +73,7 @@ class Server(object):
         ########################################################################
         self.config = load_config(self.configfile)
 
-        collectors = load_collectors(self.config['diamond_collectors_path'])
+        collectors = load_collectors(self.config['diamondCollectorsPath'])
 
         ########################################################################
         # Signals
@@ -96,17 +96,17 @@ class Server(object):
                 ##############################################################
 
                 running_collectors = []
-                for collector, config in self.config['diamond_collectors'].iteritems():
+                for collector, config in self.config['diamondCollectors'].iteritems():
                     # Inject keys to collector's configuration.
                     #
                     # "enabled" is requied to be compatible with
                     # diamond configuration. There are collectors that
                     # check if they are enabled.
                     #
-                    # We use "fullerite_port" in collectors to connect
+                    # We use "fulleritePort" in collectors to connect
                     # to the running fullerite instance.
                     config['enabled'] = True
-                    config['fullerite_port'] = self.config['fullerite_port']
+                    config['fulleritePort'] = self.config['fulleritePort']
                     config['interval'] = config.get('interval', self.config['interval'])
 
                     running_collectors.append(collector)
@@ -170,7 +170,7 @@ class Server(object):
                 self.log.info('Reloading state due to HUP')
                 self.config = load_config(self.configfile)
                 collectors = load_collectors(
-                    self.config['diamond_collectors_path'])
+                    self.config['diamondCollectorsPath'])
 
 
 def main():

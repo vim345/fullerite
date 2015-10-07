@@ -5,10 +5,10 @@
         "application": "fullerite",
         "host": "dev33-devc"
     },
-    "fullerite_port": 19191,
+    "fulleritePort": 19191,
 
-    "diamond_collectors_path": "src/diamond/collectors",
-    "diamond_collectors": {
+    "diamondCollectorsPath": "src/diamond/collectors",
+    "diamondCollectors": {
         "CPUCollector": {"interval": 10},
         "PingCollector": {"target_google": "google.com", "interval": 10, "bin": "/sbin/ping"}
     },
