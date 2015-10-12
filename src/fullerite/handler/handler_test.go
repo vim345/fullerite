@@ -143,6 +143,7 @@ func TestInternalMetrics(t *testing.T) {
 			"averageEmissionTiming": 7,
 			"emissionsInWindow":     3,
 			"intervalLength":        4,
+			"maxEmissionTiming":     10,
 		},
 	}
 	assert.Equal(t, expected, results)

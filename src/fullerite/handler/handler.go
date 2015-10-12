@@ -184,12 +184,19 @@ func (base BaseHandler) InternalMetrics() InternalMetrics {
 	// now we calculate the average emission seconds for
 	if base.emissionTimes.Len() > 0 {
 		avg := 0.0
+		max := 0.0
+
 		var totalTime float64
 		for e := base.emissionTimes.Front(); e != nil; e = e.Next() {
-			totalTime += e.Value.(emissionTiming).duration.Seconds()
+			dur := e.Value.(emissionTiming).duration.Seconds()
+			totalTime += dur
+			if dur > max {
+				max = dur
+			}
 		}
 		avg = totalTime / float64(base.emissionTimes.Len())
 		gauges["averageEmissionTiming"] = avg
+		gauges["maxEmissionTiming"] = max
 	}
 
 	return InternalMetrics{
