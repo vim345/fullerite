@@ -212,6 +212,14 @@ func (base *BaseHandler) configureCommonParams(configMap map[string]interface{})
 	if asInterface, exists := configMap["interval"]; exists == true {
 		base.interval = config.GetAsInt(asInterface, DefaultInterval)
 	}
+
+	// Default dimensions can be extended or overridden on a per handler basis.
+	if asInterface, exists := configMap["handler_dimensions"]; exists == true {
+		handler_dimensions := config.GetAsMap(asInterface)
+		for name, value := range handler_dimensions {
+			base.defaultDimensions[name] = value
+		}
+	}
 }
 
 func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {

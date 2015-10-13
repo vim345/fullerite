@@ -110,6 +110,19 @@ func TestGetFloat(t *testing.T) {
 	assert.Equal(val, 12.123)
 }
 
+func TestGetAsMap(t *testing.T) {
+  assert := assert.New(t)
+
+	string_to_parse := "{\"runtimeenv\" : \"dev\", \"region\":\"uswest1-devc\"}"
+	expected_value  := map[string]string{
+		"runtimeenv"  : "dev",
+		"region" : "uswest1-devc",
+	}
+
+	val := config.GetAsMap(string_to_parse)
+	assert.Equal(val, expected_value)
+}
+
 func TestParseGoodConfig(t *testing.T) {
 	_, err := config.ReadConfig(tmpTestGoodFile)
 	assert.Nil(t, err, "should succeed")

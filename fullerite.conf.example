@@ -39,7 +39,14 @@
             "port": "8080",
             "interval": "10",
             "max_buffer_size": 300,
-            "timeout": 2
+            "timeout": 2,
+            "handler_dimensions": {
+              "runtimeenv":"dev",
+              "superregion": "norcal-dev",
+              "region": "uswest1-dev",
+              "ecosystem": "devc",
+              "habitat":"uswest1devc",
+            }
         },
         "SignalFx": {
             "authToken": "secret_token",

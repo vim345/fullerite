@@ -82,3 +82,15 @@ func GetAsInt(value interface{}, defaultValue int) (result int) {
 
 	return
 }
+
+// GetAsMap parses a string to a map[string]string
+func GetAsMap(value interface{}) (result map[string]string) {
+	result = map[string]string{}
+
+	err := json.Unmarshal([]byte(value.(string)), &result)
+	if err != nil {
+		log.Warn("Failed to convert value", value, "to a map")
+	}
+
+	return
+}
