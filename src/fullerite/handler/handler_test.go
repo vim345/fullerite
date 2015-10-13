@@ -47,18 +47,19 @@ func TestNewHandler(t *testing.T) {
 // If configured, per handler dimensions should be present in additon to the default dimensions
 func TestPerHandlerDimensions(t *testing.T) {
 		h := New("Kairos")
-		dims := map[string]string{"test": "test value"}
+		dims := map[string]string{"test": "test value", "host":"test host"}
 		h.SetDefaultDimensions(dims)
-		assert.Equal(t, 1, len(h.DefaultDimensions()))
+		assert.Equal(t, 2, len(h.DefaultDimensions()))
 
-    handler_dimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
+    handler_level_dimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
 		configMap := map[string]interface{}{
-		  "handler_dimensions" : handler_dimensions,
+		  "defaultDimensions" : handler_level_dimensions,
 	  }
 
 		h.Configure(configMap)
 		assert.Equal(t, 3, len(h.DefaultDimensions()))
 		assert.Equal(t, "updated value", h.DefaultDimensions()["test"])
+		assert.Equal(t, "", h.DefaultDimensions()["host"])
 }
 
 func TestEmissionAndRecord(t *testing.T) {
