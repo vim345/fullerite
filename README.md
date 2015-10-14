@@ -26,7 +26,7 @@ Fullerite works by spawning a separate goroutines for each collector and handler
 
 The `fullerite_diamond_server` is a process that starts each diamond collector in python as a separate process. The listening collector in go must also be configured on. Doing this each diamond collector will connect to the server and then start piping metrics to the collector. The server handles the transient connections and other such issues by spawning a new goroutine for each of the connecting collectors. 
 
-![Alt text](/fullerite_arch.tiff?raw=true "Optional Title")
+![Alt text](/fullerite_arch.jpg?raw=true "Optional Title")
 
 ## supported collectors
  * [fullerite collectors](src/fullerite/collector)
