@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"reflect"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -78,6 +79,24 @@ func GetAsInt(value interface{}, defaultValue int) (result int) {
 		result = int(value.(int64))
 	case float64:
 		result = int(value.(float64))
+	}
+
+	return
+}
+
+// GetAsMap parses a string to a map[string]string
+func GetAsMap(value interface{}) (result map[string]string) {
+	result = map[string]string{}
+
+	switch value.(type) {
+	case string:
+		err := json.Unmarshal([]byte(value.(string)), &result)
+		if err != nil {
+			log.Warn("Failed to convert value", value, "to a map")
+		}
+	default:
+		log.Warn("Expected a string but got", reflect.TypeOf(value), ". Returning empty map!")
+		result = make(map[string]string)
 	}
 
 	return

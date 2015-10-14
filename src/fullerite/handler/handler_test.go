@@ -44,6 +44,24 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
+// If configured, per handler dimensions should over write default dimensions
+func TestPerHandlerDimensions(t *testing.T) {
+	b := new(BaseHandler)
+	dims := map[string]string{"test": "test value", "host": "test host"}
+	b.SetDefaultDimensions(dims)
+	assert.Equal(t, 2, len(b.DefaultDimensions()))
+
+	handler_level_dimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
+	configMap := map[string]interface{}{
+		"defaultDimensions": handler_level_dimensions,
+	}
+
+	b.configureCommonParams(configMap)
+	assert.Equal(t, 3, len(b.DefaultDimensions()))
+	assert.Equal(t, "updated value", b.DefaultDimensions()["test"])
+	assert.Equal(t, "", b.DefaultDimensions()["host"])
+}
+
 func TestEmissionAndRecord(t *testing.T) {
 	emitCalled := false
 
