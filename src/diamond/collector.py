@@ -285,7 +285,17 @@ class Collector(object):
         """
         Publish a Metric object
         """
-        payload = "%s\n" % json.dumps(metric.export())
+        payload = {
+            'name': metric.getMetricPath(),
+            'value': metric.raw_value,
+            'type': metric.metric_type,
+            'dimensions': {
+                'prefix': metric.getPathPrefix(),
+                'collector': metric.getCollectorPath(),
+            }
+        }
+
+        payloadStr = "%s\n" % json.dumps(payload)
         success = False
 
         for i in range(FULLERITE_RETRY_COUNT):
@@ -295,17 +305,17 @@ class Collector(object):
                     self._reconnect = False
                     self.log.debug("Successfully reconnected")
 
-                self._socket.sendall(payload)
+                self._socket.sendall(payloadStr)
                 success = True
-                self.log.debug("Attempt %d: Wrote: %s" % (i, payload))
+                self.log.debug("Attempt %d: Wrote: %s" % (i, payloadStr))
                 break
             except socket.error, e:
                 self.log.exception("Error sending payload on attempt %d. "
-                                   "We will reconnect. Payload: %s", (i, payload))
+                                   "We will reconnect. Payload: %s", (i, payloadStr))
                 self._reconnect = True
 
         if not success:
-            self.log.warn("After %d attempts failed to write payload %s", (FULLERITE_RETRY_COUNT, payload))
+            self.log.warn("After %d attempts failed to write payload %s", (FULLERITE_RETRY_COUNT, payloadStr))
 
     def publish_gauge(self, name, value, precision=0, instance=None):
         return self.publish(name, value, precision=precision,
