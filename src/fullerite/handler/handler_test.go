@@ -44,22 +44,22 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
-// If configured, per handler dimensions should be present in additon to the default dimensions
+// If configured, per handler dimensions should over write default dimensions
 func TestPerHandlerDimensions(t *testing.T) {
-		h := New("Kairos")
-		dims := map[string]string{"test": "test value", "host":"test host"}
-		h.SetDefaultDimensions(dims)
-		assert.Equal(t, 2, len(h.DefaultDimensions()))
+	b := new(BaseHandler)
+	dims := map[string]string{"test": "test value", "host": "test host"}
+	b.SetDefaultDimensions(dims)
+	assert.Equal(t, 2, len(b.DefaultDimensions()))
 
-    handler_level_dimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
-		configMap := map[string]interface{}{
-		  "defaultDimensions" : handler_level_dimensions,
-	  }
+	handler_level_dimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
+	configMap := map[string]interface{}{
+		"defaultDimensions": handler_level_dimensions,
+	}
 
-		h.Configure(configMap)
-		assert.Equal(t, 3, len(h.DefaultDimensions()))
-		assert.Equal(t, "updated value", h.DefaultDimensions()["test"])
-		assert.Equal(t, "", h.DefaultDimensions()["host"])
+	b.configureCommonParams(configMap)
+	assert.Equal(t, 3, len(b.DefaultDimensions()))
+	assert.Equal(t, "updated value", b.DefaultDimensions()["test"])
+	assert.Equal(t, "", b.DefaultDimensions()["host"])
 }
 
 func TestEmissionAndRecord(t *testing.T) {
