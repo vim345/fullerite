@@ -125,7 +125,7 @@ func TestGetAsMap(t *testing.T) {
 	interfaceMapToParse := make(map[string]interface{})
 	interfaceMapToParse["runtimeenv"] = "dev"
 	interfaceMapToParse["region"] = "uswest1-devc"
-	assert.Equal(config.GetAsMap(stringToParse), expectedValue)
+	assert.Equal(config.GetAsMap(interfaceMapToParse), expectedValue)
 }
 
 func TestParseGoodConfig(t *testing.T) {
