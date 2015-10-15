@@ -86,7 +86,7 @@ func GetAsInt(value interface{}, defaultValue int) (result int) {
 
 // GetAsMap parses a string to a map[string]string
 func GetAsMap(value interface{}) (result map[string]string) {
-	result = map[string]string{}
+	result = make(map[string]string)
 
 	switch value.(type) {
 	case string:
@@ -94,9 +94,17 @@ func GetAsMap(value interface{}) (result map[string]string) {
 		if err != nil {
 			log.Warn("Failed to convert value", value, "to a map")
 		}
+	case map[string]interface{}:
+		temp := value.(map[string]interface{})
+		for k, v := range temp {
+			if str, ok := v.(string); ok {
+				result[k] = str
+			} else {
+				log.Warn("Expected a string but got", reflect.TypeOf(value), ". Discarding handler level metric: ", k)
+			}
+		}
 	default:
 		log.Warn("Expected a string but got", reflect.TypeOf(value), ". Returning empty map!")
-		result = make(map[string]string)
 	}
 
 	return
