@@ -222,8 +222,8 @@ func (base *BaseHandler) configureCommonParams(configMap map[string]interface{})
 
 	// Default dimensions can be extended or overridden on a per handler basis.
 	if asInterface, exists := configMap["defaultDimensions"]; exists == true {
-		handler_level_dimensions := config.GetAsMap(asInterface)
-		base.SetDefaultDimensions(handler_level_dimensions)
+		handlerLevelDimensions := config.GetAsMap(asInterface)
+		base.SetDefaultDimensions(handlerLevelDimensions)
 	}
 }
 

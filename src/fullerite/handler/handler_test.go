@@ -51,9 +51,9 @@ func TestPerHandlerDimensions(t *testing.T) {
 	b.SetDefaultDimensions(dims)
 	assert.Equal(t, 2, len(b.DefaultDimensions()))
 
-	handler_level_dimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
+	handlerLevelDimensions := "{ \"test\" : \"updated value\", \"runtimeenv\": \"dev\", \"region\":\"uswest1-devc\"}"
 	configMap := map[string]interface{}{
-		"defaultDimensions": handler_level_dimensions,
+		"defaultDimensions": handlerLevelDimensions,
 	}
 
 	b.configureCommonParams(configMap)
