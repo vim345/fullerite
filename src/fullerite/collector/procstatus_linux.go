@@ -5,7 +5,6 @@ package collector
 import (
 	"fullerite/metric"
 
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -40,48 +39,21 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 		"pid":         pid,
 	}
 
-	for dimension, generator := range ps.generatedDimensions {
-		if len(generator) != 2 {
-			continue
-		}
-
-		procAttribute := generator[0]
-		procRegex := generator[1]
-
-		var err interface{}
-		var cmdOutput []string
-
-		switch procAttribute {
-
-		case "cmdline":
-			cmdOutput, err = proc.CmdLine()
-		case "filedescriptors":
-			cmdOutput, err = proc.FileDescriptorTargets()
-		}
-
-		if err != nil {
-			ps.log.Warn("Error getting generated dimensions: ", dimension, generator, err)
-			continue
-		}
-
-		if len(cmdOutput) > 0 {
-			//don't use MustCompile otherwise program will panic due to misformated regex
-			re, err := regexp.Compile(procRegex)
-			if err != nil {
-				continue
-			}
-
-			subMatch := re.FindStringSubmatch(cmdOutput[0])
-			if len(subMatch) > 1 {
-				dim[dimension] = subMatch[1]
-			}
-		}
-	}
-
 	ret := []metric.Metric{
 		procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim),
 		procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim),
 		procStatusPoint("CPUTime", float64(stat.CPUTime()), dim),
+	}
+
+	cmdOutput, err := proc.CmdLine()
+
+	if err != nil {
+		ps.log.Warn("Error getting command line: ", err)
+	}
+
+	if len(cmdOutput) > 0 {
+		generatedDimensions := ps.extractDimensions(cmdOutput[0])
+		metric.AddToAll(&ret, generatedDimensions)
 	}
 
 	return ret
@@ -105,6 +77,24 @@ func (ps ProcStatus) procStatusMetrics() []metric.Metric {
 
 		if len(ps.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], ps.processName) {
 			ret = append(ret, ps.getMetrics(proc)...)
+		}
+	}
+
+	return ret
+}
+
+func (ps ProcStatus) extractDimensions(cmd string) map[string]string {
+	ret := map[string]string{}
+
+	for dimension, generator := range ps.generatedDimensions {
+		procRegex, exists := ps.compiledRegex[generator]
+		if exists == false {
+			continue
+		}
+
+		subMatch := procRegex.FindStringSubmatch(cmd)
+		if len(subMatch) > 1 {
+			ret[dimension] = subMatch[1]
 		}
 	}
 

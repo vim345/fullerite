@@ -13,14 +13,12 @@ func TestProcStatusConfigureEmptyConfig(t *testing.T) {
 	ps.Configure(config)
 
 	assert.Equal(t,
-		ps.Interval(),
 		123,
-		"should be the default collection interval",
+		ps.Interval(),
 	)
 	assert.Equal(t,
-		ps.ProcessName(),
 		"",
-		"should be the default process name",
+		ps.ProcessName(),
 	)
 }
 
@@ -29,8 +27,8 @@ func TestProcStatusConfigure(t *testing.T) {
 	config["interval"] = 9999
 	config["processName"] = "fullerite"
 
-	dims := map[string][2]string{
-		"currentDirectory": [2]string{"pwd", ".*"},
+	dims := map[string]string{
+		"currentDirectory": ".*",
 	}
 	config["generatedDimensions"] = dims
 
@@ -38,20 +36,17 @@ func TestProcStatusConfigure(t *testing.T) {
 	ps.Configure(config)
 
 	assert.Equal(t,
-		ps.Interval(),
 		9999,
-		"should be the defined interval",
+		ps.Interval(),
 	)
 
 	assert.Equal(t,
-		ps.ProcessName(),
 		"fullerite",
-		"should be the defined process name",
+		ps.ProcessName(),
 	)
 
 	assert.Equal(t,
-		ps.GeneratedDimensions(),
 		dims,
-		"should be the defined generated dimensions",
+		ps.generatedDimensions,
 	)
 }

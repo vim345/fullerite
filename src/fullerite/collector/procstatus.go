@@ -3,24 +3,22 @@ package collector
 import (
 	"fullerite/metric"
 
+	"regexp"
+
 	l "github.com/Sirupsen/logrus"
 )
 
 // ProcStatus collector type
 type ProcStatus struct {
 	baseCollector
+	compiledRegex       map[string]*regexp.Regexp
+	generatedDimensions map[string]string
 	processName         string
-	generatedDimensions map[string][2]string
 }
 
 // ProcessName returns ProcStatus collectors process name
 func (ps ProcStatus) ProcessName() string {
 	return ps.processName
-}
-
-// GeneratedDimensions returns ProcStatus collectors generated dimensions
-func (ps ProcStatus) GeneratedDimensions() map[string][2]string {
-	return ps.generatedDimensions
 }
 
 // NewProcStatus creates a new Test collector.
@@ -33,7 +31,8 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 
 	ps.name = "ProcStatus"
 	ps.processName = ""
-	ps.generatedDimensions = make(map[string][2]string)
+	ps.generatedDimensions = make(map[string]string)
+	ps.compiledRegex = make(map[string]*regexp.Regexp)
 
 	return ps
 }
@@ -45,7 +44,16 @@ func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
 	}
 
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists == true {
-		ps.generatedDimensions = generatedDimensions.(map[string][2]string)
+		ps.generatedDimensions = generatedDimensions.(map[string]string)
+
+		for _, generator := range ps.generatedDimensions {
+			//don't use MustCompile otherwise program will panic due to misformated regex
+			re, err := regexp.Compile(generator)
+			if err != nil {
+				continue
+			}
+			ps.compiledRegex[generator] = re
+		}
 	}
 
 	ps.configureCommonParams(configMap)
