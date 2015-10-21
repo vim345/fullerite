@@ -11,9 +11,8 @@ import (
 // ProcStatus collector type
 type ProcStatus struct {
 	baseCollector
-	compiledRegex       map[string]*regexp.Regexp
-	generatedDimensions map[string]string
-	processName         string
+	compiledRegex map[string]*regexp.Regexp
+	processName   string
 }
 
 // ProcessName returns ProcStatus collectors process name
@@ -31,7 +30,6 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 
 	ps.name = "ProcStatus"
 	ps.processName = ""
-	ps.generatedDimensions = make(map[string]string)
 	ps.compiledRegex = make(map[string]*regexp.Regexp)
 
 	return ps
@@ -44,15 +42,14 @@ func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
 	}
 
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists == true {
-		ps.generatedDimensions = generatedDimensions.(map[string]string)
-
-		for _, generator := range ps.generatedDimensions {
+		for dimension, generator := range generatedDimensions.(map[string]string) {
 			//don't use MustCompile otherwise program will panic due to misformated regex
 			re, err := regexp.Compile(generator)
 			if err != nil {
-				continue
+				ps.log.Warn("Failed to compile regex: ", generator, err)
+			} else {
+				ps.compiledRegex[dimension] = re
 			}
-			ps.compiledRegex[generator] = re
 		}
 	}
 

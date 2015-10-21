@@ -28,21 +28,6 @@ func TestProcStatusCollect(t *testing.T) {
 	ps := NewProcStatus(channel, 12, testLog)
 	ps.Configure(config)
 
-	assert.Equal(t,
-		9999,
-		ps.Interval(),
-	)
-
-	assert.Equal(t,
-		"",
-		ps.ProcessName(),
-	)
-
-	assert.Equal(t,
-		dims,
-		ps.generatedDimensions,
-	)
-
 	go ps.Collect()
 
 	select {
@@ -73,9 +58,5 @@ func TestProcStatusExtractDimensions(t *testing.T) {
 	}
 
 	extracted := ps.extractDimensions("python -m test.my.function.bond-[007]")
-
-	assert.Equal(t,
-		dim,
-		extracted,
-	)
+	assert.Equal(t, dim, extracted)
 }

@@ -49,6 +49,7 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 
 	if err != nil {
 		ps.log.Warn("Error getting command line: ", err)
+		return nil
 	}
 
 	if len(cmdOutput) > 0 {
@@ -86,12 +87,7 @@ func (ps ProcStatus) procStatusMetrics() []metric.Metric {
 func (ps ProcStatus) extractDimensions(cmd string) map[string]string {
 	ret := map[string]string{}
 
-	for dimension, generator := range ps.generatedDimensions {
-		procRegex, exists := ps.compiledRegex[generator]
-		if exists == false {
-			continue
-		}
-
+	for dimension, procRegex := range ps.compiledRegex {
 		subMatch := procRegex.FindStringSubmatch(cmd)
 		if len(subMatch) > 1 {
 			ret[dimension] = subMatch[1]
