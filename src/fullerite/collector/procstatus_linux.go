@@ -5,6 +5,7 @@ package collector
 import (
 	"fullerite/metric"
 
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -33,14 +34,54 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 		return nil
 	}
 
+	pid := strconv.Itoa(stat.PID)
 	dim := map[string]string{
 		"processName": stat.Comm,
-		"pid":         strconv.Itoa(stat.PID),
+		"pid":         pid,
+	}
+
+	for dimension, generator := range ps.generatedDimensions {
+		if len(generator) != 2 {
+			continue
+		}
+
+		procAttribute := generator[0]
+		procRegex := generator[1]
+
+		var err interface{}
+		var cmdOutput []string
+
+		switch procAttribute {
+
+		case "cmdline":
+			cmdOutput, err = proc.CmdLine()
+		case "filedescriptors":
+			cmdOutput, err = proc.FileDescriptorTargets()
+		}
+
+		if err != nil {
+			ps.log.Warn("Error getting generated dimensions: ", dimension, generator, err)
+			continue
+		}
+
+		if len(cmdOutput) > 0 {
+			//don't use MustCompile otherwise program will panic due to misformated regex
+			re, err := regexp.Compile(procRegex)
+			if err != nil {
+				continue
+			}
+
+			subMatch := re.FindStringSubmatch(cmdOutput[0])
+			if len(subMatch) > 1 {
+				dim[dimension] = subMatch[1]
+			}
+		}
 	}
 
 	ret := []metric.Metric{
 		procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim),
 		procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim),
+		procStatusPoint("CPUTime", float64(stat.CPUTime()), dim),
 	}
 
 	return ret

@@ -29,6 +29,11 @@ func TestProcStatusConfigure(t *testing.T) {
 	config["interval"] = 9999
 	config["processName"] = "fullerite"
 
+	dims := map[string][2]string{
+		"currentDirectory": [2]string{"pwd", ".*"},
+	}
+	config["generatedDimensions"] = dims
+
 	ps := NewProcStatus(nil, 123, nil)
 	ps.Configure(config)
 
@@ -42,5 +47,11 @@ func TestProcStatusConfigure(t *testing.T) {
 		ps.ProcessName(),
 		"fullerite",
 		"should be the defined process name",
+	)
+
+	assert.Equal(t,
+		ps.GeneratedDimensions(),
+		dims,
+		"should be the defined generated dimensions",
 	)
 }
