@@ -64,7 +64,7 @@ type baseCollector struct {
 }
 
 func (col *baseCollector) configureCommonParams(configMap map[string]interface{}) {
-	if interval, exists := configMap["interval"]; exists == true {
+	if interval, exists := configMap["interval"]; exists {
 		col.interval = config.GetAsInt(interval, DefaultCollectionInterval)
 	}
 }

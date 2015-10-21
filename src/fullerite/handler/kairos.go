@@ -52,13 +52,13 @@ func NewKairos(
 
 // Configure the Kairos handler
 func (k *Kairos) Configure(configMap map[string]interface{}) {
-	if server, exists := configMap["server"]; exists == true {
+	if server, exists := configMap["server"]; exists {
 		k.server = server.(string)
 	} else {
 		k.log.Error("There was no server specified for the Kairos Handler, there won't be any emissions")
 	}
 
-	if port, exists := configMap["port"]; exists == true {
+	if port, exists := configMap["port"]; exists {
 		k.port = port.(string)
 	} else {
 		k.log.Error("There was no port specified for the Kairos Handler, there won't be any emissions")
