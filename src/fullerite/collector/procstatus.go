@@ -41,7 +41,7 @@ func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
 		ps.processName = processName.(string)
 	}
 
-	if generatedDimensions, exists := configMap["generatedDimensions"]; exists == true {
+	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
 		for dimension, generator := range generatedDimensions.(map[string]string) {
 			//don't use MustCompile otherwise program will panic due to misformated regex
 			re, err := regexp.Compile(generator)
