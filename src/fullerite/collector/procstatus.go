@@ -33,7 +33,7 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 
 // Configure this takes a dictionary of values with which the handler can configure itself
 func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
-	if processName, exists := configMap["processName"]; exists == true {
+	if processName, exists := configMap["processName"]; exists {
 		ps.processName = processName.(string)
 	}
 	ps.configureCommonParams(configMap)

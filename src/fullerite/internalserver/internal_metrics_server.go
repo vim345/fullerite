@@ -61,13 +61,13 @@ func (srv *InternalServer) Run() {
 
 func (srv *InternalServer) configure(cfgMap map[string]interface{}) {
 
-	if val, exists := (cfgMap)["port"]; exists == true {
+	if val, exists := (cfgMap)["port"]; exists {
 		srv.port = config.GetAsInt(val, defaultPort)
 	} else {
 		srv.port = defaultPort
 	}
 
-	if val, exists := (cfgMap)["path"]; exists == true {
+	if val, exists := (cfgMap)["path"]; exists {
 		srv.path = val.(string)
 	} else {
 		srv.path = defaultMetricsPath

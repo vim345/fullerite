@@ -155,10 +155,10 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 }
 
 func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
-	if val, exists := configMap["queryPath"]; exists == true {
+	if val, exists := configMap["queryPath"]; exists {
 		n.queryPath = val.(string)
 	}
-	if val, exists := configMap["configFilePath"]; exists == true {
+	if val, exists := configMap["configFilePath"]; exists {
 		n.configFilePath = val.(string)
 	}
 
@@ -186,7 +186,7 @@ func (n *nerveUWSGICollector) parseNerveConfig(raw *[]byte, ips []string) (map[i
 		host := strings.TrimSpace(serviceConfig["host"].(string))
 
 		_, exists := ipMap[host]
-		if exists == true {
+		if exists {
 			name := strings.Split(rawServiceName, ".")[0]
 			port := config.GetAsInt(serviceConfig["port"], -1)
 			if port != -1 {
