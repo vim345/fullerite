@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/Yelp/fullerite.svg?branch=master)](https://travis-ci.org/Yelp/fullerite)
 
 
-*Fullerite is a metrics collection tool*. It is different than other collection tools (e.g. diamond, collectd) in that it supports multidimensional metrics from its core. It is also meant to innately support easy concurrency. Collectors and handler are sufficiently isolated to avoid having one misbehaving component affect the rest of the system. Generally, an instance of fullerite runs as an upstart daemon on a box collecting the configured metrics and reports them via different handlers to endpoints such as graphite, signalfx, or datadog. 
+*Fullerite is a metrics collection tool*. It is different than other collection tools (e.g. diamond, collectd) in that it supports multidimensional metrics from its core. It is also meant to innately support easy concurrency. Collectors and handler are sufficiently isolated to avoid having one misbehaving component affect the rest of the system. Generally, an instance of fullerite runs as a daemon on a box collecting the configured metrics and reports them via different handlers to endpoints such as graphite, kairosdb, signalfx, or datadog. 
 
 A summary of interesting features of fullerite include:
  * Fully compatible with diamond collectors
@@ -34,6 +34,6 @@ The `fullerite_diamond_server` is a process that starts each diamond collector i
 
 ## supported handlers
  * [Graphite](http://graphite.wikidot.com/)
- * [Kairos](https://github.com/kairosdb/kairosdb)
+ * [KairosDB](https://github.com/kairosdb/kairosdb)
  * [SignalFx](https://www.signalfx.com)
  * [Datadog](https://www.datadoghq.com)
