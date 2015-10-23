@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,16 +13,8 @@ func TestProcStatusConfigureEmptyConfig(t *testing.T) {
 	ps := NewProcStatus(nil, 123, nil)
 	ps.Configure(config)
 
-	assert.Equal(t,
-		ps.Interval(),
-		123,
-		"should be the default collection interval",
-	)
-	assert.Equal(t,
-		ps.ProcessName(),
-		"",
-		"should be the default process name",
-	)
+	assert.Equal(t, 123, ps.Interval())
+	assert.Equal(t, "", ps.ProcessName())
 }
 
 func TestProcStatusConfigure(t *testing.T) {
@@ -29,18 +22,20 @@ func TestProcStatusConfigure(t *testing.T) {
 	config["interval"] = 9999
 	config["processName"] = "fullerite"
 
+	dims := map[string]string{
+		"currentDirectory": ".*",
+	}
+	config["generatedDimensions"] = dims
+
+	regex, _ := regexp.Compile(".*")
+	compRegex := map[string]*regexp.Regexp{
+		"currentDirectory": regex,
+	}
+
 	ps := NewProcStatus(nil, 123, nil)
 	ps.Configure(config)
 
-	assert.Equal(t,
-		ps.Interval(),
-		9999,
-		"should be the defined interval",
-	)
-
-	assert.Equal(t,
-		ps.ProcessName(),
-		"fullerite",
-		"should be the defined process name",
-	)
+	assert.Equal(t, 9999, ps.Interval())
+	assert.Equal(t, "fullerite", ps.ProcessName())
+	assert.Equal(t, compRegex, ps.compiledRegex)
 }

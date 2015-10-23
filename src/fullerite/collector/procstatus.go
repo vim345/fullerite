@@ -1,7 +1,10 @@
 package collector
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
+
+	"regexp"
 
 	l "github.com/Sirupsen/logrus"
 )
@@ -9,7 +12,8 @@ import (
 // ProcStatus collector type
 type ProcStatus struct {
 	baseCollector
-	processName string
+	compiledRegex map[string]*regexp.Regexp
+	processName   string
 }
 
 // ProcessName returns ProcStatus collectors process name
@@ -27,6 +31,7 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 
 	ps.name = "ProcStatus"
 	ps.processName = ""
+	ps.compiledRegex = make(map[string]*regexp.Regexp)
 
 	return ps
 }
@@ -36,5 +41,18 @@ func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
 	if processName, exists := configMap["processName"]; exists {
 		ps.processName = processName.(string)
 	}
+
+	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
+		for dimension, generator := range config.GetAsMap(generatedDimensions) {
+			//don't use MustCompile otherwise program will panic due to misformated regex
+			re, err := regexp.Compile(generator)
+			if err != nil {
+				ps.log.Warn("Failed to compile regex: ", generator, err)
+			} else {
+				ps.compiledRegex[dimension] = re
+			}
+		}
+	}
+
 	ps.configureCommonParams(configMap)
 }

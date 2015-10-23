@@ -33,14 +33,28 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 		return nil
 	}
 
+	pid := strconv.Itoa(stat.PID)
 	dim := map[string]string{
 		"processName": stat.Comm,
-		"pid":         strconv.Itoa(stat.PID),
+		"pid":         pid,
 	}
 
 	ret := []metric.Metric{
 		procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim),
 		procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim),
+		procStatusPoint("CPUTime", float64(stat.CPUTime()), dim),
+	}
+
+	cmdOutput, err := proc.CmdLine()
+
+	if err != nil {
+		ps.log.Warn("Error getting command line: ", err)
+		return ret
+	}
+
+	if len(cmdOutput) > 0 {
+		generatedDimensions := ps.extractDimensions(cmdOutput[0])
+		metric.AddToAll(&ret, generatedDimensions)
 	}
 
 	return ret
@@ -64,6 +78,19 @@ func (ps ProcStatus) procStatusMetrics() []metric.Metric {
 
 		if len(ps.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], ps.processName) {
 			ret = append(ret, ps.getMetrics(proc)...)
+		}
+	}
+
+	return ret
+}
+
+func (ps ProcStatus) extractDimensions(cmd string) map[string]string {
+	ret := map[string]string{}
+
+	for dimension, procRegex := range ps.compiledRegex {
+		subMatch := procRegex.FindStringSubmatch(cmd)
+		if len(subMatch) > 1 {
+			ret[dimension] = subMatch[1]
 		}
 	}
 
