@@ -28,6 +28,18 @@ The `fullerite_diamond_server` is a process that starts each diamond collector i
 
 ![Alt text](/fullerite_arch.jpg?raw=true "Optional Title")
 
+## using fullerite
+Fullerite makes a deb package that can be installed onto a linux box. It has been tested a lot with Ubuntu trusty, lucid, and precise. Once installed it can be controlled like any normal service:
+
+    $ service fullerite [status | start | stop]
+    $ service fullerite_diamond_server [status | start | stop]
+
+By default it logs out to `/var/log/fullerite/*`. It runs as user `fullerite`. This can all be changed by editing the `/etc/default/fullerite.conf` file. See the upstart scripts for [fullerite](deb/etc/init/fullerite) and [fullerite_diamond_server](deb/etc/init/fullerite_diamond_server) for more info. 
+
+You can also run fullerite directly using the commands: `run-fullerite.sh` and `run-diamond-collectors.sh`. These both have command line args that are good to use. 
+
+Finally, fullerite is just a simple go binary. You can manually invoke it and pass it arguments as you'd like. 
+
 ## supported collectors
  * [fullerite collectors](src/fullerite/collector)
  * [diamond collectors](src/diamond/collectors)
