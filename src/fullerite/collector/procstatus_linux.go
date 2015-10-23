@@ -49,7 +49,7 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 
 	if err != nil {
 		ps.log.Warn("Error getting command line: ", err)
-		return nil
+		return ret
 	}
 
 	if len(cmdOutput) > 0 {

@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 
 	"regexp"
@@ -42,7 +43,7 @@ func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
 	}
 
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
-		for dimension, generator := range generatedDimensions.(map[string]string) {
+		for dimension, generator := range config.GetAsMap(generatedDimensions) {
 			//don't use MustCompile otherwise program will panic due to misformated regex
 			re, err := regexp.Compile(generator)
 			if err != nil {
