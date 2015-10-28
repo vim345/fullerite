@@ -76,8 +76,6 @@ func start(ctx *cli.Context) {
 	}
 	initLogrus(ctx)
 	log.Info("Starting fullerite...")
-	log = nil
-	log.Info("Starting fullerite...")
 
 	c, err := config.ReadConfig(ctx.String("config"))
 	if err != nil {
