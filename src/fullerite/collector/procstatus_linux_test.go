@@ -60,3 +60,32 @@ func TestProcStatusExtractDimensions(t *testing.T) {
 	extracted := ps.extractDimensions("python -m test.my.function.bond-[007]")
 	assert.Equal(t, dim, extracted)
 }
+
+func TestProcStatusMetrics(t *testing.T) {
+	testLog = l.WithFields(l.Fields{"testing": "procstatus_linux"})
+
+	config := make(map[string]interface{})
+
+	dims := map[string]string{
+		"seven":  "(.......)",
+		"eleven": "(...........)",
+	}
+	config["generatedDimensions"] = dims
+
+	ps := NewProcStatus(nil, 12, testLog)
+	ps.Configure(config)
+
+	count := 0
+	for _, m := range ps.procStatusMetrics() {
+		mDims := m.Dimensions
+		_, existsSeven := mDims["seven"]
+		_, existsEleven := mDims["eleven"]
+		if existsSeven == false || existsEleven == false {
+			continue
+		}
+		count++
+	}
+	if count == 0 {
+		t.Fail()
+	}
+}
