@@ -21,12 +21,12 @@ func (ps ProcStatus) Collect() {
 func procStatusPoint(name string, value float64, dimensions map[string]string) (m metric.Metric) {
 	m = metric.New(name)
 	m.Value = value
-	m.AddDimension("collector", "fullerite")
+	m.AddDimension("collector", "ProcStatus")
 	m.AddDimensions(dimensions)
 	return m
 }
 
-func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
+func (ps ProcStatus) getMetrics(proc procfs.Proc, cmdOutput []string) []metric.Metric {
 	stat, err := proc.NewStat()
 	if err != nil {
 		ps.log.Warn("Error getting stats: ", err)
@@ -34,8 +34,13 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 	}
 
 	pid := strconv.Itoa(stat.PID)
+	processName := stat.Comm
+	if len(ps.processName) > 0 {
+		processName = ps.processName
+	}
+
 	dim := map[string]string{
-		"processName": stat.Comm,
+		"processName": processName,
 		"pid":         pid,
 	}
 
@@ -43,13 +48,6 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc) []metric.Metric {
 		procStatusPoint("VirtualMemory", float64(stat.VirtualMemory()), dim),
 		procStatusPoint("ResidentMemory", float64(stat.ResidentMemory()), dim),
 		procStatusPoint("CPUTime", float64(stat.CPUTime()), dim),
-	}
-
-	cmdOutput, err := proc.CmdLine()
-
-	if err != nil {
-		ps.log.Warn("Error getting command line: ", err)
-		return ret
 	}
 
 	if len(cmdOutput) > 0 {
@@ -77,7 +75,7 @@ func (ps ProcStatus) procStatusMetrics() []metric.Metric {
 		}
 
 		if len(ps.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], ps.processName) {
-			ret = append(ret, ps.getMetrics(proc)...)
+			ret = append(ret, ps.getMetrics(proc, cmd)...)
 		}
 	}
 
