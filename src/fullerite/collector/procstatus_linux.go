@@ -34,13 +34,9 @@ func (ps ProcStatus) getMetrics(proc procfs.Proc, cmdOutput []string) []metric.M
 	}
 
 	pid := strconv.Itoa(stat.PID)
-	processName := stat.Comm
-	if len(ps.processName) > 0 {
-		processName = ps.processName
-	}
 
 	dim := map[string]string{
-		"processName": processName,
+		"processName": stat.Comm,
 		"pid":         pid,
 	}
 
