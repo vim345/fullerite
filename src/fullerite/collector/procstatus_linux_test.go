@@ -4,11 +4,12 @@ package collector
 
 import (
 	"fullerite/metric"
+	"test_utils"
 
+	"errors"
 	"testing"
 	"time"
 
-	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,14 +18,14 @@ func TestProcStatusCollect(t *testing.T) {
 	config["interval"] = 9999
 
 	dims := map[string]string{
-		"module": ".*",
+		"module": "(.*)",
 	}
 
 	config["generatedDimensions"] = dims
 
 	channel := make(chan metric.Metric)
 
-	testLog = l.WithFields(l.Fields{"testing": "procstatus_linux"})
+	testLog := test_utils.BuildLogger()
 	ps := NewProcStatus(channel, 12, testLog)
 	ps.Configure(config)
 
@@ -39,7 +40,7 @@ func TestProcStatusCollect(t *testing.T) {
 }
 
 func TestProcStatusExtractDimensions(t *testing.T) {
-	testLog = l.WithFields(l.Fields{"testing": "procstatus_linux"})
+	testLog := test_utils.BuildLogger()
 
 	config := make(map[string]interface{})
 
@@ -62,7 +63,7 @@ func TestProcStatusExtractDimensions(t *testing.T) {
 }
 
 func TestProcStatusMetrics(t *testing.T) {
-	testLog = l.WithFields(l.Fields{"testing": "procstatus_linux"})
+	testLog := test_utils.BuildLogger()
 
 	config := make(map[string]interface{})
 
@@ -88,4 +89,68 @@ func TestProcStatusMetrics(t *testing.T) {
 	if count == 0 {
 		t.Fail()
 	}
+}
+
+func TestProcStatusMatches(t *testing.T) {
+	assert := assert.New(t)
+	testLog := test_utils.BuildLogger()
+	ps := NewProcStatus(nil, 12, testLog)
+	config := make(map[string]interface{})
+
+	commGenerator := func(comm string, err error) func() (string, error) {
+		return func() (string, error) {
+			return comm, err
+		}
+	}
+
+	config["query"] = ".*"
+	config["matchCommandLine"] = true
+	ps.Configure(config)
+
+	match := ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	assert.True(match)
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	assert.True(match)
+
+	config["query"] = ".*"
+	config["matchCommandLine"] = false
+	ps.Configure(config)
+
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	assert.True(match)
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	assert.False(match)
+
+	config["query"] = "met"
+	config["matchCommandLine"] = true
+	ps.Configure(config)
+
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	assert.True(match)
+	match = ps.matches([]string{"baris", "martin"}, commGenerator("baris", nil))
+	assert.False(match)
+	match = ps.matches([]string{"baris", "martin"}, commGenerator("metin", nil))
+	assert.False(match)
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	assert.True(match)
+
+	config["query"] = "bar"
+	config["matchCommandLine"] = false
+	ps.Configure(config)
+
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	assert.True(match)
+	match = ps.matches([]string{"boris", "metin"}, commGenerator("boris", nil))
+	assert.False(match)
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("boris", nil))
+	assert.False(match)
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	assert.False(match)
+
+	config["query"] = "is met"
+	config["matchCommandLine"] = true
+	ps.Configure(config)
+
+	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	assert.True(match)
 }

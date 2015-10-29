@@ -14,13 +14,15 @@ func TestProcStatusConfigureEmptyConfig(t *testing.T) {
 	ps.Configure(config)
 
 	assert.Equal(t, 123, ps.Interval())
-	assert.Equal(t, "", ps.ProcessName())
+	assert.Equal(t, regexp.MustCompile(""), ps.Query())
+	assert.Equal(t, true, ps.MatchCommandLine())
 }
 
 func TestProcStatusConfigure(t *testing.T) {
 	config := make(map[string]interface{})
 	config["interval"] = 9999
-	config["processName"] = "fullerite"
+	config["query"] = "^fullerite$"
+	config["matchCommandLine"] = false
 
 	dims := map[string]string{
 		"currentDirectory": ".*",
@@ -36,6 +38,7 @@ func TestProcStatusConfigure(t *testing.T) {
 	ps.Configure(config)
 
 	assert.Equal(t, 9999, ps.Interval())
-	assert.Equal(t, "fullerite", ps.ProcessName())
+	assert.Equal(t, regexp.MustCompile("^fullerite$"), ps.Query())
+	assert.Equal(t, false, ps.MatchCommandLine())
 	assert.Equal(t, compRegex, ps.compiledRegex)
 }
