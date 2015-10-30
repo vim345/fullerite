@@ -104,5 +104,5 @@ func (ps ProcStatus) matches(cmdline []string, comm func() (string, error)) bool
 		s = comm
 	}
 
-	return ps.query.MatchString(s)
+	return ps.pattern.MatchString(s)
 }

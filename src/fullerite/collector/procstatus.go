@@ -13,13 +13,13 @@ import (
 type ProcStatus struct {
 	baseCollector
 	compiledRegex    map[string]*regexp.Regexp
-	query            *regexp.Regexp
+	pattern          *regexp.Regexp
 	matchCommandLine bool
 }
 
-// Query returns ProcStatus collectors query
-func (ps ProcStatus) Query() *regexp.Regexp {
-	return ps.query
+// Pattern returns ProcStatus collectors search pattern
+func (ps ProcStatus) Pattern() *regexp.Regexp {
+	return ps.pattern
 }
 
 // MatchCommandLine returns ProcStatus collectors matches command line
@@ -36,7 +36,7 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 	ps.interval = initialInterval
 
 	ps.name = "ProcStatus"
-	ps.query = regexp.MustCompile("")
+	ps.pattern = regexp.MustCompile("")
 	ps.matchCommandLine = true
 	ps.compiledRegex = make(map[string]*regexp.Regexp)
 
@@ -45,12 +45,12 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 
 // Configure this takes a dictionary of values with which the handler can configure itself
 func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
-	if query, exists := configMap["query"]; exists {
-		re, err := regexp.Compile(query.(string))
+	if pattern, exists := configMap["pattern"]; exists {
+		re, err := regexp.Compile(pattern.(string))
 		if err != nil {
 			ps.log.Warn("Failed to compile regex: ", err)
 		} else {
-			ps.query = re
+			ps.pattern = re
 		}
 	}
 

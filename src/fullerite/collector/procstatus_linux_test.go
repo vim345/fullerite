@@ -103,7 +103,7 @@ func TestProcStatusMatches(t *testing.T) {
 		}
 	}
 
-	config["query"] = ".*"
+	config["pattern"] = ".*"
 	config["matchCommandLine"] = true
 	ps.Configure(config)
 
@@ -112,7 +112,7 @@ func TestProcStatusMatches(t *testing.T) {
 	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.True(match)
 
-	config["query"] = ".*"
+	config["pattern"] = ".*"
 	config["matchCommandLine"] = false
 	ps.Configure(config)
 
@@ -121,7 +121,7 @@ func TestProcStatusMatches(t *testing.T) {
 	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.False(match)
 
-	config["query"] = "sta"
+	config["pattern"] = "sta"
 	config["matchCommandLine"] = true
 	ps.Configure(config)
 
@@ -134,7 +134,7 @@ func TestProcStatusMatches(t *testing.T) {
 	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.True(match)
 
-	config["query"] = "pro"
+	config["pattern"] = "pro"
 	config["matchCommandLine"] = false
 	ps.Configure(config)
 
@@ -147,7 +147,7 @@ func TestProcStatusMatches(t *testing.T) {
 	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.False(match)
 
-	config["query"] = "oc sta"
+	config["pattern"] = "oc sta"
 	config["matchCommandLine"] = true
 	ps.Configure(config)
 
