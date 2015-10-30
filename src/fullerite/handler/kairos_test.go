@@ -50,6 +50,24 @@ func TestKairosConfigure(t *testing.T) {
 	assert.Equal(t, "10101", k.Port())
 }
 
+func TestKairosConfigureIntPort(t *testing.T) {
+	config := map[string]interface{}{
+		"interval":        "10",
+		"timeout":         "10",
+		"max_buffer_size": "100",
+		"server":          "kairos.server",
+		"port":            10101,
+	}
+
+	k := getTestKairosHandler(12, 13, 14)
+	k.Configure(config)
+
+	assert.Equal(t, 10, k.Interval())
+	assert.Equal(t, 100, k.MaxBufferSize())
+	assert.Equal(t, "kairos.server", k.Server())
+	assert.Equal(t, "10101", k.Port())
+}
+
 func TestKairosRun(t *testing.T) {
 	wait := make(chan bool)
 	// Mock Kairos server
