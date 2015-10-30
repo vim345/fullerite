@@ -107,50 +107,50 @@ func TestProcStatusMatches(t *testing.T) {
 	config["matchCommandLine"] = true
 	ps.Configure(config)
 
-	match := ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	match := ps.matches([]string{"proc", "status"}, commGenerator("proc", nil))
 	assert.True(match)
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.True(match)
 
 	config["query"] = ".*"
 	config["matchCommandLine"] = false
 	ps.Configure(config)
 
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", nil))
 	assert.True(match)
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.False(match)
 
-	config["query"] = "met"
+	config["query"] = "sta"
 	config["matchCommandLine"] = true
 	ps.Configure(config)
 
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", nil))
 	assert.True(match)
-	match = ps.matches([]string{"baris", "martin"}, commGenerator("baris", nil))
+	match = ps.matches([]string{"proc", "butter"}, commGenerator("proc", nil))
 	assert.False(match)
-	match = ps.matches([]string{"baris", "martin"}, commGenerator("metin", nil))
+	match = ps.matches([]string{"proc", "butter"}, commGenerator("status", nil))
 	assert.False(match)
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.True(match)
 
-	config["query"] = "bar"
+	config["query"] = "pro"
 	config["matchCommandLine"] = false
 	ps.Configure(config)
 
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", nil))
 	assert.True(match)
-	match = ps.matches([]string{"boris", "metin"}, commGenerator("boris", nil))
+	match = ps.matches([]string{"peanut", "status"}, commGenerator("peanut", nil))
 	assert.False(match)
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("boris", nil))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("peanut", nil))
 	assert.False(match)
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", errors.New("")))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", errors.New("")))
 	assert.False(match)
 
-	config["query"] = "is met"
+	config["query"] = "oc sta"
 	config["matchCommandLine"] = true
 	ps.Configure(config)
 
-	match = ps.matches([]string{"baris", "metin"}, commGenerator("baris", nil))
+	match = ps.matches([]string{"proc", "status"}, commGenerator("proc", nil))
 	assert.True(match)
 }
