@@ -56,7 +56,7 @@ func (g *Graphite) Configure(configMap map[string]interface{}) {
 	}
 
 	if port, exists := configMap["port"]; exists {
-		g.port = port.(string)
+		g.port = fmt.Sprint(port)
 	} else {
 		g.log.Error("There was no port specified for the Graphite Handler, there won't be any emissions")
 	}

@@ -59,7 +59,7 @@ func (k *Kairos) Configure(configMap map[string]interface{}) {
 	}
 
 	if port, exists := configMap["port"]; exists {
-		k.port = port.(string)
+		k.port = fmt.Sprint(port)
 	} else {
 		k.log.Error("There was no port specified for the Kairos Handler, there won't be any emissions")
 	}
