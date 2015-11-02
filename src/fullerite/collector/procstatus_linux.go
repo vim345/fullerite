@@ -70,7 +70,7 @@ func (ps ProcStatus) procStatusMetrics() []metric.Metric {
 			continue
 		}
 
-		if len(ps.processName) == 0 || len(cmd) > 0 && strings.Contains(cmd[0], ps.processName) {
+		if ps.matches(cmd, proc.Comm) {
 			ret = append(ret, ps.getMetrics(proc, cmd)...)
 		}
 	}
@@ -89,4 +89,20 @@ func (ps ProcStatus) extractDimensions(cmd string) map[string]string {
 	}
 
 	return ret
+}
+
+func (ps ProcStatus) matches(cmdline []string, comm func() (string, error)) bool {
+	var s string
+	if ps.matchCommandLine {
+		s = strings.Join(cmdline, " ")
+	} else {
+		comm, err := comm()
+		if err != nil {
+			ps.log.Warn("Error getting comm: ", err)
+			return false
+		}
+		s = comm
+	}
+
+	return ps.pattern.MatchString(s)
 }

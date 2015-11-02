@@ -12,13 +12,19 @@ import (
 // ProcStatus collector type
 type ProcStatus struct {
 	baseCollector
-	compiledRegex map[string]*regexp.Regexp
-	processName   string
+	compiledRegex    map[string]*regexp.Regexp
+	pattern          *regexp.Regexp
+	matchCommandLine bool
 }
 
-// ProcessName returns ProcStatus collectors process name
-func (ps ProcStatus) ProcessName() string {
-	return ps.processName
+// Pattern returns ProcStatus collectors search pattern
+func (ps ProcStatus) Pattern() *regexp.Regexp {
+	return ps.pattern
+}
+
+// MatchCommandLine returns ProcStatus collectors matches command line
+func (ps ProcStatus) MatchCommandLine() bool {
+	return ps.matchCommandLine
 }
 
 // NewProcStatus creates a new Test collector.
@@ -30,7 +36,8 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 	ps.interval = initialInterval
 
 	ps.name = "ProcStatus"
-	ps.processName = ""
+	ps.pattern = regexp.MustCompile("")
+	ps.matchCommandLine = true
 	ps.compiledRegex = make(map[string]*regexp.Regexp)
 
 	return ps
@@ -38,8 +45,17 @@ func NewProcStatus(channel chan metric.Metric, initialInterval int, log *l.Entry
 
 // Configure this takes a dictionary of values with which the handler can configure itself
 func (ps *ProcStatus) Configure(configMap map[string]interface{}) {
-	if processName, exists := configMap["processName"]; exists {
-		ps.processName = processName.(string)
+	if pattern, exists := configMap["pattern"]; exists {
+		re, err := regexp.Compile(pattern.(string))
+		if err != nil {
+			ps.log.Warn("Failed to compile regex: ", err)
+		} else {
+			ps.pattern = re
+		}
+	}
+
+	if matchCommandLine, exists := configMap["matchCommandLine"]; exists {
+		ps.matchCommandLine = matchCommandLine.(bool)
 	}
 
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
