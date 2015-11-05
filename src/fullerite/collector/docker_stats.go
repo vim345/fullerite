@@ -1,10 +1,10 @@
 package collector
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 
 	"strings"
-
 	"time"
 
 	l "github.com/Sirupsen/logrus"
@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	mesosTaskID    = "MESOS_TASK_ID"
-	endpoint       = "unix:///var/run/docker.sock"
-	timeoutChannel = 7
+	mesosTaskID           = "MESOS_TASK_ID"
+	endpoint              = "unix:///var/run/docker.sock"
+	defaultTimeoutChannel = 7
 )
 
 // DockerStats collector type.
@@ -25,6 +25,7 @@ type DockerStats struct {
 	baseCollector
 	previousCPUValues map[string]*CPUValues
 	dockerClient      *docker.Client
+	timeoutChannel    int
 }
 
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
@@ -33,22 +34,27 @@ type CPUValues struct {
 	totCPU, systemCPU float64
 }
 
-// NewDockerStats creates a new Test collector.
+// NewDockerStats creates a new DockerStats collector.
 func NewDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entry) *DockerStats {
 	d := new(DockerStats)
 
 	d.log = log
 	d.channel = channel
 	d.interval = initialInterval
+
 	d.name = "DockerStats"
 	d.previousCPUValues = make(map[string]*CPUValues)
 	d.dockerClient, _ = docker.NewClient(endpoint)
+	d.timeoutChannel = defaultTimeoutChannel
 
 	return d
 }
 
 // Configure takes a dictionary of values with which the handler can configure itself.
 func (d *DockerStats) Configure(configMap map[string]interface{}) {
+	if timeout, exists := configMap["dockerStatsTimeout"]; exists {
+		d.timeoutChannel = config.GetAsInt(timeout, defaultTimeoutChannel)
+	}
 	d.configureCommonParams(configMap)
 }
 
