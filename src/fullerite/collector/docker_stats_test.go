@@ -12,11 +12,7 @@ func TestDockerStatsConfigureEmptyConfig(t *testing.T) {
 	d := NewDockerStats(nil, 123, nil)
 	d.Configure(config)
 
-	assert.Equal(t,
-		d.Interval(),
-		123,
-		"should be the default collection interval",
-	)
+	assert.Equal(t, 123, d.Interval())
 }
 
 func TestDockerStatsConfigure(t *testing.T) {
@@ -26,9 +22,5 @@ func TestDockerStatsConfigure(t *testing.T) {
 	d := NewDockerStats(nil, 123, nil)
 	d.Configure(config)
 
-	assert.Equal(t,
-		d.Interval(),
-		9999,
-		"should be the defined interval",
-	)
+	assert.Equal(t, 9999, d.Interval())
 }
