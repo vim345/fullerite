@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	mesosTaskID           = "MESOS_TASK_ID"
-	endpoint              = "unix:///var/run/docker.sock"
-	defaultTimeoutChannel = 7
+	mesosTaskID         = "MESOS_TASK_ID"
+	endpoint            = "unix:///var/run/docker.sock"
+	defaultStatsTimeout = 7
 )
 
 // DockerStats collector type.
@@ -25,7 +25,7 @@ type DockerStats struct {
 	baseCollector
 	previousCPUValues map[string]*CPUValues
 	dockerClient      *docker.Client
-	timeoutChannel    int
+	statsTimeout      int
 }
 
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
@@ -45,7 +45,7 @@ func NewDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entr
 	d.name = "DockerStats"
 	d.previousCPUValues = make(map[string]*CPUValues)
 	d.dockerClient, _ = docker.NewClient(endpoint)
-	d.timeoutChannel = defaultTimeoutChannel
+	d.statsTimeout = defaultStatsTimeout
 
 	return d
 }
@@ -53,7 +53,7 @@ func NewDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entr
 // Configure takes a dictionary of values with which the handler can configure itself.
 func (d *DockerStats) Configure(configMap map[string]interface{}) {
 	if timeout, exists := configMap["dockerStatsTimeout"]; exists {
-		d.timeoutChannel = config.GetAsInt(timeout, defaultTimeoutChannel)
+		d.statsTimeout = config.GetAsInt(timeout, defaultStatsTimeout)
 	}
 	d.configureCommonParams(configMap)
 }
@@ -95,15 +95,13 @@ func (d DockerStats) getDockerContainerInfo(container *docker.Container) {
 		if !ok {
 			select {
 			case err := <-errC:
-				d.log.Error("Received error from stream channel ", err)
+				d.log.Error("Failed to collect docker container stats: ", err)
 				break
 			case <-time.After(time.Millisecond * 500):
 				break
 			}
-			errC <- nil
 			break
 		}
-		errC <- nil
 		done <- false
 
 		ret := d.buildMetrics(container, float64(stats.MemoryStats.Usage), float64(stats.MemoryStats.Limit), calculateCPUPercent(d.previousCPUValues[container.ID].totCPU, d.previousCPUValues[container.ID].systemCPU, stats))
@@ -114,13 +112,11 @@ func (d DockerStats) getDockerContainerInfo(container *docker.Container) {
 		d.previousCPUValues[container.ID].systemCPU = float64(stats.CPUStats.SystemCPUUsage)
 
 		break
-	case <-time.After(time.Duration(d.timeoutChannel) * time.Second):
-		d.log.Error("Impossible collect stats for the container: ", container.ID)
+	case <-time.After(time.Duration(d.statsTimeout) * time.Second):
+		d.log.Error("Timed out collecting stats for container ", container.ID)
 		done <- false
-		errC <- nil
 		break
 	}
-	<-errC
 }
 
 // buildMetrics creates the actual metrics for the given container.
@@ -130,13 +126,12 @@ func (d DockerStats) buildMetrics(container *docker.Container, memUsed, memLimit
 		buildDockerMetric("DockerMemoryLimit", memLimit),
 		buildDockerMetric("DockerCpuPercentage", cpuPercentage),
 	}
-	additionalDimensions := make(map[string]string)
-	additionalDimensions["container_id"] = container.ID
-	res := getServiceDimensions(container)
-	for key, value := range res {
-		additionalDimensions[key] = value
+	additionalDimensions := map[string]string{
+		"container_id":   container.ID,
+		"container_name": strings.TrimPrefix(container.Name, "/"),
 	}
 	metric.AddToAll(&ret, additionalDimensions)
+	metric.AddToAll(&ret, getServiceDimensions(container))
 
 	return ret
 }
