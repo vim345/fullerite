@@ -31,7 +31,7 @@ type DockerStats struct {
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
 // (see calculateCPUPercent() for more details)
 type CPUValues struct {
-	totCPU, systemCPU float64
+	totCPU, systemCPU uint64
 }
 
 // NewDockerStats creates a new DockerStats collector.
@@ -93,28 +93,23 @@ func (d DockerStats) getDockerContainerInfo(container *docker.Container) {
 	select {
 	case stats, ok := <-statsC:
 		if !ok {
-			select {
-			case err := <-errC:
-				d.log.Error("Failed to collect docker container stats: ", err)
-				break
-			case <-time.After(time.Millisecond * 500):
-				break
-			}
+			err := <-errC
+			d.log.Error("Failed to collect docker container stats: ", err)
 			break
 		}
-		done <- false
+		done <- true
 
 		ret := d.buildMetrics(container, float64(stats.MemoryStats.Usage), float64(stats.MemoryStats.Limit), calculateCPUPercent(d.previousCPUValues[container.ID].totCPU, d.previousCPUValues[container.ID].systemCPU, stats))
 
 		d.sendMetrics(ret)
 
-		d.previousCPUValues[container.ID].totCPU = float64(stats.CPUStats.CPUUsage.TotalUsage)
-		d.previousCPUValues[container.ID].systemCPU = float64(stats.CPUStats.SystemCPUUsage)
+		d.previousCPUValues[container.ID].totCPU = stats.CPUStats.CPUUsage.TotalUsage
+		d.previousCPUValues[container.ID].systemCPU = stats.CPUStats.SystemCPUUsage
 
 		break
 	case <-time.After(time.Duration(d.statsTimeout) * time.Second):
 		d.log.Error("Timed out collecting stats for container ", container.ID)
-		done <- false
+		done <- true
 		break
 	}
 }
@@ -174,13 +169,13 @@ func buildDockerMetric(name string, value float64) (m metric.Metric) {
 }
 
 // Function that compute the current cpu usage percentage combining current and last values.
-func calculateCPUPercent(previousCPU, previousSystem float64, stats *docker.Stats) float64 {
+func calculateCPUPercent(previousCPU, previousSystem uint64, stats *docker.Stats) float64 {
 	var (
 		cpuPercent = 0.0
 		// calculate the change for the cpu usage of the container in between readings
-		cpuDelta = float64(stats.CPUStats.CPUUsage.TotalUsage) - previousCPU
+		cpuDelta = float64(stats.CPUStats.CPUUsage.TotalUsage - previousCPU)
 		// calculate the change for the entire system between readings
-		systemDelta = float64(stats.CPUStats.SystemCPUUsage) - previousSystem
+		systemDelta = float64(stats.CPUStats.SystemCPUUsage - previousSystem)
 	)
 
 	if systemDelta > 0.0 && cpuDelta > 0.0 {
