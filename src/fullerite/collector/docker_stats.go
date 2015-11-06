@@ -62,12 +62,13 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 // memory and cpu statistics.
 // For each container a gorutine is started to spin up the collection process.
 func (d *DockerStats) Collect() {
+	if d.dockerClient == nil {
+		d.log.Error("Invalid endpoint: ", docker.ErrInvalidEndpoint)
+		return
+	}
 	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false})
 	if err != nil {
 		d.log.Error("ListContainers() failed: ", err)
-		if err = d.dockerClient.Ping(); err != nil {
-			d.dockerClient, _ = docker.NewClient(endpoint)
-		}
 		return
 	}
 	for _, apiContainer := range containers {
