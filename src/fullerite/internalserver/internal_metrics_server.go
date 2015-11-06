@@ -36,7 +36,7 @@ type ResponseFormat struct {
 // New createse a new internal server instance
 func New(cfg config.Config, handlers *[]handler.Handler) *InternalServer {
 	srv := new(InternalServer)
-	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver["})
+	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver"})
 	srv.handlers = handlers
 	srv.configure(cfg.InternalServerConfig)
 	return srv

@@ -138,10 +138,17 @@ func (k *Kairos) emitMetrics(metrics []metric.Metric) bool {
 	}
 
 	body, _ := ioutil.ReadAll(rsp.Body)
-	k.log.Error("Failed to post to Kairos @", apiURL,
-		" status was ", rsp.Status,
-		" rsp body was ", string(body),
-		" payload was ", string(payload))
+	if (rsp.StatusCode / 100) == 4 {
+		k.log.Error("Failed to post to Kairos @", apiURL,
+			" status was ", rsp.Status,
+			" rsp body was ", string(body),
+			" payload was ", string(payload))
+	} else {
+		k.log.Error("Failed to post to Kairos @", apiURL,
+			" status was ", rsp.Status,
+			" rsp body was ", string(body))
+	}
+
 	return false
 }
 
