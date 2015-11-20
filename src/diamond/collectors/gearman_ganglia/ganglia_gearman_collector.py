@@ -40,13 +40,11 @@ class GearmanCollector(diamond.collector.Collector):
         """
         Collector gearman stats
         """
-        def gearman_ping(gearman_host):
-            gm_admin_client = gearman.GearmanAdminClient([gearman_host])
+        def gearman_ping(gm_admin_client):
             server_ping = gm_admin_client.ping_server()
             return server_ping
 
-        def gearman_queued(gearman_host):
-            gm_admin_client = gearman.GearmanAdminClient([gearman_host])
+        def gearman_queued(gm_admin_client):
             server_status = gm_admin_client.get_status()
             queued = 0
             for entry in server_status:
@@ -64,12 +62,13 @@ class GearmanCollector(diamond.collector.Collector):
             return count
 
         try:
-            # Collect Metrics
-            self.log.debug("Using pid file: %s and gearman endpoint : %s to collect metrics", self.config['gearman_pid_path'], self.config['url'])
-
-            # Publish Metrics
-            self.publish('gearman_ping', gearman_ping(self.config['url']))
-            self.publish('gearman_queued', gearman_queued(self.config['url']))
+            # Collect and Publish Metrics
+            self.log.debug("Using pid file: %s & gearman endpoint : %s",
+                    self.config['gearman_pid_path'], self.config['url'])
+            
+            gm_admin_client = gearman.GearmanAdminClient([self.config['url']])
+            self.publish('gearman_ping', gearman_ping(gm_admin_client))
+            self.publish('gearman_queued', gearman_queued(gm_admin_client))
             self.publish('gearman_fds', get_fds(self.config['gearman_pid_path']))
         except Exception, e:
             self.log.error("Error: %s", e)
