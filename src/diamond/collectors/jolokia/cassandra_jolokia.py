@@ -118,7 +118,7 @@ class CassandraJolokiaCollector(diamond.collector.Collector):
                 if self.check_mbean(k):
                     self.collect_bean(k, v)
         except KeyError:
-            self.log.error("Unable to retrieve MBean listing")
+            self.log.error("Unable to retrieve MBean listing", domain)
 
     def read_json(self, request):
         json_str = request.read()
