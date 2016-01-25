@@ -69,7 +69,7 @@ class CassandraJolokiaCollector(diamond.collector.Collector):
             'rewrite': [],
             'path': 'jolokia',
             'host': 'localhost',
-            'prefix': 'jktest',
+            'prefix': 'hktest',
             'port': 8778,
         })
         return config
