@@ -206,7 +206,8 @@ class CassandraJolokiaCollector(diamond.collector.Collector):
         result = {}
         for d in dimension_string.split(','):
             k, v = d.split('=')
-            result[k] = v
+            result[str(k)] = v
+
         return result
 
     # There's no unambiguous way to interpret list values, so
