@@ -14,6 +14,12 @@ from cassandra_jolokia import CassandraJolokiaCollector
 
 ################################################################################
 
+def find_metric(metric_list, metric_name):
+    return filter(lambda metric:metric["name"].find(metric_name) > -1, metric_list)
+
+def find_by_dimension(metric_list, key, val):
+    return filter(lambda metric:metric["dimensions"][key] == val, metric_list)[0]
+
 
 class TestCassandraJolokiaCollector(CollectorTestCase):
     def setUp(self):
@@ -24,17 +30,42 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
     def test_import(self):
         self.assertTrue(CassandraJolokiaCollector)
 
-    @patch.object(Collector, 'publish')
+    @patch.object(Collector, 'flush')
     def test_should_create_dimension(self, publish_mock):
         def se(url):
-            return self.getFixture("yelp_report.json")
+            return self.getFixture("metrics.json")
 
         patch_urlopen = patch('urllib2.urlopen', Mock(side_effect=se))
 
         patch_urlopen.start()
         self.collector.emit_domain_metrics("com.yelp")
-
         patch_urlopen.stop()
+        self.assertEquals(len(self.collector.payload), 3828)
+
+        metrics = find_metric(self.collector.payload, "org.apache.cassandra.metrics.ColumnFamily.LiveSSTableCount")
+        self.assertNotEqual(len(metrics), 0)
+        metric = find_by_dimension(metrics, "type", "compaction_history")
+        self.assertEquals(metric["type"], "GAUGE")
+
+    @patch.object(Collector, 'flush')
+    def test_should_create_type(self, publish_mock):
+        def se(url):
+            return self.getFixture("metrics.json")
+
+        patch_urlopen = patch('urllib2.urlopen', Mock(side_effect=se))
+
+        patch_urlopen.start()
+        self.collector.emit_domain_metrics("com.yelp")
+        patch_urlopen.stop()
+        self.assertEquals(len(self.collector.payload), 3828)
+
+        metrics = find_metric(self.collector.payload, "org.apache.cassandra.metrics.ColumnFamily.CoordinatorReadLatency.count")
+        self.assertNotEqual(len(metrics), 0)
+        metric = find_by_dimension(metrics, "keyspace", "OpsCenter")
+        self.assertEquals(metric["type"], "CUMCOUNTER")
+
+
+
 
 
 
