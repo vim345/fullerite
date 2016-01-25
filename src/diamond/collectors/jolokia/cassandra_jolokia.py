@@ -191,6 +191,7 @@ class CassandraJolokiaCollector(diamond.collector.Collector):
         full_metric_name_list.append(metric_name)
 
         if value_key.lower() == 'count':
+            full_metric_name_list.append(value_key.lower())
             full_metric_name = '.'.join(full_metric_name_list)
             self.publish_cumulative_counter(full_metric_name, value)
         elif value_key.lower() == 'value':
