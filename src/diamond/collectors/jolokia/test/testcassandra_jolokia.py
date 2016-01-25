@@ -65,10 +65,6 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
         self.assertEquals(metric["type"], "CUMCOUNTER")
 
 
-
-
-
-
 ################################################################################
 if __name__ == "__main__":
     unittest.main()
