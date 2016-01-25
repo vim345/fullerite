@@ -178,12 +178,27 @@ class CassandraJolokiaCollector(diamond.collector.Collector):
         metric_name_prefix, y = metric_key.split(':', 2)
         d_dict = self.make_dimension(y)
         metric_name = d_dict.pop("name")
-        self.dimensions = d_dict
-        full_metric_name = '.'.join([self.config['prefix'], metric_name_prefix, metric_name])
-        if value_key.lower() == 'count':
-            self.publish_cumulative_counter(full_metric_name, value)
+        metric_type = d_dict.pop("type", None)
+        scope_type = d_dict.pop("scope", None)
+        if scope_type:
+            d_dict["type"] = scope_type
 
+        self.dimensions = d_dict
+        full_metric_name_list = [self.config['prefix'], metric_name_prefix]
+        if metric_type:
+            full_metric_name_list.append(metric_type)
+
+        full_metric_name_list.append(metric_name)
+
+        if value_key.lower() == 'count':
+            full_metric_name = '.'.join(full_metric_name_list)
+            self.publish_cumulative_counter(full_metric_name, value)
+        elif value_key.lower() == 'value':
+            full_metric_name = '.'.join(full_metric_name_list)
+            self.publish(full_metric_name, value)
         else:
+            full_metric_name_list.append(value_key.lower())
+            full_metric_name = '.'.join(full_metric_name_list)
             self.publish(full_metric_name, value)
 
 

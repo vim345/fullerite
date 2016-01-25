@@ -33,6 +33,7 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
 
         patch_urlopen.start()
         self.collector.emit_domain_metrics("com.yelp")
+
         patch_urlopen.stop()
 
 
