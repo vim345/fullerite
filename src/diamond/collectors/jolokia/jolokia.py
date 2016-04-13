@@ -110,7 +110,8 @@ class JolokiaCollector(diamond.collector.Collector):
                        " from-to regex rewrites.",
             'url_path': 'Path to jolokia.  typically "jmx" or "jolokia"',
             'listing_max_depth': 'max depth of domain listings tree, 0=deepest, 1=keys only, 2=weird',
-            'read_limit': 'Request size to read from jolokia, defaults to 1000, 0 = no limit'
+            'read_limit': 'Request size to read from jolokia, defaults to 1000, 0 = no limit',
+            'default_dimension': "Default dimensions for collector"
         })
         return config_help
 
@@ -126,6 +127,7 @@ class JolokiaCollector(diamond.collector.Collector):
             'port': 8778,
             'listing_max_depth': 1,
             'read_limit': 1000,
+            'default_dimension': {}
         })
         self.domain_keys = []
         self.last_list_request = 0
@@ -296,6 +298,7 @@ class JolokiaCollector(diamond.collector.Collector):
             if metric_name == "":
                 self.dimensions = {}
                 return
+            self.dimensions.update(self.config['default_dimension'])
             if key.lower() == 'count':
                 self.publish_cumulative_counter(metric_name, value)
             else:
