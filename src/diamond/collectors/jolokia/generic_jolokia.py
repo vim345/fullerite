@@ -7,10 +7,6 @@ for dimensions
 from jolokia import JolokiaCollector
 
 class GenericJolokiaCollector(JolokiaCollector):
-    def __init__(self, *args, **kwargs):
-        super(GenericJolokiaCollector, self).__init__(*args, **kwargs)
-        self.update_config(self.config)
-
     def collect_bean(self, prefix, obj):
         for k, v in obj.iteritems():
             if type(v) in [int, float, long]:
@@ -28,5 +24,9 @@ class GenericJolokiaCollector(JolokiaCollector):
         if self.config.get('prefix', None):
             metric_name_list = [self.config['prefix']] + metric_name_list
 
-        metric_name_list.append(bean.bean_key.lower())
+        lower_bean_key = bean.bean_key.lower()
+
+        if lower_bean_key not in ['count', 'value']:
+            metric_name_list.append(lower_bean_key)
+
         return metric_name_list
