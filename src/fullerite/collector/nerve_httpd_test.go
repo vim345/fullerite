@@ -45,6 +45,7 @@ func TestDefaultConfigNerveHTTPD(t *testing.T) {
 	assert.Equal(t, time.Duration(1)*time.Hour, collector.statusTTL)
 	assert.Equal(t, "localhost", collector.host)
 	assert.Equal(t, "NerveHTTPD", collector.Name())
+	assert.Equal(t, "", collector.prefix)
 }
 
 func TestCustomConfigNerveHTTPD(t *testing.T) {
@@ -53,6 +54,7 @@ func TestCustomConfigNerveHTTPD(t *testing.T) {
 		"status_ttl":     120,
 		"configFilePath": "/tmp/foobar",
 		"host":           "169.0.0.1",
+		"prefix":         "paasta",
 	}
 	collector.Configure(configMap)
 
@@ -61,10 +63,11 @@ func TestCustomConfigNerveHTTPD(t *testing.T) {
 	assert.Equal(t, "server-status?auto", collector.queryPath)
 	assert.Equal(t, time.Duration(120)*time.Second, collector.statusTTL)
 	assert.Equal(t, "169.0.0.1", collector.host)
+	assert.Equal(t, "paasta", collector.prefix)
 }
 
 func TestExtractApacheMetrics(t *testing.T) {
-	metrics := extractApacheMetrics(getRawApacheStat())
+	metrics := extractApacheMetrics(getRawApacheStat(), "")
 	metricMap := map[string]metric.Metric{}
 	for _, m := range metrics {
 		metricMap[m.Name] = m
@@ -76,6 +79,21 @@ func TestExtractApacheMetrics(t *testing.T) {
 	assert.Equal(t, 901.485, metricMap["CPULoad"].Value)
 	assert.Equal(t, 1.45588, metricMap["ReqPerSec"].Value)
 	assert.Equal(t, 1626.35, metricMap["BytesPerSec"].Value)
+}
+
+func TestExtractApacheMetricsWithPrefix(t *testing.T) {
+	metrics := extractApacheMetrics(getRawApacheStat(), "paasta")
+	metricMap := map[string]metric.Metric{}
+	for _, m := range metrics {
+		metricMap[m.Name] = m
+	}
+	assert.Equal(t, 99.0, metricMap["paasta.TotalAccesses"].Value)
+	assert.Equal(t, 34.0, metricMap["paasta.WritingWorkers"].Value)
+	assert.Equal(t, 6.0, metricMap["paasta.IdleWorkers"].Value)
+	assert.Equal(t, 6.0, metricMap["paasta.StandbyWorkers"].Value)
+	assert.Equal(t, 901.485, metricMap["paasta.CPULoad"].Value)
+	assert.Equal(t, 1.45588, metricMap["paasta.ReqPerSec"].Value)
+	assert.Equal(t, 1626.35, metricMap["paasta.BytesPerSec"].Value)
 }
 
 func TestFetchApacheMetrics(t *testing.T) {

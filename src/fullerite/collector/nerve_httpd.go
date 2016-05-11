@@ -55,6 +55,7 @@ type NerveHTTPD struct {
 	statusTTL       time.Duration
 	failedEndPoints map[string]int64
 	mu              *sync.RWMutex
+	prefix          string
 }
 
 type nerveHTTPDResponse struct {
@@ -95,6 +96,10 @@ func (c *NerveHTTPD) Configure(configMap map[string]interface{}) {
 
 	if val, exists := configMap["host"]; exists {
 		c.host = val.(string)
+	}
+
+	if val, exists := configMap["prefix"]; exists {
+		c.prefix = val.(string)
 	}
 
 	if val, exists := configMap["status_ttl"]; exists {
@@ -160,7 +165,7 @@ func (c *NerveHTTPD) getMetrics(serviceName string, port int) []metric.Metric {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", httpResponse.err)
 		return results
 	}
-	apacheMetrics := extractApacheMetrics(httpResponse.data)
+	apacheMetrics := extractApacheMetrics(httpResponse.data, c.prefix)
 	metric.AddToAll(&apacheMetrics, map[string]string{
 		"service": serviceName,
 		"port":    strconv.Itoa(port),
@@ -168,7 +173,7 @@ func (c *NerveHTTPD) getMetrics(serviceName string, port int) []metric.Metric {
 	return apacheMetrics
 }
 
-func extractApacheMetrics(data []byte) []metric.Metric {
+func extractApacheMetrics(data []byte, prefix string) []metric.Metric {
 	results := []metric.Metric{}
 	reader := bytes.NewReader(data)
 	scanner := bufio.NewScanner(reader)
@@ -183,11 +188,11 @@ func extractApacheMetrics(data []byte) []metric.Metric {
 			}
 
 			if k == "Scoreboard" {
-				scoreBoardMetrics := extractScoreBoardMetrics(k, v)
+				scoreBoardMetrics := extractScoreBoardMetrics(k, v, prefix)
 				results = append(results, scoreBoardMetrics...)
 			}
 
-			metric, err := buildApacheMetric(k, v)
+			metric, err := buildApacheMetric(k, v, prefix)
 			if err == nil {
 				results = append(results, metric)
 			}
@@ -197,7 +202,7 @@ func extractApacheMetrics(data []byte) []metric.Metric {
 	return results
 }
 
-func buildApacheMetric(key, value string) (metric.Metric, error) {
+func buildApacheMetric(key, value, prefix string) (metric.Metric, error) {
 	var tmpMetric metric.Metric
 	if _, ok := knownApacheMetrics[key]; ok {
 		whiteRegexp := regexp.MustCompile(`\s+`)
@@ -207,27 +212,27 @@ func buildApacheMetric(key, value string) (metric.Metric, error) {
 		if err != nil {
 			return tmpMetric, err
 		}
-		return metric.WithValue(metricName, metricValue), nil
+		return buildPrefixedMetric(metricName, prefix, metricValue), nil
 	}
 	return tmpMetric, errors.New("invalid metric")
 }
 
-func extractScoreBoardMetrics(key, value string) []metric.Metric {
+func extractScoreBoardMetrics(key, value, prefix string) []metric.Metric {
 	results := []metric.Metric{}
 	charCounter := func(str string, pattern string) float64 {
 		return float64(strings.Count(str, pattern))
 	}
-	results = append(results, metric.WithValue("IdleWorkers", charCounter(value, "_")))
-	results = append(results, metric.WithValue("StartingWorkers", charCounter(value, "S")))
-	results = append(results, metric.WithValue("ReadingWorkers", charCounter(value, "R")))
-	results = append(results, metric.WithValue("WritingWorkers", charCounter(value, "W")))
-	results = append(results, metric.WithValue("KeepaliveWorkers", charCounter(value, "K")))
-	results = append(results, metric.WithValue("DnsWorkers", charCounter(value, "D")))
-	results = append(results, metric.WithValue("ClosingWorkers", charCounter(value, "C")))
-	results = append(results, metric.WithValue("LoggingWorkers", charCounter(value, "L")))
-	results = append(results, metric.WithValue("FinishingWorkers", charCounter(value, "G")))
-	results = append(results, metric.WithValue("CleanupWorkers", charCounter(value, "I")))
-	results = append(results, metric.WithValue("StandbyWorkers", charCounter(value, "_")))
+	results = append(results, buildPrefixedMetric("IdleWorkers", prefix, charCounter(value, "_")))
+	results = append(results, buildPrefixedMetric("StartingWorkers", prefix, charCounter(value, "S")))
+	results = append(results, buildPrefixedMetric("ReadingWorkers", prefix, charCounter(value, "R")))
+	results = append(results, buildPrefixedMetric("WritingWorkers", prefix, charCounter(value, "W")))
+	results = append(results, buildPrefixedMetric("KeepaliveWorkers", prefix, charCounter(value, "K")))
+	results = append(results, buildPrefixedMetric("DnsWorkers", prefix, charCounter(value, "D")))
+	results = append(results, buildPrefixedMetric("ClosingWorkers", prefix, charCounter(value, "C")))
+	results = append(results, buildPrefixedMetric("LoggingWorkers", prefix, charCounter(value, "L")))
+	results = append(results, buildPrefixedMetric("FinishingWorkers", prefix, charCounter(value, "G")))
+	results = append(results, buildPrefixedMetric("CleanupWorkers", prefix, charCounter(value, "I")))
+	results = append(results, buildPrefixedMetric("StandbyWorkers", prefix, charCounter(value, "_")))
 	return results
 }
 
@@ -264,4 +269,11 @@ func fetchApacheMetrics(endpoint string, timeout int) *nerveHTTPDResponse {
 	}
 	response.data = txt
 	return response
+}
+
+func buildPrefixedMetric(metricName string, prefix string, value float64) metric.Metric {
+	if len(prefix) > 0 {
+		return metric.WithValue(prefix+"."+metricName, value)
+	}
+	return metric.WithValue(metricName, value)
 }
