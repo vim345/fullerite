@@ -48,8 +48,8 @@ func Parse(raw []byte, schemaVer string, ccEnabled bool) ([]metric.Metric, eror)
 	}
 	parser.data = raw
 	parser.schemaVer = schemaVer
+	parser.ccEnabled = ccEnabled
 	return parser.Parse()
-
 }
 
 // metricFromMap takes in flattened maps formatted like this::
@@ -109,4 +109,29 @@ func (parser *BaseParser) createMetricFromDatam(rollup string,
 		return m, false
 	}
 	return m, true
+}
+
+func (parser *BaseParser) extractParsedMetric(parsed *Format) []metric.Metric {
+	results := []metric.Metric{}
+	appendIt := func(metrics []metric.Metric, typeDimVal string) {
+		if !parser.ccEnabled {
+			metric.AddToAll(&metrics, map[string]string{"type": typeDimVal})
+		}
+		results = append(results, metrics...)
+	}
+
+	appendIt(parser.convertToMetrics(parsed.Gauges, metric.Gauge), "gauge")
+	appendIt(parser.convertToMetrics(parsed.Counters, metric.Counter), "counter")
+	appendIt(parser.convertToMetrics(parsed.Histograms, metric.Gauge), "histogram")
+	appendIt(parser.convertToMetrics(parsed.Meters, metric.Gauge), "meter")
+	appendIt(parser.convertToMetrics(parsed.Timers, metric.Gauge), "timer")
+
+	return results
+}
+
+func (parser *BaseParser) convertToMetrics(
+	metricMap map[string]map[string]interface{},
+	metricType string) []metric.Metric {
+
+	return []metric.Metrc{}
 }
