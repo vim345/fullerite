@@ -26,6 +26,35 @@ type Parser interface {
 }
 
 // Format defines format in which dropwizard metrics are emitted
+//
+// the assumed format is:
+// {
+// 	"gauges": {},
+// 	"histograms": {},
+// 	"version": "xxx",
+// 	"timers": {
+// 		"pyramid_uwsgi_metrics.tweens.status.metrics": {
+// 			"count": ###,
+// 			"p98": ###,
+// 			...
+// 		},
+// 		"pyramid_uwsgi_metrics.tweens.lookup": {
+// 			"count": ###,
+// 			...
+// 		}
+// 	},
+// 	"meters": {
+// 		"pyramid_uwsgi_metrics.tweens.XXX": {
+//			"count": ###,
+//			"mean_rate": ###,
+// 			"m1_rate": ###
+// 		}
+// 	},
+// 	"counters": {
+//		"myname": {
+//			"count": ###,
+// 	}
+// }
 type Format struct {
 	ServiceDims map[string]interface{} `json:"service_dims"`
 	Counters    map[string]map[string]interface{}
