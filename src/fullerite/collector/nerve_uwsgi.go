@@ -156,6 +156,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		return
 	}
 	metrics, err := dropwizard.Parse(rawResponse, schemaVer, n.serviceInWhitelist(serviceName))
+	fmt.Println(metrics)
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return

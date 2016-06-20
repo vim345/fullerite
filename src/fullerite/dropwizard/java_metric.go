@@ -30,7 +30,7 @@ func (parser *JavaMetric) Parse() ([]metric.Metric, error) {
 		return []metric.Metric{}, err
 	}
 
-	results := parser.extractParsedMetric(parsed)
+	results := extractParsedMetric(parser, parsed)
 	return results, nil
 }
 

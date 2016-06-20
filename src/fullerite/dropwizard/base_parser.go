@@ -1,6 +1,7 @@
 package dropwizard
 
 import (
+	"fmt"
 	"fullerite/metric"
 	"regexp"
 
@@ -19,6 +20,10 @@ const (
 // Parser is an interface for dropwizard parsers
 type Parser interface {
 	Parse() ([]metric.Metric, error)
+	createMetricFromDatam(string, interface{}, string, string) (metric.Metric, bool)
+	metricFromMap(map[string]interface{}, string, string) []metric.Metric
+	convertToMetrics(map[string]map[string]interface{}, string) []metric.Metric
+	isCCEnabled() bool
 }
 
 // Format defines format in which dropwizard metrics are emitted
@@ -89,6 +94,10 @@ func (parser *BaseParser) metricFromMap(metricMap map[string]interface{},
 	return results
 }
 
+func (parser *BaseParser) isCCEnabled() bool {
+	return parser.ccEnabled
+}
+
 // createMetricFromDatam takes in rollup, value, metricName, metricType and returns metric only if
 // value was numeric
 func (parser *BaseParser) createMetricFromDatam(rollup string,
@@ -111,10 +120,10 @@ func (parser *BaseParser) createMetricFromDatam(rollup string,
 	return m, true
 }
 
-func (parser *BaseParser) extractParsedMetric(parsed *Format) []metric.Metric {
+func extractParsedMetric(parser Parser, parsed *Format) []metric.Metric {
 	results := []metric.Metric{}
 	appendIt := func(metrics []metric.Metric, typeDimVal string) {
-		if !parser.ccEnabled {
+		if !parser.isCCEnabled() {
 			metric.AddToAll(&metrics, map[string]string{"type": typeDimVal})
 		}
 		results = append(results, metrics...)
@@ -133,6 +142,7 @@ func (parser *BaseParser) convertToMetrics(
 	metricMap map[string]map[string]interface{},
 	metricType string) []metric.Metric {
 
+	fmt.Println("^^^^ I am being called")
 	return []metric.Metric{}
 }
 
