@@ -9,8 +9,15 @@ import (
 
 var defaultLog = l.WithFields(l.Fields{"app": "fullerite", "pkg": "dropwizard"})
 
+const (
+	// MetricTypeCounter String for counter metric type
+	MetricTypeCounter string = "COUNTER"
+	// MetricTypeGauge String for Gauge metric type
+	MetricTypeGauge string = "GAUGE"
+)
+
 type Parser interface {
-	Parse() []metric.Metric
+	Parse() ([]metric.Metric, error)
 }
 
 // DropwizardFormat defines format in which dropwizard metrics are emitted
@@ -27,6 +34,22 @@ type BaseParser struct {
 	data      []byte
 	log       *l.Entry
 	ccEnabled bool // Enable cumulative counters
+	schemaVer string
+}
+
+func Parse(raw []byte, schemaVer string, ccEnabled bool) ([]metric.Metric, eror) {
+	BaseParser * parser
+	if schemaVer == "uwsgi.1.0" || schemaVer == "uwsg.1.1" {
+		parser = new(UWSGIMetric)
+	} else if schemaVer == "java-1.1" {
+		parser = new(JavaMetric)
+	} else {
+		parser = new(LegacyMetric)
+	}
+	parser.data = raw
+	parser.schemaVer = schemaVer
+	return parser.Parse()
+
 }
 
 // metricFromMap takes in flattened maps formatted like this::
