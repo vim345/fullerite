@@ -16,11 +16,12 @@ const (
 	MetricTypeGauge string = "GAUGE"
 )
 
+// Parser is an interface for dropwizard parsers
 type Parser interface {
 	Parse() ([]metric.Metric, error)
 }
 
-// DropwizardFormat defines format in which dropwizard metrics are emitted
+// Format defines format in which dropwizard metrics are emitted
 type Format struct {
 	ServiceDims map[string]interface{} `json:"service_dims"`
 	Counters    map[string]map[string]interface{}
@@ -30,6 +31,7 @@ type Format struct {
 	Timers      map[string]map[string]interface{}
 }
 
+// BaseParser is a base struct for real parsers
 type BaseParser struct {
 	data      []byte
 	log       *l.Entry
@@ -37,18 +39,16 @@ type BaseParser struct {
 	schemaVer string
 }
 
-func Parse(raw []byte, schemaVer string, ccEnabled bool) ([]metric.Metric, eror) {
-	BaseParser * parser
+// Parse can be called from collector code to parse results
+func Parse(raw []byte, schemaVer string, ccEnabled bool) ([]metric.Metric, error) {
+	var parser Parser
 	if schemaVer == "uwsgi.1.0" || schemaVer == "uwsg.1.1" {
-		parser = new(UWSGIMetric)
+		parser = NewUWSGIMetric(raw, schemaVer, ccEnabled)
 	} else if schemaVer == "java-1.1" {
-		parser = new(JavaMetric)
+		parser = NewJavaMetric(raw, schemaVer, ccEnabled)
 	} else {
-		parser = new(LegacyMetric)
+		parser = NewLegacyMetric(raw, schemaVer, ccEnabled)
 	}
-	parser.data = raw
-	parser.schemaVer = schemaVer
-	parser.ccEnabled = ccEnabled
 	return parser.Parse()
 }
 
@@ -133,5 +133,10 @@ func (parser *BaseParser) convertToMetrics(
 	metricMap map[string]map[string]interface{},
 	metricType string) []metric.Metric {
 
-	return []metric.Metrc{}
+	return []metric.Metric{}
+}
+
+// Parse is just a placehoder function
+func (parser *BaseParser) Parse() ([]metric.Metric, error) {
+	return []metric.Metric{}, nil
 }

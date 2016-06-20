@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fullerite/config"
+	"fullerite/dropwizard"
 	"fullerite/metric"
 	"fullerite/util"
 
@@ -154,7 +155,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
 		return
 	}
-	metrics, err := schemaMap[schemaVer](&rawResponse, n.serviceInWhitelist(serviceName))
+	metrics, err := dropwizard.Parse(rawResponse, schemaVer, n.serviceInWhitelist(serviceName))
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return

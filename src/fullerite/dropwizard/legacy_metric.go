@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// LegacyMetric is for parsing metrics without version information
 type LegacyMetric struct {
 	BaseParser
 }
@@ -14,6 +15,15 @@ type LegacyMetric struct {
 type nestedMetricMap struct {
 	metricSegments []string
 	metricMap      map[string]interface{}
+}
+
+// NewLegacyMetric new parser for legacy metrics
+func NewLegacyMetric(data []byte, schemaVer string, ccEnabled bool) *LegacyMetric {
+	parser := new(LegacyMetric)
+	parser.data = data
+	parser.schemaVer = schemaVer
+	parser.ccEnabled = ccEnabled
+	return parser
 }
 
 // Parse parses metric using legacy format. It is usable when schema version is

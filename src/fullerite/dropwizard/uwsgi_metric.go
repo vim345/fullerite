@@ -10,6 +10,7 @@ type UWSGIMetric struct {
 	BaseParser
 }
 
+// NewUWSGIMetric creates new parser for uwsgi metrics
 func NewUWSGIMetric(data []byte, schemaVer string, ccEnabled bool) *UWSGIMetric {
 	parser := new(UWSGIMetric)
 	parser.data = data
@@ -32,9 +33,8 @@ func (parser *UWSGIMetric) convertToMetrics(metricMap map[string]map[string]inte
 func (parser *UWSGIMetric) Parse() ([]metric.Metric, error) {
 	if parser.schemaVer == "uwsgi-1.1" {
 		return parser.parseUWSGIMetrics11()
-	} else {
-		return parser.parseUWSGIMetrics10()
 	}
+	return parser.parseUWSGIMetrics10()
 }
 
 // parseUWSGIMetrics10 takes the json returned from the endpoint and converts

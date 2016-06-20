@@ -7,10 +7,21 @@ import (
 	"strings"
 )
 
+// JavaMetric is a parser for parsing java-1.1 metrics
 type JavaMetric struct {
 	BaseParser
 }
 
+// NewJavaMetric new parser for java metrics
+func NewJavaMetric(data []byte, schemaVer string, ccEnabled bool) *JavaMetric {
+	parser := new(JavaMetric)
+	parser.data = data
+	parser.schemaVer = schemaVer
+	parser.ccEnabled = ccEnabled
+	return parser
+}
+
+// Parse returns dimensionalized parsed metrics
 func (parser *JavaMetric) Parse() ([]metric.Metric, error) {
 	parsed := new(Format)
 	err := json.Unmarshal(parser.data, parsed)
