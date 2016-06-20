@@ -1,7 +1,6 @@
 package dropwizard
 
 import (
-	"fmt"
 	"fullerite/metric"
 	"regexp"
 
@@ -105,7 +104,7 @@ func (parser *BaseParser) createMetricFromDatam(rollup string,
 	metricName string, metricType string) (metric.Metric, bool) {
 	m := metric.New(metricName)
 	m.MetricType = metricType
-	if parser.ccEnabled {
+	if !parser.ccEnabled {
 		m.AddDimension("rollup", rollup)
 	}
 	// only add things that have a numeric base
@@ -141,8 +140,6 @@ func extractParsedMetric(parser Parser, parsed *Format) []metric.Metric {
 func (parser *BaseParser) convertToMetrics(
 	metricMap map[string]map[string]interface{},
 	metricType string) []metric.Metric {
-
-	fmt.Println("^^^^ I am being called")
 	return []metric.Metric{}
 }
 

@@ -156,7 +156,6 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		return
 	}
 	metrics, err := dropwizard.Parse(rawResponse, schemaVer, n.serviceInWhitelist(serviceName))
-	fmt.Println(metrics)
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
@@ -166,7 +165,6 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		"service": serviceName,
 		"port":    strconv.Itoa(port),
 	})
-
 	serviceLog.Debug("Sending ", len(metrics), " to channel")
 	for _, m := range metrics {
 		n.Channel() <- m

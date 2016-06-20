@@ -2,7 +2,6 @@ package dropwizard
 
 import (
 	"encoding/json"
-	"fmt"
 	"fullerite/metric"
 )
 
@@ -23,8 +22,6 @@ func NewUWSGIMetric(data []byte, schemaVer string, ccEnabled bool) *UWSGIMetric 
 func (parser *UWSGIMetric) convertToMetrics(metricMap map[string]map[string]interface{}, metricType string) []metric.Metric {
 	results := []metric.Metric{}
 
-	fmt.Println("$$$$$$$$$$ I am here")
-
 	for metricName, metricData := range metricMap {
 		tempResults := parser.metricFromMap(metricData, metricName, metricType)
 		results = append(results, tempResults...)
@@ -34,8 +31,7 @@ func (parser *UWSGIMetric) convertToMetrics(metricMap map[string]map[string]inte
 
 // Parse method parses metrics and returns
 func (parser *UWSGIMetric) Parse() ([]metric.Metric, error) {
-	fmt.Println("**********I am here")
-	if parser.schemaVer == "uwsgi-1.1" {
+	if parser.schemaVer == "uwsgi.1.1" {
 		return parser.parseUWSGIMetrics11()
 	}
 	return parser.parseUWSGIMetrics10()
