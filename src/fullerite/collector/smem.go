@@ -22,6 +22,7 @@ import (
 type smemStatLine struct {
 	proc string
 	pss  float64
+	uss  float64
 	rss  float64
 	vss  float64
 }
@@ -37,11 +38,10 @@ type SmemStats struct {
 
 var (
 	requiredConfigs = []string{"user", "procsWhitelist"}
-
-	execCommand   = exec.Command
-	commandOutput = (*exec.Cmd).Output
-	getSmemStats  = (*SmemStats).getSmemStats
-	allMetrics    = []string{"rss", "vss", "pss"}
+	execCommand     = exec.Command
+	commandOutput   = (*exec.Cmd).Output
+	getSmemStats    = (*SmemStats).getSmemStats
+	allMetrics      = []string{"rss", "vss", "pss", "uss"}
 )
 
 func init() {
@@ -98,6 +98,8 @@ func (s *SmemStats) Collect() {
 			switch element {
 			case "pss":
 				s.Channel() <- metric.WithValue(stat.proc+".smem.pss", stat.pss)
+			case "uss":
+				s.Channel() <- metric.WithValue(stat.proc+".smem.uss", stat.uss)
 			case "vss":
 				s.Channel() <- metric.WithValue(stat.proc+".smem.vss", stat.vss)
 			case "rss":
@@ -116,7 +118,7 @@ func (s *SmemStats) getSmemStats() []smemStatLine {
 		"-u", s.user,
 		s.smemPath,
 		"-P", s.whitelistedProcs,
-		"-c", "pss rss vss name")
+		"-c", "pss uss rss vss name")
 	if out, err = commandOutput(cmd); err != nil {
 		s.log.Error(err.Error())
 		return nil
@@ -133,10 +135,11 @@ func (s *SmemStats) parseSmemLines(out string) []smemStatLine {
 	for _, line := range lines {
 		parts := strings.Fields(line)
 		stats = append(stats, smemStatLine{
-			proc: parts[3],
+			proc: parts[4],
 			pss:  util.StrToFloat(parts[0]),
-			rss:  util.StrToFloat(parts[1]),
-			vss:  util.StrToFloat(parts[2]),
+			uss:  util.StrToFloat(parts[1]),
+			rss:  util.StrToFloat(parts[2]),
+			vss:  util.StrToFloat(parts[3]),
 		})
 	}
 
