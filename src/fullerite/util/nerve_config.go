@@ -50,7 +50,7 @@ type EndPoint struct {
 // ParseNerveConfig is responsible for taking the JSON string coming in into a map of service:port
 // it will also filter based on only services runnign on this host.
 // To deal with multi-tenancy we actually will return port:service
-func ParseNerveConfig(raw *[]byte) ([]NerveService, error) {
+func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, error) {
 	services := make(map[string]NerveService)
 	results := []NerveService{}
 	ips, err := ipGetter()
@@ -82,7 +82,11 @@ func ParseNerveConfig(raw *[]byte) ([]NerveService, error) {
 			port := extractPort(serviceConfig)
 			if port != -1 {
 				service.Port = port
-				services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
+				if namespaceIncluded {
+					services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
+				} else {
+					services[service.Name+":"+strconv.Itoa(port)] = *service
+				}
 			}
 		}
 	}

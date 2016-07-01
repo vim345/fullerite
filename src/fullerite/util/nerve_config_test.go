@@ -155,7 +155,7 @@ func TestNerveConfigParsing(t *testing.T) {
 
 	cfgString := getTestNerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.Nil(t, err)
 	m := make(map[NerveService]bool)
 	for _, r := range results {
@@ -164,10 +164,26 @@ func TestNerveConfigParsing(t *testing.T) {
 	assert.Equal(t, expected, m)
 }
 
+func TestNerveConfigParsingiNoNamespace(t *testing.T) {
+	expected := map[int]bool{
+		22224: true, 13752: true,
+	}
+
+	cfgString := getTestNerveConfig()
+	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
+	results, err := ParseNerveConfig(&cfgString, false)
+	assert.Nil(t, err)
+	m := make(map[int]bool)
+	for _, r := range results {
+		m[r.Port] = true
+	}
+	assert.Equal(t, expected, m)
+}
+
 func TestNerveFilterOnIP(t *testing.T) {
 	cfgString := getTestNerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.Nil(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
@@ -177,7 +193,7 @@ func TestHandleBadNerveConfig(t *testing.T) {
 	// b/c there is valid json coming in it won't error, just have an empty response
 	cfgString := []byte("{}")
 	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.Nil(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
@@ -186,7 +202,7 @@ func TestHandleBadNerveConfig(t *testing.T) {
 func TestHandlePoorlyFormedJson(t *testing.T) {
 	cfgString := []byte("notjson")
 	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.NotNil(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
@@ -195,13 +211,13 @@ func TestHandlePoorlyFormedJson(t *testing.T) {
 func TestNoURI(t *testing.T) {
 	cfgString := noURINerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
-	results, _ := ParseNerveConfig(&cfgString)
+	results, _ := ParseNerveConfig(&cfgString, true)
 	assert.Equal(t, 0, len(results))
 }
 
 func TestBadURI(t *testing.T) {
 	cfgString := badURINerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
-	results, _ := ParseNerveConfig(&cfgString)
+	results, _ := ParseNerveConfig(&cfgString, true)
 	assert.Equal(t, 0, len(results))
 }
