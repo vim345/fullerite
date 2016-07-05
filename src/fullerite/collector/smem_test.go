@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var smemOutput = `   5   864  2442180 apache2
+var smemOutput = `    5     343     864    2442180 apache2
 `
 
 func TestNewSmemStats(t *testing.T) {
@@ -44,7 +44,7 @@ func TestSmemStatsConfigure(t *testing.T) {
 			expectedWhitelist:   "apache2|tmux",
 			expectedUser:        "fullerite",
 			expectedSmemPath:    "/path/to/smem",
-			expectedMetricslist: []string{"pss"},
+			expectedMetricslist: []string{"pss", "uss"},
 			msg:                 "All configs are valid, so no errors",
 		},
 		{
@@ -52,7 +52,7 @@ func TestSmemStatsConfigure(t *testing.T) {
 			expectedWhitelist:   "",
 			expectedUser:        "",
 			expectedSmemPath:    "",
-			expectedMetricslist: []string{"rss", "vss", "pss"},
+			expectedMetricslist: []string{"rss", "vss", "pss", "uss"},
 			msg:                 "Required configs missing",
 		},
 	}
@@ -90,6 +90,7 @@ func TestSmemStatsCollect(t *testing.T) {
 	actual := []metric.Metric{}
 	expected := []metric.Metric{
 		metric.Metric{Name: "apache2.smem.pss", MetricType: "gauge", Value: 5, Dimensions: map[string]string{}},
+		metric.Metric{Name: "apache2.smem.uss", MetricType: "gauge", Value: 343, Dimensions: map[string]string{}},
 		metric.Metric{Name: "apache2.smem.vss", MetricType: "gauge", Value: 2.44218e+06, Dimensions: map[string]string{}},
 		metric.Metric{Name: "apache2.smem.rss", MetricType: "gauge", Value: 864, Dimensions: map[string]string{}},
 	}
@@ -99,7 +100,7 @@ func TestSmemStatsCollect(t *testing.T) {
 	sut.user = "user"
 	sut.whitelistedProcs = "some|whitelist"
 	sut.smemPath = "/path/to/smem"
-	sut.whitelistedMetrics = []string{"pss", "vss", "rss"}
+	sut.whitelistedMetrics = []string{"pss", "uss", "vss", "rss"}
 	go sut.Collect()
 
 	for i := 0; i < len(expected); i++ {
@@ -135,7 +136,7 @@ func TestSmemStatsCollectNotCalled(t *testing.T) {
 			smemPath: "/path/to/smem",
 		},
 		{
-			whitelistedMetrics: []string{"pss"},
+			whitelistedMetrics: []string{"pss", "uss"},
 		},
 	}
 
