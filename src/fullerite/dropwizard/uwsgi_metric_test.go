@@ -30,7 +30,7 @@ func TestUWSGIMetricConversion(t *testing.T) {
 	}
 	parser := NewUWSGIMetric([]byte(``), "", false)
 
-	actual := parser.convertToMetrics(testMeters, "metricType")
+	actual := parser.parseMapOfMap(testMeters, "metricType")
 
 	// only the numbers are made
 	assert.Equal(t, 10, len(actual))
@@ -95,7 +95,7 @@ func TestUWSGIMetricConversionCumulativeCountersEnabled(t *testing.T) {
 
 	parser := NewUWSGIMetric([]byte(``), "", true)
 
-	actual := parser.convertToMetrics(testMeters, "metricType")
+	actual := parser.parseMapOfMap(testMeters, "metricType")
 
 	for _, m := range actual {
 		switch m.Name {

@@ -19,7 +19,7 @@ func NewUWSGIMetric(data []byte, schemaVer string, ccEnabled bool) *UWSGIMetric 
 	return parser
 }
 
-func (parser *UWSGIMetric) convertToMetrics(metricMap map[string]map[string]interface{}, metricType string) []metric.Metric {
+func (parser *UWSGIMetric) parseMapOfMap(metricMap map[string]map[string]interface{}, metricType string) []metric.Metric {
 	results := []metric.Metric{}
 
 	for metricName, metricData := range metricMap {

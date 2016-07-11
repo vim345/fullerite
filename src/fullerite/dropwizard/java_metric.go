@@ -34,7 +34,7 @@ func (parser *JavaMetric) Parse() ([]metric.Metric, error) {
 	return results, nil
 }
 
-func (parser *JavaMetric) convertToMetrics(
+func (parser *JavaMetric) parseMapOfMap(
 	metricMap map[string]map[string]interface{},
 	metricType string) []metric.Metric {
 	results := []metric.Metric{}
