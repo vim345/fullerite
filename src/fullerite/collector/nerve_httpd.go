@@ -118,17 +118,17 @@ func (c *NerveHTTPD) Collect() {
 		c.log.Warn("Failed to read the contents of file ", c.configFilePath, " because ", err)
 		return
 	}
-	servicePortMap, err := util.ParseNerveConfig(&rawFileContents)
+	services, err := util.ParseNerveConfig(&rawFileContents, true)
 	if err != nil {
 		c.log.Warn("Failed to parse the nerve config at ", c.configFilePath, ": ", err)
 		return
 	}
-	c.log.Debug("Finished parsing Nerve config into ", servicePortMap)
+	c.log.Debug("Finished parsing Nerve config into ", services)
 
-	for port, service := range servicePortMap {
+	for _, service := range services {
 		if c.serviceInWhitelist(service) {
-			if !c.checkIfFailed(service.Name, port) {
-				go c.emitHTTPDMetric(service, port)
+			if !c.checkIfFailed(service.Name, service.Port) {
+				go c.emitHTTPDMetric(service, service.Port)
 			}
 		}
 	}

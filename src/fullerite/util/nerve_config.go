@@ -38,6 +38,7 @@ type nerveConfigData struct {
 type NerveService struct {
 	Name      string
 	Namespace string
+	Port      int
 }
 
 // EndPoint defines a struct for endpoints
@@ -49,8 +50,9 @@ type EndPoint struct {
 // ParseNerveConfig is responsible for taking the JSON string coming in into a map of service:port
 // it will also filter based on only services runnign on this host.
 // To deal with multi-tenancy we actually will return port:service
-func ParseNerveConfig(raw *[]byte) (map[int]NerveService, error) {
-	results := make(map[int]NerveService)
+func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, error) {
+	services := make(map[string]NerveService)
+	results := []NerveService{}
 	ips, err := ipGetter()
 
 	if err != nil {
@@ -79,11 +81,19 @@ func ParseNerveConfig(raw *[]byte) (map[int]NerveService, error) {
 			service.Namespace = strings.Split(rawServiceName, ".")[1]
 			port := extractPort(serviceConfig)
 			if port != -1 {
-				results[port] = *service
+				service.Port = port
+				if namespaceIncluded {
+					services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
+				} else {
+					services[service.Name+":"+strconv.Itoa(port)] = *service
+				}
 			}
 		}
 	}
 
+	for _, value := range services {
+		results = append(results, value)
+	}
 	return results, nil
 }
 

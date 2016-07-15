@@ -61,6 +61,31 @@ func getTestNerveConfig() []byte {
 	                "10.40.1.17:22181"
 	            ],
 	            "zk_path": "/nerve/superregion:norcal-devc/example_service.mesosstage_main"
+	        },
+	        "example_service.another.norcal-devc.superregion:norcal-devc.13752.new": {
+	            "check_interval": 7,
+	            "checks": [
+	                {
+	                    "fall": 2,
+	                    "headers": {},
+	                    "host": "127.0.0.1",
+	                    "open_timeout": 6,
+	                    "port": 6666,
+	                    "rise": 1,
+	                    "timeout": 6,
+	                    "type": "http",
+	                    "uri": "/http/example_service.another/13752/status"
+	                }
+	            ],
+	            "host": "10.56.5.21",
+	            "port": 22222,
+	            "weight": 24,
+	            "zk_hosts": [
+	                "10.40.5.5:22181",
+	                "10.40.5.6:22181",
+	                "10.40.1.17:22181"
+	            ],
+	            "zk_path": "/nerve/superregion:norcal-devc/example_service.another"
 	        }
 	    }
 	}
@@ -122,22 +147,43 @@ func badURINerveConfig() []byte {
 }
 
 func TestNerveConfigParsing(t *testing.T) {
-	expected := map[int]NerveService{
-		22224: NerveService{Name: "example_service", Namespace: "mesosstage_main"},
-		13752: NerveService{Name: "example_service", Namespace: "main"},
+	expected := map[NerveService]bool{
+		NerveService{Name: "example_service", Namespace: "mesosstage_main", Port: 22224}: true,
+		NerveService{Name: "example_service", Namespace: "main", Port: 13752}:            true,
+		NerveService{Name: "example_service", Namespace: "another", Port: 13752}:         true,
 	}
 
 	cfgString := getTestNerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.Nil(t, err)
-	assert.Equal(t, expected, results)
+	m := make(map[NerveService]bool)
+	for _, r := range results {
+		m[r] = true
+	}
+	assert.Equal(t, expected, m)
+}
+
+func TestNerveConfigParsingiNoNamespace(t *testing.T) {
+	expected := map[int]bool{
+		22224: true, 13752: true,
+	}
+
+	cfgString := getTestNerveConfig()
+	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
+	results, err := ParseNerveConfig(&cfgString, false)
+	assert.Nil(t, err)
+	m := make(map[int]bool)
+	for _, r := range results {
+		m[r.Port] = true
+	}
+	assert.Equal(t, expected, m)
 }
 
 func TestNerveFilterOnIP(t *testing.T) {
 	cfgString := getTestNerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.Nil(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
@@ -147,7 +193,7 @@ func TestHandleBadNerveConfig(t *testing.T) {
 	// b/c there is valid json coming in it won't error, just have an empty response
 	cfgString := []byte("{}")
 	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.Nil(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
@@ -156,7 +202,7 @@ func TestHandleBadNerveConfig(t *testing.T) {
 func TestHandlePoorlyFormedJson(t *testing.T) {
 	cfgString := []byte("notjson")
 	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString)
+	results, err := ParseNerveConfig(&cfgString, true)
 	assert.NotNil(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
@@ -165,13 +211,13 @@ func TestHandlePoorlyFormedJson(t *testing.T) {
 func TestNoURI(t *testing.T) {
 	cfgString := noURINerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
-	results, _ := ParseNerveConfig(&cfgString)
+	results, _ := ParseNerveConfig(&cfgString, true)
 	assert.Equal(t, 0, len(results))
 }
 
 func TestBadURI(t *testing.T) {
 	cfgString := badURINerveConfig()
 	ipGetter = func() ([]string, error) { return []string{"10.56.5.21"}, nil }
-	results, _ := ParseNerveConfig(&cfgString)
+	results, _ := ParseNerveConfig(&cfgString, true)
 	assert.Equal(t, 0, len(results))
 }
