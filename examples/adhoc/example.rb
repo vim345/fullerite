@@ -11,16 +11,14 @@ metrics['first'] = {
     "name" => "example",
     "value" => 2.0,
     "dimensions" => dimensions,
-    "metricType"=> "gauge"
+    "type"=> "gauge"
 }
 
 metrics['second'] = {
-    "name" => "anotherExample",
+    "name" => "counter2.example",
     "value" => 2.0,
     "dimensions" => dimensions,
-    "metricType" => "cumcounter"
+    "type" => "cumcounter"
 }
-
-puts metrics['first'].to_json
 
 puts metrics.values.to_json

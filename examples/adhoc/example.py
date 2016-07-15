@@ -12,14 +12,14 @@ metrics['first'] = {
     "name": "example",
     "value": 2.0,
     "dimensions": dimensions,
-    "metricType": "gauge"
+    "type": "gauge"
 }
 
 metrics['second'] = {
     "name": "anotherExample",
     "value": 2.0,
     "dimensions": dimensions,
-    "metricType": "cumcounter"
+    "type": "cumcounter"
 }
 
 # Send one metric
