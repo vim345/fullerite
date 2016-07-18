@@ -34,6 +34,11 @@ func RegisterHandler(name string, f func(chan metric.Metric, int, int, time.Dura
 	handlerConstructs[name] = f
 }
 
+type CollectorEnd struct {
+	Channel  chan metric.Metric
+	Interval int
+}
+
 // New creates a new Handler based on the requested handler name.
 func New(name string) Handler {
 	channel := make(chan metric.Metric)
@@ -68,8 +73,8 @@ type Handler interface {
 	String() string
 	Channel() chan metric.Metric
 
-	CollectorChannels() map[string]chan metric.Metric
-	SetCollectorChannels(map[string]chan metric.Metric)
+	CollectorChannels() map[string]CollectorEnd
+	SetCollectorChannels(map[string]CollectorEnd)
 
 	Interval() int
 	SetInterval(int)
@@ -111,7 +116,7 @@ type emissionTiming struct {
 // BaseHandler is class to handle the boiler plate parts of the handlers
 type BaseHandler struct {
 	channel           chan metric.Metric
-	collectorChannels map[string]chan metric.Metric
+	collectorChannels map[string]CollectorEnd
 	name              string
 	prefix            string
 	defaultDimensions map[string]string
@@ -170,13 +175,13 @@ func (base BaseHandler) Channel() chan metric.Metric {
 }
 
 // CollectorChannels : the channels to handler listens for metrics on
-func (base BaseHandler) CollectorChannels() map[string]chan metric.Metric {
+func (base BaseHandler) CollectorChannels() map[string]CollectorEnd {
 	return base.collectorChannels
 }
 
 // SetCollectorChannels : the channels to handler listens for metrics on
-func (base *BaseHandler) SetCollectorChannels(c map[string]chan metric.Metric) {
-	base.collectorChannels = make(map[string]chan metric.Metric)
+func (base *BaseHandler) SetCollectorChannels(c map[string]CollectorEnd) {
+	base.collectorChannels = make(map[string]CollectorEnd)
 	for name, channel := range c {
 		base.collectorChannels[name] = channel
 	}
@@ -262,7 +267,7 @@ func (base BaseHandler) MaxIdleConnectionsPerHost() int {
 
 // InitListeners - initiate listener channels for collectors
 func (base *BaseHandler) InitListeners(globalConfig config.Config) {
-	collectorChannels := make(map[string]chan metric.Metric)
+	collectorChannels := make(map[string]CollectorEnd)
 	for _, c := range append(globalConfig.Collectors, globalConfig.DiamondCollectors...) {
 
 		// If the handler's whitelist is set, then only metrics from collectors in it will be emitted. If the same
@@ -283,9 +288,29 @@ func (base *BaseHandler) InitListeners(globalConfig config.Config) {
 				continue
 			}
 		}
-		collectorChannels[c] = make(chan metric.Metric, 1)
+		collectorChannels[c] = CollectorEnd{
+			make(chan metric.Metric, 1),
+			getCollectorInterval(c, globalConfig, base.Interval()),
+		}
 	}
 	base.SetCollectorChannels(collectorChannels)
+}
+
+func getCollectorInterval(colllectorName string,
+	globalConfig config.Config,
+	defaultInterval int) (result int) {
+	configFile := strings.Join([]string{globalConfig.CollectorsConfigPath, colllectorName}, "/") + ".conf"
+	configFile = strings.Replace(configFile, " ", "_", -1)
+	conf, err := config.ReadCollectorConfig(configFile)
+	result = defaultInterval
+	if err != nil {
+		return
+	}
+
+	if interval, exists := conf["interval"]; exists {
+		result = config.GetAsInt(interval, defaultInterval)
+	}
+	return
 }
 
 // KeepAliveInterval - return keep alive interval
@@ -381,7 +406,9 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	emissionResults := make(chan emissionTiming)
 	go base.recordEmissions(emissionResults)
 
-	go base.listenForMetrics(emitFunc, base.Channel(), emissionResults)
+	defaultCollectorEnd := CollectorEnd{base.Channel(), base.Interval()}
+
+	go base.listenForMetrics(emitFunc, defaultCollectorEnd, emissionResults)
 	for k := range base.CollectorChannels() {
 		go base.listenForMetrics(emitFunc, base.CollectorChannels()[k], emissionResults)
 	}
@@ -389,19 +416,21 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 
 func (base *BaseHandler) listenForMetrics(
 	emitFunc func([]metric.Metric) bool,
-	c <-chan metric.Metric,
+	collectorEnd CollectorEnd,
 	emissionResults chan<- emissionTiming) {
 
 	metrics := make([]metric.Metric, 0, base.MaxBufferSize())
 	currentBufferSize := 0
 
-	ticker := time.NewTicker(time.Duration(base.Interval()) * time.Second)
+	base.log.Info("Creating handler to run every", base.Interval())
+
+	ticker := time.NewTicker(time.Duration(collectorEnd.Interval) * time.Second)
 	flusher := ticker.C
 
 stopReading:
 	for {
 		select {
-		case incomingMetric := <-c:
+		case incomingMetric := <-collectorEnd.Channel:
 			if incomingMetric.ZeroValue() {
 				// a zero metric value means, either channel has been closed or
 				// we have been asked to stop reading.

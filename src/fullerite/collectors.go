@@ -133,7 +133,7 @@ func readFromCollector(collector collector.Collector,
 
 		for i := range handlers {
 			if _, exists := handlers[i].CollectorChannels()[c]; exists {
-				handlers[i].CollectorChannels()[c] <- m
+				handlers[i].CollectorChannels()[c].Channel <- m
 			}
 		}
 	}

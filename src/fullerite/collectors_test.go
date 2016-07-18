@@ -147,8 +147,8 @@ func TestCollectorPrefix(t *testing.T) {
 	collector.SetInterval(1)
 	collector.Configure(c)
 
-	collectorChannel := map[string]chan metric.Metric{
-		"Test": make(chan metric.Metric),
+	collectorChannel := map[string]handler.CollectorEnd{
+		"Test": handler.CollectorEnd{make(chan metric.Metric), 1},
 	}
 
 	testHandler := handler.New("Log")
