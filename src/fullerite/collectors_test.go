@@ -163,7 +163,7 @@ func TestCollectorPrefix(t *testing.T) {
 	}()
 	go func() {
 		defer wg.Done()
-		testMetric := <-collectorChannel["Test"]
+		testMetric := <-collectorChannel["Test"].Channel
 		assert.Equal(t, "px.hello", testMetric.Name)
 	}()
 	readFromCollector(collector, []handler.Handler{testHandler})
