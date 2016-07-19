@@ -74,8 +74,8 @@ type Handler interface {
 	String() string
 	Channel() chan metric.Metric
 
-	CollectorChannels() map[string]CollectorEnd
-	SetCollectorChannels(map[string]CollectorEnd)
+	CollectorEndpoints() map[string]CollectorEnd
+	SetCollectorEndpoints(map[string]CollectorEnd)
 
 	Interval() int
 	SetInterval(int)
@@ -116,12 +116,12 @@ type emissionTiming struct {
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
 type BaseHandler struct {
-	channel           chan metric.Metric
-	collectorChannels map[string]CollectorEnd
-	name              string
-	prefix            string
-	defaultDimensions map[string]string
-	log               *l.Entry
+	channel            chan metric.Metric
+	collectorEndpoints map[string]CollectorEnd
+	name               string
+	prefix             string
+	defaultDimensions  map[string]string
+	log                *l.Entry
 
 	interval      int
 	maxBufferSize int
@@ -175,16 +175,16 @@ func (base BaseHandler) Channel() chan metric.Metric {
 	return base.channel
 }
 
-// CollectorChannels : the channels to handler listens for metrics on
-func (base BaseHandler) CollectorChannels() map[string]CollectorEnd {
-	return base.collectorChannels
+// CollectorEndpoints : the channels to handler listens for metrics on
+func (base BaseHandler) CollectorEndpoints() map[string]CollectorEnd {
+	return base.collectorEndpoints
 }
 
-// SetCollectorChannels : the channels to handler listens for metrics on
-func (base *BaseHandler) SetCollectorChannels(c map[string]CollectorEnd) {
-	base.collectorChannels = make(map[string]CollectorEnd)
+// SetCollectorEndpoints : the channels to handler listens for metrics on
+func (base *BaseHandler) SetCollectorEndpoints(c map[string]CollectorEnd) {
+	base.collectorEndpoints = make(map[string]CollectorEnd)
 	for name, channel := range c {
-		base.collectorChannels[name] = channel
+		base.collectorEndpoints[name] = channel
 	}
 }
 
@@ -268,7 +268,7 @@ func (base BaseHandler) MaxIdleConnectionsPerHost() int {
 
 // InitListeners - initiate listener channels for collectors
 func (base *BaseHandler) InitListeners(globalConfig config.Config) {
-	collectorChannels := make(map[string]CollectorEnd)
+	collectorEndpoints := make(map[string]CollectorEnd)
 	for _, c := range append(globalConfig.Collectors, globalConfig.DiamondCollectors...) {
 
 		// If the handler's whitelist is set, then only metrics from collectors in it will be emitted. If the same
@@ -289,12 +289,12 @@ func (base *BaseHandler) InitListeners(globalConfig config.Config) {
 				continue
 			}
 		}
-		collectorChannels[c] = CollectorEnd{
+		collectorEndpoints[c] = CollectorEnd{
 			make(chan metric.Metric, 1),
 			getCollectorInterval(c, globalConfig, base.Interval()),
 		}
 	}
-	base.SetCollectorChannels(collectorChannels)
+	base.SetCollectorEndpoints(collectorEndpoints)
 }
 
 func getCollectorInterval(colllectorName string,
@@ -410,8 +410,8 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	defaultCollectorEnd := CollectorEnd{base.Channel(), base.Interval()}
 
 	go base.listenForMetrics(emitFunc, defaultCollectorEnd, emissionResults)
-	for k := range base.CollectorChannels() {
-		go base.listenForMetrics(emitFunc, base.CollectorChannels()[k], emissionResults)
+	for k := range base.CollectorEndpoints() {
+		go base.listenForMetrics(emitFunc, base.CollectorEndpoints()[k], emissionResults)
 	}
 }
 
