@@ -152,7 +152,7 @@ func TestCollectorPrefix(t *testing.T) {
 	}
 
 	testHandler := handler.New("Log")
-	testHandler.SetCollectorChannels(collectorChannel)
+	testHandler.SetCollectorEndpoints(collectorChannel)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
