@@ -34,6 +34,7 @@ func RegisterHandler(name string, f func(chan metric.Metric, int, int, time.Dura
 	handlerConstructs[name] = f
 }
 
+// CollectorEnd defines a endpoint from which handler reads metrics from collector
 type CollectorEnd struct {
 	Channel  chan metric.Metric
 	Interval int
@@ -422,7 +423,7 @@ func (base *BaseHandler) listenForMetrics(
 	metrics := make([]metric.Metric, 0, base.MaxBufferSize())
 	currentBufferSize := 0
 
-	base.log.Info("Creating handler to run every", base.Interval())
+	base.log.Info("Creating handler to run every", collectorEnd.Interval)
 
 	ticker := time.NewTicker(time.Duration(collectorEnd.Interval) * time.Second)
 	flusher := ticker.C
