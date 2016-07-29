@@ -12,7 +12,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/davecheney/profile"
+	"github.com/pkg/profile"
 )
 
 const (
@@ -100,14 +100,10 @@ func main() {
 
 func start(ctx *cli.Context) {
 	if ctx.Bool("profile") {
-		pcfg := profile.Config{
-			CPUProfile:   true,
-			MemProfile:   true,
-			BlockProfile: true,
-			ProfilePath:  ".",
-		}
-		p := profile.Start(&pcfg)
-		defer p.Stop()
+		defer profile.Start(profile.CPUProfile).Stop()
+		defer profile.Start(profile.MemProfile).Stop()
+		defer profile.Start(profile.BlockProfile).Stop()
+		defer profile.Start(profile.ProfilePath("."))
 	}
 	quit := make(chan bool)
 	initLogrus(ctx)
