@@ -30,6 +30,7 @@ type DockerStats struct {
 	skipRegex         *regexp.Regexp
 	endpoint          string
 	mu                *sync.Mutex
+	lessDimensions    bool
 }
 
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
@@ -85,6 +86,15 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 		}
 	} else {
 		d.endpoint = endpoint
+	}
+	if lessDimensions, exists := configMap["lessDimensions"]; exists {
+		if boolean, ok := lessDimensions.(bool); ok {
+			d.lessDimensions = boolean
+		} else {
+			d.log.Warn("Failed to cast lessDimensions: ", reflect.TypeOf(lessDimensions))
+		}
+	} else {
+		d.lessDimensions = false
 	}
 	d.dockerClient, _ = docker.NewClient(d.endpoint)
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
@@ -158,6 +168,7 @@ func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
 
 		metrics := d.extractMetrics(container, stats)
 		d.sendMetrics(metrics)
+		d.log.Error("Successfully emitted metrics ", container.ID)
 
 		break
 	case <-time.After(time.Duration(d.statsTimeout) * time.Second):
@@ -195,14 +206,21 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		rxb.AddDimension("iface", netiface)
 		ret = append(ret, rxb)
 	}
-	additionalDimensions := map[string]string{
-		"container_id":   container.ID,
-		"container_name": strings.TrimPrefix(container.Name, "/"),
+	additionalDimensions := map[string]string{}
+	if d.lessDimensions == true {
+		stringList := strings.Split(container.Config.Image, ":")
+		additionalDimensions = map[string]string{
+			"image_name": stringList[0],
+		}
+	} else {
+		additionalDimensions = map[string]string{
+			"container_id":   container.ID,
+			"container_name": strings.TrimPrefix(container.Name, "/"),
+		}
 	}
 	metric.AddToAll(&ret, additionalDimensions)
 	ret = append(ret, buildDockerMetric("DockerContainerCount", metric.Counter, 1))
 	metric.AddToAll(&ret, d.extractDimensions(container))
-
 	return ret
 }
 
