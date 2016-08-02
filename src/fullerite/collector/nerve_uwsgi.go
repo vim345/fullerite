@@ -517,9 +517,8 @@ func metricFromMap(metricMap map[string]interface{}, metricName string, metricTy
 func createMetricFromDatam(rollup string, value interface{}, metricName string, metricType string, cumulCounterEnabled bool) (metric.Metric, bool) {
 	m := metric.New(metricName)
 	m.MetricType = metricType
-	if !cumulCounterEnabled {
-		m.AddDimension("rollup", rollup)
-	}
+	m.AddDimension("rollup", rollup)
+
 	// only add things that have a numeric base
 	switch value.(type) {
 	case float64:
