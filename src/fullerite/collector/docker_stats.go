@@ -63,6 +63,7 @@ func newDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entr
 	d.name = "DockerStats"
 	d.previousCPUValues = make(map[string]*CPUValues)
 	d.compiledRegex = make(map[string]*Regex)
+	d.lessDimensions = false
 	return d
 }
 
@@ -93,9 +94,8 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 		} else {
 			d.log.Warn("Failed to cast lessDimensions: ", reflect.TypeOf(lessDimensions))
 		}
-	} else {
-		d.lessDimensions = false
 	}
+
 	d.dockerClient, _ = docker.NewClient(d.endpoint)
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
 		for dimension, generator := range generatedDimensions.(map[string]interface{}) {
@@ -168,7 +168,6 @@ func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
 
 		metrics := d.extractMetrics(container, stats)
 		d.sendMetrics(metrics)
-		d.log.Error("Successfully emitted metrics ", container.ID)
 
 		break
 	case <-time.After(time.Duration(d.statsTimeout) * time.Second):
@@ -207,7 +206,7 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		ret = append(ret, rxb)
 	}
 	additionalDimensions := map[string]string{}
-	if d.lessDimensions == true {
+	if d.lessDimensions {
 		stringList := strings.Split(container.Config.Image, ":")
 		additionalDimensions = map[string]string{
 			"image_name": stringList[0],
