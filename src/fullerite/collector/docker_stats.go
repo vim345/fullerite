@@ -30,7 +30,7 @@ type DockerStats struct {
 	skipRegex         *regexp.Regexp
 	endpoint          string
 	mu                *sync.Mutex
-	lessDimensions    bool
+	emit_image_name   bool
 }
 
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
@@ -63,7 +63,7 @@ func newDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entr
 	d.name = "DockerStats"
 	d.previousCPUValues = make(map[string]*CPUValues)
 	d.compiledRegex = make(map[string]*Regex)
-	d.lessDimensions = false
+	d.emit_image_name = false
 	return d
 }
 
@@ -88,11 +88,11 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 	} else {
 		d.endpoint = endpoint
 	}
-	if lessDimensions, exists := configMap["lessDimensions"]; exists {
-		if boolean, ok := lessDimensions.(bool); ok {
-			d.lessDimensions = boolean
+	if emit_image_name, exists := configMap["emit_image_name"]; exists {
+		if boolean, ok := emit_image_name.(bool); ok {
+			d.emit_image_name = boolean
 		} else {
-			d.log.Warn("Failed to cast lessDimensions: ", reflect.TypeOf(lessDimensions))
+			d.log.Warn("Failed to cast emit_image_name: ", reflect.TypeOf(emit_image_name))
 		}
 	}
 
@@ -206,7 +206,7 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		ret = append(ret, rxb)
 	}
 	additionalDimensions := map[string]string{}
-	if d.lessDimensions {
+	if d.emit_image_name {
 		stringList := strings.Split(container.Config.Image, ":")
 		additionalDimensions = map[string]string{
 			"image_name": stringList[0],

@@ -128,7 +128,7 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 	assert.Equal(t, ret, expectedMetrics)
 }
 
-func TestDockerStatsBuildwithlessDimensions(t *testing.T) {
+func TestDockerStatsBuildwithemit_image_name(t *testing.T) {
 	config := make(map[string]interface{})
 	envVars := []byte(`
 	{
@@ -196,7 +196,7 @@ func TestDockerStatsBuildwithlessDimensions(t *testing.T) {
 
 	d := getSUT()
 	d.Configure(config)
-	d.lessDimensions = true
+	d.emit_image_name = true
 	ret := d.buildMetrics(container, stats, 0.5)
 	assert.Equal(t, ret, expectedMetrics)
 }
