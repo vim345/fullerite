@@ -104,8 +104,6 @@ func (k Kairos) convertToKairos(incomingMetric metric.Metric) (datapoint KairosM
 }
 
 func (k *Kairos) emitMetrics(metrics []metric.Metric) bool {
-	k.log.Info("Starting to emit ", len(metrics), " metrics")
-
 	if len(metrics) == 0 {
 		k.log.Warn("Skipping send because of an empty payload")
 		return false
@@ -145,7 +143,6 @@ func (k *Kairos) emitMetrics(metrics []metric.Metric) bool {
 
 	defer rsp.Body.Close()
 	if rsp.StatusCode == http.StatusNoContent {
-		k.log.Info("Successfully sent ", len(series), " datapoints to Kairos")
 		return true
 	}
 

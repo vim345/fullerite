@@ -380,16 +380,17 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	emissionResults := make(chan emissionTiming)
 	go base.recordEmissions(emissionResults)
 
-	go base.listenForMetrics(emitFunc, base.Channel(), emissionResults)
+	go base.listenForMetrics(emitFunc, base.Channel(), emissionResults, "")
 	for k := range base.CollectorChannels() {
-		go base.listenForMetrics(emitFunc, base.CollectorChannels()[k], emissionResults)
+		go base.listenForMetrics(emitFunc, base.CollectorChannels()[k], emissionResults, k)
 	}
 }
 
 func (base *BaseHandler) listenForMetrics(
 	emitFunc func([]metric.Metric) bool,
 	c <-chan metric.Metric,
-	emissionResults chan<- emissionTiming) {
+	emissionResults chan<- emissionTiming,
+	collectorName string) {
 
 	metrics := make([]metric.Metric, 0, base.MaxBufferSize())
 	currentBufferSize := 0
@@ -411,6 +412,9 @@ stopReading:
 			currentBufferSize++
 
 			if int(currentBufferSize) >= base.MaxBufferSize() {
+				if collectorName == "NerveHTTPD" {
+					base.log.Info("Emitting ", currentBufferSize, " of metrics", len(metrics))
+				}
 				go base.emitAndTime(metrics, emitFunc, emissionResults)
 
 				// will get copied into this call, meaning it's ok to clear it
@@ -419,6 +423,9 @@ stopReading:
 			}
 		case <-flusher:
 			if currentBufferSize > 0 {
+				if collectorName == "NerveHTTPD" {
+					base.log.Info("Emitting ", currentBufferSize, " of metrics", len(metrics))
+				}
 				go base.emitAndTime(metrics, emitFunc, emissionResults)
 				metrics = make([]metric.Metric, 0, base.MaxBufferSize())
 				currentBufferSize = 0
