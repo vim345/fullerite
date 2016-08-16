@@ -191,6 +191,7 @@ func extractApacheMetrics(data []byte) []metric.Metric {
 		}
 
 	}
+	defaultLog.Info("Got metrics in nerve_http collector", len(results))
 	return results
 }
 

@@ -131,7 +131,6 @@ func (s SignalFx) getSanitizedDimensions(incomingMetric metric.Metric) map[strin
 }
 
 func (s *SignalFx) emitMetrics(metrics []metric.Metric) bool {
-	s.log.Info("Starting to emit ", len(metrics), " metrics")
 
 	if len(metrics) == 0 {
 		s.log.Warn("Skipping send because of an empty payload")
@@ -182,7 +181,6 @@ func (s *SignalFx) emitMetrics(metrics []metric.Metric) bool {
 		return false
 	}
 
-	s.log.Info("Successfully sent ", len(datapoints), " datapoints to SignalFx")
 	return true
 }
 

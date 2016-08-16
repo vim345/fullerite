@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"container/list"
-	"fmt"
 	"strings"
 	"time"
 
@@ -471,13 +470,6 @@ func (base *BaseHandler) emitAndTime(
 		duration:    emissionDuration,
 		metricsSent: numMetrics,
 	}
-	base.log.Info(
-		fmt.Sprintf("POST of %d metrics to %s took %f seconds",
-			numMetrics,
-			base.name,
-			emissionDuration.Seconds(),
-		),
-	)
 	callbackChannel <- timing
 
 	if result {
