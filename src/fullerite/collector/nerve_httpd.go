@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	l "github.com/Sirupsen/logrus"
@@ -53,8 +52,6 @@ type NerveHTTPD struct {
 	host              string
 	timeout           int
 	statusTTL         time.Duration
-	failedEndPoints   map[string]int64
-	mu                *sync.RWMutex
 	servicesWhitelist []string
 }
 
@@ -73,7 +70,6 @@ func newNerveHTTPD(channel chan metric.Metric, initialInterval int, log *l.Entry
 	c.channel = channel
 	c.interval = initialInterval
 	c.log = log
-	c.mu = new(sync.RWMutex)
 
 	c.name = "NerveHTTPD"
 	c.configFilePath = "/etc/nerve/nerve.conf.json"
@@ -81,7 +77,6 @@ func newNerveHTTPD(channel chan metric.Metric, initialInterval int, log *l.Entry
 	c.host = "localhost"
 	c.timeout = 2
 	c.statusTTL = time.Duration(60) * time.Minute
-	c.failedEndPoints = map[string]int64{}
 	return c
 }
 
@@ -127,9 +122,7 @@ func (c *NerveHTTPD) Collect() {
 
 	for _, service := range services {
 		if c.serviceInWhitelist(service) {
-			if !c.checkIfFailed(service.Name, service.Port) {
-				go c.emitHTTPDMetric(service, service.Port)
-			}
+			go c.emitHTTPDMetric(service, service.Port)
 		}
 	}
 }
@@ -150,19 +143,6 @@ func (c *NerveHTTPD) emitHTTPDMetric(service util.NerveService, port int) {
 	}
 }
 
-func (c *NerveHTTPD) checkIfFailed(serviceName string, port int) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	endpoint := fmt.Sprintf("%s:%d", serviceName, port)
-	if lastFailed, ok := c.failedEndPoints[endpoint]; ok {
-		tm := time.Unix(lastFailed, 0)
-		if time.Since(tm) < c.statusTTL {
-			return true
-		}
-	}
-	return false
-}
-
 func (c *NerveHTTPD) getMetrics(service util.NerveService, port int) []metric.Metric {
 	results := []metric.Metric{}
 	serviceLog := c.log.WithField("service", service.Name)
@@ -173,7 +153,6 @@ func (c *NerveHTTPD) getMetrics(service util.NerveService, port int) []metric.Me
 	httpResponse := fetchApacheMetrics(endpoint, port)
 
 	if httpResponse.status != 200 {
-		c.updateFailedStatus(service.Name, port, httpResponse.status)
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", httpResponse.err)
 		return results
 	}
@@ -247,15 +226,6 @@ func extractScoreBoardMetrics(key, value string) []metric.Metric {
 	results = append(results, metric.WithValue("CleanupWorkers", charCounter(value, "I")))
 	results = append(results, metric.WithValue("StandbyWorkers", charCounter(value, "_")))
 	return results
-}
-
-func (c *NerveHTTPD) updateFailedStatus(serviceName string, port int, statusCode int) {
-	if statusCode == 404 {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		endpoint := fmt.Sprintf("%s:%d", serviceName, port)
-		c.failedEndPoints[endpoint] = time.Now().Unix()
-	}
 }
 
 func fetchApacheMetrics(endpoint string, timeout int) *nerveHTTPDResponse {
