@@ -122,6 +122,7 @@ func (c *NerveHTTPD) Collect() {
 
 	for _, service := range services {
 		if c.serviceInWhitelist(service) {
+			c.log.Info("Collecting metrics for", service.Name)
 			go c.emitHTTPDMetric(service, service.Port)
 		}
 	}
