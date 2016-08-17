@@ -422,7 +422,6 @@ func (base *BaseHandler) listenForMetrics(
 
 	metrics := make([]metric.Metric, 0, collectorEnd.BufferSize)
 	currentBufferSize := 0
-	base.log.Info("Buffer size selected is ", collectorEnd.BufferSize, " for collector ", collectorName)
 
 	ticker := time.NewTicker(time.Duration(base.Interval()) * time.Second)
 	flusher := ticker.C
