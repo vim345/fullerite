@@ -440,6 +440,7 @@ stopReading:
 			currentBufferSize++
 
 			if int(currentBufferSize) >= collectorEnd.BufferSize {
+				base.log.Info("Buffer full - ", currentBufferSize, " emitting ", len(metrics), " metrics")
 				go base.emitAndTime(metrics, emitFunc, emissionResults)
 
 				// will get copied into this call, meaning it's ok to clear it
@@ -448,6 +449,7 @@ stopReading:
 			}
 		case <-flusher:
 			if currentBufferSize > 0 {
+				base.log.Info("Timer with currentBuffersize - ", currentBufferSize, " emitting ", len(metrics), " metrics")
 				go base.emitAndTime(metrics, emitFunc, emissionResults)
 				metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
 				currentBufferSize = 0
