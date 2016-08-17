@@ -77,6 +77,12 @@ func (m *Metric) ZeroValue() bool {
 		(len(m.Dimensions) == 0)
 }
 
+// Sentinel is a metric value which forces handler to flush
+// all buffered metrics
+func (m *Metric) Sentinel() bool {
+	return (m.Name == "fullerite.flush_now")
+}
+
 // AddToAll adds a map of dimensions to a list of metrics
 func AddToAll(metrics *[]Metric, dims map[string]string) {
 	for _, m := range *metrics {
