@@ -36,8 +36,8 @@ func RegisterHandler(name string, f func(chan metric.Metric, int, int, time.Dura
 
 // CollectorEnd defines a endpoint from which handler reads metrics from collector
 type CollectorEnd struct {
-	Channel  chan metric.Metric
-	Interval int
+	Channel    chan metric.Metric
+	BufferSize int
 }
 
 // New creates a new Handler based on the requested handler name.
@@ -183,8 +183,8 @@ func (base BaseHandler) CollectorEndpoints() map[string]CollectorEnd {
 // SetCollectorEndpoints : the channels to handler listens for metrics on
 func (base *BaseHandler) SetCollectorEndpoints(c map[string]CollectorEnd) {
 	base.collectorEndpoints = make(map[string]CollectorEnd)
-	for name, channel := range c {
-		base.collectorEndpoints[name] = channel
+	for name, colInfo := range c {
+		base.collectorEndpoints[name] = colInfo
 	}
 }
 
@@ -291,25 +291,24 @@ func (base *BaseHandler) InitListeners(globalConfig config.Config) {
 		}
 		collectorEndpoints[c] = CollectorEnd{
 			make(chan metric.Metric, 1),
-			getCollectorInterval(c, globalConfig, base.Interval()),
+			getCollectorBatchSize(c, globalConfig, base.MaxBufferSize()),
 		}
 	}
+	fmt.Println(collectorEndpoints)
 	base.SetCollectorEndpoints(collectorEndpoints)
 }
 
-func getCollectorInterval(colllectorName string,
+func getCollectorBatchSize(collectorName string,
 	globalConfig config.Config,
-	defaultInterval int) (result int) {
-	configFile := strings.Join([]string{globalConfig.CollectorsConfigPath, colllectorName}, "/") + ".conf"
-	configFile = strings.Replace(configFile, " ", "_", -1)
-	conf, err := config.ReadCollectorConfig(configFile)
-	result = defaultInterval
+	defaultBufSize int) (result int) {
+	conf, err := globalConfig.GetCollectorConfig(collectorName)
+	result = defaultBufSize
 	if err != nil {
 		return
 	}
 
-	if interval, exists := conf["interval"]; exists {
-		result = config.GetAsInt(interval, defaultInterval)
+	if bufferSize, exists := conf["max_buffer_size"]; exists {
+		result = config.GetAsInt(bufferSize, defaultBufSize)
 	}
 	return
 }
@@ -407,25 +406,25 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	emissionResults := make(chan emissionTiming)
 	go base.recordEmissions(emissionResults)
 
-	defaultCollectorEnd := CollectorEnd{base.Channel(), base.Interval()}
+	defaultCollectorEnd := CollectorEnd{base.Channel(), base.MaxBufferSize()}
 
-	go base.listenForMetrics(emitFunc, defaultCollectorEnd, emissionResults)
+	go base.listenForMetrics(emitFunc, defaultCollectorEnd, emissionResults, "")
 	for k := range base.CollectorEndpoints() {
-		go base.listenForMetrics(emitFunc, base.CollectorEndpoints()[k], emissionResults)
+		go base.listenForMetrics(emitFunc, base.CollectorEndpoints()[k], emissionResults, k)
 	}
 }
 
 func (base *BaseHandler) listenForMetrics(
 	emitFunc func([]metric.Metric) bool,
 	collectorEnd CollectorEnd,
-	emissionResults chan<- emissionTiming) {
+	emissionResults chan<- emissionTiming,
+	collectorName string) {
 
-	metrics := make([]metric.Metric, 0, base.MaxBufferSize())
+	metrics := make([]metric.Metric, 0, collectorEnd.BufferSize)
 	currentBufferSize := 0
+	base.log.Info("Buffer size selected is ", collectorEnd.BufferSize, " for collector ", collectorName)
 
-	base.log.Info("Creating handler to run every", collectorEnd.Interval)
-
-	ticker := time.NewTicker(time.Duration(collectorEnd.Interval) * time.Second)
+	ticker := time.NewTicker(time.Duration(base.Interval()) * time.Second)
 	flusher := ticker.C
 
 stopReading:
@@ -441,17 +440,17 @@ stopReading:
 			metrics = append(metrics, incomingMetric)
 			currentBufferSize++
 
-			if int(currentBufferSize) >= base.MaxBufferSize() {
+			if int(currentBufferSize) >= collectorEnd.BufferSize {
 				go base.emitAndTime(metrics, emitFunc, emissionResults)
 
 				// will get copied into this call, meaning it's ok to clear it
-				metrics = make([]metric.Metric, 0, base.MaxBufferSize())
+				metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
 				currentBufferSize = 0
 			}
 		case <-flusher:
 			if currentBufferSize > 0 {
 				go base.emitAndTime(metrics, emitFunc, emissionResults)
-				metrics = make([]metric.Metric, 0, base.MaxBufferSize())
+				metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
 				currentBufferSize = 0
 			}
 		}

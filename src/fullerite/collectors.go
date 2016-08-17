@@ -8,7 +8,6 @@ import (
 
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -16,13 +15,7 @@ func startCollectors(c config.Config) (collectors []collector.Collector) {
 	log.Info("Starting collectors...")
 
 	for _, name := range c.Collectors {
-		configFile := strings.Join([]string{c.CollectorsConfigPath, name}, "/") + ".conf"
-		// Since collector naems can be defined with a space in order to instantiate multiple
-		// instances of the same collector, we want their files
-		// will not have that space and needs to have it replaced with an underscore
-		// instead
-		configFile = strings.Replace(configFile, " ", "_", -1)
-		conf, err := config.ReadCollectorConfig(configFile)
+		conf, err := c.GetCollectorConfig(name)
 		if err != nil {
 			log.Error("Collector config failed to load for: ", name)
 			continue
