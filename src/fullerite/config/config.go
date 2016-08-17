@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -54,6 +55,18 @@ func ReadCollectorConfig(configFile string) (c map[string]interface{}, e error) 
 		return c, err
 	}
 	return c, nil
+}
+
+// GetCollectorConfig returns collector config. given a name
+func (conf Config) GetCollectorConfig(name string) (map[string]interface{}, error) {
+	configFile := strings.Join([]string{conf.CollectorsConfigPath, name}, "/") + ".conf"
+	// Since collector naems can be defined with a space in order to instantiate multiple
+	// instances of the same collector, we want their files
+	// will not have that space and needs to have it replaced with an underscore
+	// instead
+	configFile = strings.Replace(configFile, " ", "_", -1)
+	collectorConf, err := ReadCollectorConfig(configFile)
+	return collectorConf, err
 }
 
 // GetAsFloat parses a string to a float or returns the float if float is passed in

@@ -147,12 +147,12 @@ func TestCollectorPrefix(t *testing.T) {
 	collector.SetInterval(1)
 	collector.Configure(c)
 
-	collectorChannel := map[string]chan metric.Metric{
-		"Test": make(chan metric.Metric),
+	collectorChannel := map[string]handler.CollectorEnd{
+		"Test": handler.CollectorEnd{make(chan metric.Metric), 1},
 	}
 
 	testHandler := handler.New("Log")
-	testHandler.SetCollectorChannels(collectorChannel)
+	testHandler.SetCollectorEndpoints(collectorChannel)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -163,7 +163,7 @@ func TestCollectorPrefix(t *testing.T) {
 	}()
 	go func() {
 		defer wg.Done()
-		testMetric := <-collectorChannel["Test"]
+		testMetric := <-collectorChannel["Test"].Channel
 		assert.Equal(t, "px.hello", testMetric.Name)
 	}()
 	readFromCollector(collector, []handler.Handler{testHandler})

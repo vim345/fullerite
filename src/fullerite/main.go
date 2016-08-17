@@ -26,7 +26,7 @@ var log = logrus.WithFields(logrus.Fields{"app": "fullerite"})
 func initLogrus(ctx *cli.Context) {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableColors:   true,
-		TimestampFormat: time.RFC822,
+		TimestampFormat: time.RFC850,
 		FullTimestamp:   true,
 	})
 
