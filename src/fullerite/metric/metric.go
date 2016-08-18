@@ -34,6 +34,12 @@ func WithValue(name string, value float64) Metric {
 	return metric
 }
 
+// Sentinel returns a sentinel metric, which will force
+// a flush in handler
+func Sentinel() Metric {
+	return WithValue("fullerite.emit_now", 0)
+}
+
 // AddDimension adds a new dimension to the Metric.
 func (m *Metric) AddDimension(name, value string) {
 	m.Dimensions[name] = value
@@ -80,7 +86,7 @@ func (m *Metric) ZeroValue() bool {
 // Sentinel is a metric value which forces handler to flush
 // all buffered metrics
 func (m *Metric) Sentinel() bool {
-	return (m.Name == "fullerite.flush_now")
+	return (m.Name == "fullerite.emit_now")
 }
 
 // AddToAll adds a map of dimensions to a list of metrics

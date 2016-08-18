@@ -448,6 +448,7 @@ stopReading:
 				flushFunction()
 				continue
 			}
+
 			base.log.Debug(base.Name(), " metric: ", incomingMetric)
 			metrics = append(metrics, incomingMetric)
 			currentBufferSize++

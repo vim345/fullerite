@@ -141,7 +141,7 @@ func (c *NerveHTTPD) emitHTTPDMetric(service util.NerveService, port int) {
 	for _, metric := range metrics {
 		c.Channel() <- metric
 	}
-	c.Channel() <- metric.WithValue("fullerite.emit_now", 0)
+	c.Channel() <- metric.Sentinel()
 }
 
 func (c *NerveHTTPD) getMetrics(service util.NerveService, port int) []metric.Metric {

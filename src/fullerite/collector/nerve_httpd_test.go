@@ -203,7 +203,7 @@ func TestNerveHTTPDCollectWhiteList(t *testing.T) {
 			break
 		}
 	}
-	assert.Equal(t, 17, len(actual))
+	assert.Equal(t, 18, len(actual))
 
 	metricMap := map[string]metric.Metric{}
 	for _, m := range actual {
