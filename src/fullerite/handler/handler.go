@@ -426,6 +426,14 @@ func (base *BaseHandler) listenForMetrics(
 	ticker := time.NewTicker(time.Duration(base.Interval()) * time.Second)
 	flusher := ticker.C
 
+	flushFunction := func() {
+		go base.emitAndTime(metrics, emitFunc, emissionResults)
+
+		// will get copied into this call, meaning it's ok to clear it
+		metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
+		currentBufferSize = 0
+	}
+
 stopReading:
 	for {
 		select {
@@ -435,24 +443,26 @@ stopReading:
 				// we have been asked to stop reading.
 				break stopReading
 			}
+			if incomingMetric.Sentinel() {
+				base.log.Info("Sentinel :", currentBufferSize, " col: ", collectorName)
+				if currentBufferSize > 0 {
+					flushFunction()
+				}
+				continue
+			}
+
 			base.log.Debug(base.Name(), " metric: ", incomingMetric)
 			metrics = append(metrics, incomingMetric)
 			currentBufferSize++
 
 			if int(currentBufferSize) >= collectorEnd.BufferSize {
 				base.log.Debug("Full: ", currentBufferSize, " col: ", collectorName)
-				go base.emitAndTime(metrics, emitFunc, emissionResults)
-
-				// will get copied into this call, meaning it's ok to clear it
-				metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
-				currentBufferSize = 0
+				flushFunction()
 			}
 		case <-flusher:
 			if currentBufferSize > 0 {
 				base.log.Debug("Time: ", currentBufferSize, " col: ", collectorName)
-				go base.emitAndTime(metrics, emitFunc, emissionResults)
-				metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
-				currentBufferSize = 0
+				flushFunction()
 			}
 		}
 	}
