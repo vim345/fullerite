@@ -445,7 +445,9 @@ stopReading:
 			}
 			if incomingMetric.Sentinel() {
 				base.log.Info("Sentinel :", currentBufferSize, " col: ", collectorName)
-				flushFunction()
+				if currentBufferSize > 0 {
+					flushFunction()
+				}
 				continue
 			}
 

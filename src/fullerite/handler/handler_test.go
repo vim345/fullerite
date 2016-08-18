@@ -234,6 +234,16 @@ func TestSentinelFlushing(t *testing.T) {
 	assert.Equal(t, uint64(2), base.metricsSent)
 	assert.Equal(t, uint64(0), base.metricsDropped)
 
+	// send more metrics
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric")
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric1")
+	// emit sentinel value to trigger flush
+	base.CollectorEndpoints()["collector1"].Channel <- metric.Sentinel()
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, uint64(4), base.metricsSent)
+	assert.Equal(t, uint64(0), base.metricsDropped)
+	assert.Equal(t, uint64(2), base.totalEmissions)
+
 	// This is just to stop goroutines that have been started before
 	base.channel <- metric.Metric{}
 	base.CollectorEndpoints()["collector1"].Channel <- metric.Metric{}
