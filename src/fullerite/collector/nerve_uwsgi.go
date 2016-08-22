@@ -121,6 +121,10 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 		n.servicesWhitelist = config.GetAsSlice(val)
 	}
 
+	if val, exists := configMap["http_timeout"]; exists {
+		n.timeout = config.GetAsInt(val, 2)
+	}
+
 	n.configureCommonParams(configMap)
 }
 

@@ -362,6 +362,7 @@ func TestDefaultConfigNerveUWSGI(t *testing.T) {
 	inst.Configure(make(map[string]interface{}))
 
 	assert.Equal(t, 12, inst.Interval())
+	assert.Equal(t, 2, inst.timeout)
 	assert.Equal(t, "/etc/nerve/nerve.conf.json", inst.configFilePath)
 	assert.Equal(t, "status/metrics", inst.queryPath)
 }
@@ -371,6 +372,7 @@ func TestConfigNerveUWSGI(t *testing.T) {
 		"interval":       345,
 		"configFilePath": "/etc/your/moms/house",
 		"queryPath":      "littlepiggies",
+		"http_timeout":   12,
 	}
 
 	inst := getTestNerveUWSGI()
@@ -379,6 +381,7 @@ func TestConfigNerveUWSGI(t *testing.T) {
 	assert.Equal(t, 345, inst.Interval())
 	assert.Equal(t, "/etc/your/moms/house", inst.configFilePath)
 	assert.Equal(t, "littlepiggies", inst.queryPath)
+	assert.Equal(t, 12, inst.timeout)
 }
 
 func TestUWSGIMetricConversion(t *testing.T) {
