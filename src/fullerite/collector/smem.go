@@ -5,15 +5,20 @@
 //   "user": "some-user", <-- This user should be able to access the /proc/<pid>/smaps files listed in the whitelist below
 //   "procsWhitelist": "apache2|tmux",
 //   "smemPath": "/usr/bin/smem" <-- Path to the smem executable
+//   "dimensionsFromCmdline": {"worker_id": "apache worker ([0-9]+)"}
 // }
 
 package collector
 
 import (
+	"fmt"
 	"fullerite/config"
 	"fullerite/metric"
 	"fullerite/util"
+	"io/ioutil"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 
 	l "github.com/Sirupsen/logrus"
@@ -22,26 +27,30 @@ import (
 type smemStatLine struct {
 	proc string
 	pss  float64
+	uss  float64
 	rss  float64
 	vss  float64
+	pid  int
 }
 
 // SmemStats Collector to record smem stats
 type SmemStats struct {
 	baseCollector
-	user               string
-	whitelistedProcs   string
-	smemPath           string
-	whitelistedMetrics []string
+	user                  string
+	whitelistedProcs      string
+	smemPath              string
+	whitelistedMetrics    []string
+	dimensionsFromCmdline map[string]string
 }
 
 var (
-	requiredConfigs = []string{"user", "procsWhitelist"}
-
-	execCommand   = exec.Command
-	commandOutput = (*exec.Cmd).Output
-	getSmemStats  = (*SmemStats).getSmemStats
-	allMetrics    = []string{"rss", "vss", "pss"}
+	requiredConfigs     = []string{"user", "procsWhitelist"}
+	execCommand         = exec.Command
+	commandOutput       = (*exec.Cmd).Output
+	getSmemStats        = (*SmemStats).getSmemStats
+	getCustomDimensions = (*SmemStats).getCustomDimensions
+	readCmdline         = (*SmemStats).readCmdline
+	allMetrics          = []string{"rss", "vss", "pss", "uss"}
 )
 
 func init() {
@@ -85,26 +94,59 @@ func (s *SmemStats) Configure(configMap map[string]interface{}) {
 	} else {
 		s.whitelistedMetrics = allMetrics
 	}
+
+	if dimensionsFromCmdline, exists := configMap["dimensionsFromCmdline"]; exists {
+		s.dimensionsFromCmdline = config.GetAsMap(dimensionsFromCmdline)
+	}
 }
 
-// Collect periodically call smem periodically
+// Collect calls smem periodically
 func (s *SmemStats) Collect() {
 	if s.whitelistedProcs == "" || s.user == "" || s.smemPath == "" {
 		return
 	}
 
 	for _, stat := range getSmemStats(s) {
+		dims := getCustomDimensions(s, stat.pid)
 		for _, element := range s.whitelistedMetrics {
+			var m metric.Metric
 			switch element {
 			case "pss":
-				s.Channel() <- metric.WithValue(stat.proc+".smem.pss", stat.pss)
+				m = metric.WithValue(stat.proc+".smem.pss", stat.pss)
+			case "uss":
+				m = metric.WithValue(stat.proc+".smem.uss", stat.uss)
 			case "vss":
-				s.Channel() <- metric.WithValue(stat.proc+".smem.vss", stat.vss)
+				m = metric.WithValue(stat.proc+".smem.vss", stat.vss)
 			case "rss":
-				s.Channel() <- metric.WithValue(stat.proc+".smem.rss", stat.rss)
+				m = metric.WithValue(stat.proc+".smem.rss", stat.rss)
+			}
+			m.AddDimensions(dims)
+			s.Channel() <- m
+		}
+	}
+}
+
+func (s *SmemStats) readCmdline(fileName string) ([]byte, error) {
+	return ioutil.ReadFile(fileName)
+}
+
+func (s *SmemStats) getCustomDimensions(pid int) map[string]string {
+	dimensions := make(map[string]string)
+	if pid != 0 {
+		for name, rexStr := range s.dimensionsFromCmdline {
+			data, err := readCmdline(s, fmt.Sprintf("/proc/%d/cmdline", pid))
+			if err != nil {
+				s.log.Warn(err.Error())
+			} else {
+				rex, _ := regexp.Compile(rexStr)
+				match := rex.FindStringSubmatch(string(data))
+				if len(match) > 1 {
+					dimensions[name] = string(match[1])
+				}
 			}
 		}
 	}
+	return dimensions
 }
 
 func (s *SmemStats) getSmemStats() []smemStatLine {
@@ -116,7 +158,7 @@ func (s *SmemStats) getSmemStats() []smemStatLine {
 		"-u", s.user,
 		s.smemPath,
 		"-P", s.whitelistedProcs,
-		"-c", "pss rss vss name")
+		"-c", "pss uss rss vss name pid")
 	if out, err = commandOutput(cmd); err != nil {
 		s.log.Error(err.Error())
 		return nil
@@ -132,11 +174,14 @@ func (s *SmemStats) parseSmemLines(out string) []smemStatLine {
 
 	for _, line := range lines {
 		parts := strings.Fields(line)
+		pid, _ := strconv.Atoi(parts[5])
 		stats = append(stats, smemStatLine{
-			proc: parts[3],
+			proc: parts[4],
 			pss:  util.StrToFloat(parts[0]),
-			rss:  util.StrToFloat(parts[1]),
-			vss:  util.StrToFloat(parts[2]),
+			uss:  util.StrToFloat(parts[1]),
+			rss:  util.StrToFloat(parts[2]),
+			vss:  util.StrToFloat(parts[3]),
+			pid:  pid,
 		})
 	}
 

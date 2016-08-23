@@ -34,6 +34,12 @@ func RegisterHandler(name string, f func(chan metric.Metric, int, int, time.Dura
 	handlerConstructs[name] = f
 }
 
+// CollectorEnd defines a endpoint from which handler reads metrics from collector
+type CollectorEnd struct {
+	Channel    chan metric.Metric
+	BufferSize int
+}
+
 // New creates a new Handler based on the requested handler name.
 func New(name string) Handler {
 	channel := make(chan metric.Metric)
@@ -68,8 +74,8 @@ type Handler interface {
 	String() string
 	Channel() chan metric.Metric
 
-	CollectorChannels() map[string]chan metric.Metric
-	SetCollectorChannels(map[string]chan metric.Metric)
+	CollectorEndpoints() map[string]CollectorEnd
+	SetCollectorEndpoints(map[string]CollectorEnd)
 
 	Interval() int
 	SetInterval(int)
@@ -110,12 +116,12 @@ type emissionTiming struct {
 
 // BaseHandler is class to handle the boiler plate parts of the handlers
 type BaseHandler struct {
-	channel           chan metric.Metric
-	collectorChannels map[string]chan metric.Metric
-	name              string
-	prefix            string
-	defaultDimensions map[string]string
-	log               *l.Entry
+	channel            chan metric.Metric
+	collectorEndpoints map[string]CollectorEnd
+	name               string
+	prefix             string
+	defaultDimensions  map[string]string
+	log                *l.Entry
 
 	interval      int
 	maxBufferSize int
@@ -169,16 +175,16 @@ func (base BaseHandler) Channel() chan metric.Metric {
 	return base.channel
 }
 
-// CollectorChannels : the channels to handler listens for metrics on
-func (base BaseHandler) CollectorChannels() map[string]chan metric.Metric {
-	return base.collectorChannels
+// CollectorEndpoints : the channels to handler listens for metrics on
+func (base BaseHandler) CollectorEndpoints() map[string]CollectorEnd {
+	return base.collectorEndpoints
 }
 
-// SetCollectorChannels : the channels to handler listens for metrics on
-func (base *BaseHandler) SetCollectorChannels(c map[string]chan metric.Metric) {
-	base.collectorChannels = make(map[string]chan metric.Metric)
-	for name, channel := range c {
-		base.collectorChannels[name] = channel
+// SetCollectorEndpoints : the channels to handler listens for metrics on
+func (base *BaseHandler) SetCollectorEndpoints(c map[string]CollectorEnd) {
+	base.collectorEndpoints = make(map[string]CollectorEnd)
+	for name, colInfo := range c {
+		base.collectorEndpoints[name] = colInfo
 	}
 }
 
@@ -262,7 +268,7 @@ func (base BaseHandler) MaxIdleConnectionsPerHost() int {
 
 // InitListeners - initiate listener channels for collectors
 func (base *BaseHandler) InitListeners(globalConfig config.Config) {
-	collectorChannels := make(map[string]chan metric.Metric)
+	collectorEndpoints := make(map[string]CollectorEnd)
 	for _, c := range append(globalConfig.Collectors, globalConfig.DiamondCollectors...) {
 
 		// If the handler's whitelist is set, then only metrics from collectors in it will be emitted. If the same
@@ -283,9 +289,28 @@ func (base *BaseHandler) InitListeners(globalConfig config.Config) {
 				continue
 			}
 		}
-		collectorChannels[c] = make(chan metric.Metric, 1)
+		collectorEndpoints[c] = CollectorEnd{
+			make(chan metric.Metric, 1),
+			getCollectorBatchSize(c, globalConfig, base.MaxBufferSize()),
+		}
 	}
-	base.SetCollectorChannels(collectorChannels)
+	fmt.Println(collectorEndpoints)
+	base.SetCollectorEndpoints(collectorEndpoints)
+}
+
+func getCollectorBatchSize(collectorName string,
+	globalConfig config.Config,
+	defaultBufSize int) (result int) {
+	conf, err := globalConfig.GetCollectorConfig(collectorName)
+	result = defaultBufSize
+	if err != nil {
+		return
+	}
+
+	if bufferSize, exists := conf["max_buffer_size"]; exists {
+		result = config.GetAsInt(bufferSize, defaultBufSize)
+	}
+	return
 }
 
 // KeepAliveInterval - return keep alive interval
@@ -381,48 +406,63 @@ func (base *BaseHandler) run(emitFunc func([]metric.Metric) bool) {
 	emissionResults := make(chan emissionTiming)
 	go base.recordEmissions(emissionResults)
 
-	go base.listenForMetrics(emitFunc, base.Channel(), emissionResults)
-	for k := range base.CollectorChannels() {
-		go base.listenForMetrics(emitFunc, base.CollectorChannels()[k], emissionResults)
+	defaultCollectorEnd := CollectorEnd{base.Channel(), base.MaxBufferSize()}
+
+	go base.listenForMetrics(emitFunc, defaultCollectorEnd, emissionResults, "")
+	for k := range base.CollectorEndpoints() {
+		go base.listenForMetrics(emitFunc, base.CollectorEndpoints()[k], emissionResults, k)
 	}
 }
 
 func (base *BaseHandler) listenForMetrics(
 	emitFunc func([]metric.Metric) bool,
-	c <-chan metric.Metric,
-	emissionResults chan<- emissionTiming) {
+	collectorEnd CollectorEnd,
+	emissionResults chan<- emissionTiming,
+	collectorName string) {
 
-	metrics := make([]metric.Metric, 0, base.MaxBufferSize())
+	metrics := make([]metric.Metric, 0, collectorEnd.BufferSize)
 	currentBufferSize := 0
 
 	ticker := time.NewTicker(time.Duration(base.Interval()) * time.Second)
 	flusher := ticker.C
 
+	flushFunction := func() {
+		go base.emitAndTime(metrics, emitFunc, emissionResults)
+
+		// will get copied into this call, meaning it's ok to clear it
+		metrics = make([]metric.Metric, 0, collectorEnd.BufferSize)
+		currentBufferSize = 0
+	}
+
 stopReading:
 	for {
 		select {
-		case incomingMetric := <-c:
+		case incomingMetric := <-collectorEnd.Channel:
 			if incomingMetric.ZeroValue() {
 				// a zero metric value means, either channel has been closed or
 				// we have been asked to stop reading.
 				break stopReading
 			}
+			if incomingMetric.Sentinel() {
+				base.log.Info("Sentinel :", currentBufferSize, " col: ", collectorName)
+				if currentBufferSize > 0 {
+					flushFunction()
+				}
+				continue
+			}
+
 			base.log.Debug(base.Name(), " metric: ", incomingMetric)
 			metrics = append(metrics, incomingMetric)
 			currentBufferSize++
 
-			if int(currentBufferSize) >= base.MaxBufferSize() {
-				go base.emitAndTime(metrics, emitFunc, emissionResults)
-
-				// will get copied into this call, meaning it's ok to clear it
-				metrics = make([]metric.Metric, 0, base.MaxBufferSize())
-				currentBufferSize = 0
+			if int(currentBufferSize) >= collectorEnd.BufferSize {
+				base.log.Debug("Full: ", currentBufferSize, " col: ", collectorName)
+				flushFunction()
 			}
 		case <-flusher:
 			if currentBufferSize > 0 {
-				go base.emitAndTime(metrics, emitFunc, emissionResults)
-				metrics = make([]metric.Metric, 0, base.MaxBufferSize())
-				currentBufferSize = 0
+				base.log.Debug("Time: ", currentBufferSize, " col: ", collectorName)
+				flushFunction()
 			}
 		}
 	}

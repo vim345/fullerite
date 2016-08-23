@@ -133,9 +133,8 @@ func (parser *BaseParser) createMetricFromDatam(rollup string,
 	metricName string, metricType string) (metric.Metric, bool) {
 	m := metric.New(metricName)
 	m.MetricType = metricType
-	if !parser.ccEnabled {
-		m.AddDimension("rollup", rollup)
-	}
+	m.AddDimension("rollup", rollup)
+
 	// only add things that have a numeric base
 	switch value.(type) {
 	case float64:

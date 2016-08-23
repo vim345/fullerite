@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"fullerite/config"
 	"net"
 	"regexp"
 	"strconv"
@@ -39,6 +38,7 @@ type nerveConfigData struct {
 type NerveService struct {
 	Name      string
 	Namespace string
+	Port      int
 }
 
 // EndPoint defines a struct for endpoints
@@ -50,8 +50,9 @@ type EndPoint struct {
 // ParseNerveConfig is responsible for taking the JSON string coming in into a map of service:port
 // it will also filter based on only services runnign on this host.
 // To deal with multi-tenancy we actually will return port:service
-func ParseNerveConfig(raw *[]byte) (map[int]NerveService, error) {
-	results := make(map[int]NerveService)
+func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, error) {
+	services := make(map[string]NerveService)
+	results := []NerveService{}
 	ips, err := ipGetter()
 
 	if err != nil {
@@ -80,23 +81,43 @@ func ParseNerveConfig(raw *[]byte) (map[int]NerveService, error) {
 			service.Namespace = strings.Split(rawServiceName, ".")[1]
 			port := extractPort(serviceConfig)
 			if port != -1 {
-				results[port] = *service
+				service.Port = port
+				if namespaceIncluded {
+					services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
+				} else {
+					services[service.Name+":"+strconv.Itoa(port)] = *service
+				}
 			}
 		}
 	}
 
+	for _, value := range services {
+		results = append(results, value)
+	}
 	return results, nil
 }
 
 func extractPort(serviceConfig map[string]interface{}) int {
-	checkConfig := make(map[string]string)
+	checkConfig := make(map[string]interface{})
 
 	if checkArray, ok := serviceConfig["checks"].([]interface{}); ok {
-		checkConfig = config.GetAsMap(checkArray[0])
+		checkConfig = checkArray[0].(map[string]interface{})
 	}
 
-	if uri, ok := checkConfig["uri"]; ok {
-		uriArray := strings.Split(uri, "/")
+	var uri string
+
+	if uriInterface, ok := checkConfig["uri"]; ok {
+		if str, ok := uriInterface.(string); ok {
+			uri = str
+		}
+	}
+
+	if len(uri) == 0 {
+		return -1
+	}
+
+	uriArray := strings.Split(uri, "/")
+	if len(uriArray) > 3 {
 		protocol := strings.TrimSpace(uriArray[1])
 		port := uriArray[3]
 		if !httpRegexp.MatchString(protocol) {
@@ -105,7 +126,6 @@ func extractPort(serviceConfig map[string]interface{}) int {
 		if portInt, err := strconv.ParseInt(port, 10, 64); err == nil {
 			return int(portInt)
 		}
-		return -1
 	}
 	return -1
 }

@@ -30,6 +30,7 @@ type DockerStats struct {
 	skipRegex         *regexp.Regexp
 	endpoint          string
 	mu                *sync.Mutex
+	emitImageName     bool
 }
 
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
@@ -62,6 +63,7 @@ func newDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entr
 	d.name = "DockerStats"
 	d.previousCPUValues = make(map[string]*CPUValues)
 	d.compiledRegex = make(map[string]*Regex)
+	d.emitImageName = false
 	return d
 }
 
@@ -86,6 +88,14 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 	} else {
 		d.endpoint = endpoint
 	}
+	if emitImageName, exists := configMap["emit_image_name"]; exists {
+		if boolean, ok := emitImageName.(bool); ok {
+			d.emitImageName = boolean
+		} else {
+			d.log.Warn("Failed to cast emit_image_name: ", reflect.TypeOf(emitImageName))
+		}
+	}
+
 	d.dockerClient, _ = docker.NewClient(d.endpoint)
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
 		for dimension, generator := range generatedDimensions.(map[string]interface{}) {
@@ -195,14 +205,21 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		rxb.AddDimension("iface", netiface)
 		ret = append(ret, rxb)
 	}
-	additionalDimensions := map[string]string{
-		"container_id":   container.ID,
-		"container_name": strings.TrimPrefix(container.Name, "/"),
+	additionalDimensions := map[string]string{}
+	if d.emitImageName {
+		stringList := strings.Split(container.Config.Image, ":")
+		additionalDimensions = map[string]string{
+			"image_name": stringList[0],
+		}
+	} else {
+		additionalDimensions = map[string]string{
+			"container_id":   container.ID,
+			"container_name": strings.TrimPrefix(container.Name, "/"),
+		}
 	}
 	metric.AddToAll(&ret, additionalDimensions)
 	ret = append(ret, buildDockerMetric("DockerContainerCount", metric.Counter, 1))
 	metric.AddToAll(&ret, d.extractDimensions(container))
-
 	return ret
 }
 

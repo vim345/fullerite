@@ -62,6 +62,10 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 		n.servicesWhitelist = config.GetAsSlice(val)
 	}
 
+	if val, exists := configMap["http_timeout"]; exists {
+		n.timeout = config.GetAsInt(val, 2)
+	}
+
 	n.configureCommonParams(configMap)
 }
 
@@ -72,15 +76,15 @@ func (n *nerveUWSGICollector) Collect() {
 		return
 	}
 
-	servicePortMap, err := util.ParseNerveConfig(&rawFileContents)
+	services, err := util.ParseNerveConfig(&rawFileContents, false)
 	if err != nil {
 		n.log.Warn("Failed to parse the nerve config at ", n.configFilePath, ": ", err)
 		return
 	}
-	n.log.Debug("Finished parsing Nerve config into ", servicePortMap)
+	n.log.Debug("Finished parsing Nerve config into ", services)
 
-	for port, service := range servicePortMap {
-		go n.queryService(service.Name, port)
+	for _, service := range services {
+		go n.queryService(service.Name, service.Port)
 	}
 }
 

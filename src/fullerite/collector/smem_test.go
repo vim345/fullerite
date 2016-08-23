@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var smemOutput = `   5   864  2442180 apache2
+var smemOutput = `    5     343     864    2442180 apache2 1234
 `
 
 func TestNewSmemStats(t *testing.T) {
@@ -44,7 +44,7 @@ func TestSmemStatsConfigure(t *testing.T) {
 			expectedWhitelist:   "apache2|tmux",
 			expectedUser:        "fullerite",
 			expectedSmemPath:    "/path/to/smem",
-			expectedMetricslist: []string{"pss"},
+			expectedMetricslist: []string{"pss", "uss"},
 			msg:                 "All configs are valid, so no errors",
 		},
 		{
@@ -52,7 +52,7 @@ func TestSmemStatsConfigure(t *testing.T) {
 			expectedWhitelist:   "",
 			expectedUser:        "",
 			expectedSmemPath:    "",
-			expectedMetricslist: []string{"rss", "vss", "pss"},
+			expectedMetricslist: []string{"rss", "vss", "pss", "uss"},
 			msg:                 "Required configs missing",
 		},
 	}
@@ -73,10 +73,12 @@ func TestSmemStatsConfigure(t *testing.T) {
 func TestSmemStatsCollect(t *testing.T) {
 	oldExecCommand := execCommand
 	oldCommandOutput := commandOutput
+	oldGetCustomDimensions := getCustomDimensions
 
 	defer func() {
 		execCommand = oldExecCommand
 		commandOutput = oldCommandOutput
+		getCustomDimensions = oldGetCustomDimensions
 	}()
 
 	execCommand = func(string, ...string) *exec.Cmd {
@@ -87,11 +89,19 @@ func TestSmemStatsCollect(t *testing.T) {
 		return []byte(smemOutput), nil
 	}
 
+	getCustomDimensions = func(_ *SmemStats, pid int) map[string]string {
+		return map[string]string{
+			"dim1": "val1",
+		}
+	}
+
+	expectedDims := map[string]string{"dim1": "val1"}
 	actual := []metric.Metric{}
 	expected := []metric.Metric{
-		metric.Metric{Name: "apache2.smem.pss", MetricType: "gauge", Value: 5, Dimensions: map[string]string{}},
-		metric.Metric{Name: "apache2.smem.vss", MetricType: "gauge", Value: 2.44218e+06, Dimensions: map[string]string{}},
-		metric.Metric{Name: "apache2.smem.rss", MetricType: "gauge", Value: 864, Dimensions: map[string]string{}},
+		metric.Metric{Name: "apache2.smem.pss", MetricType: "gauge", Value: 5, Dimensions: expectedDims},
+		metric.Metric{Name: "apache2.smem.uss", MetricType: "gauge", Value: 343, Dimensions: expectedDims},
+		metric.Metric{Name: "apache2.smem.vss", MetricType: "gauge", Value: 2.44218e+06, Dimensions: expectedDims},
+		metric.Metric{Name: "apache2.smem.rss", MetricType: "gauge", Value: 864, Dimensions: expectedDims},
 	}
 
 	c := make(chan metric.Metric)
@@ -99,7 +109,7 @@ func TestSmemStatsCollect(t *testing.T) {
 	sut.user = "user"
 	sut.whitelistedProcs = "some|whitelist"
 	sut.smemPath = "/path/to/smem"
-	sut.whitelistedMetrics = []string{"pss", "vss", "rss"}
+	sut.whitelistedMetrics = []string{"pss", "uss", "vss", "rss"}
 	go sut.Collect()
 
 	for i := 0; i < len(expected); i++ {
@@ -135,7 +145,7 @@ func TestSmemStatsCollectNotCalled(t *testing.T) {
 			smemPath: "/path/to/smem",
 		},
 		{
-			whitelistedMetrics: []string{"pss"},
+			whitelistedMetrics: []string{"pss", "uss"},
 		},
 	}
 
@@ -150,4 +160,24 @@ func TestSmemStatsCollectNotCalled(t *testing.T) {
 
 		assert.False(t, getSmemStatsCalled)
 	}
+}
+
+func TestGetCustomDimensions(t *testing.T) {
+	oldReadCmdline := readCmdline
+	defer func() { readCmdline = oldReadCmdline }()
+
+	readCmdline = func(_ *SmemStats, _ string) ([]byte, error) {
+		return []byte("apache worker 1"), nil
+	}
+
+	s := newSmemStats(nil, 0, nil).(*SmemStats)
+	s.dimensionsFromCmdline = map[string]string{
+		"worker_id": ".* worker ([0-9]+)$",
+	}
+
+	expectedDims := map[string]string{
+		"worker_id": "1",
+	}
+
+	assert.Equal(t, getCustomDimensions(s, 123), expectedDims)
 }

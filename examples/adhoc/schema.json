@@ -6,7 +6,7 @@
             "dim1":"val1",
             "dim2":"val2"
         },
-        "metricType":"gauge"
+        "type":"gauge"
     },
     {
         "name":"anotherTestMetric",
@@ -15,6 +15,6 @@
             "dim1":"val1",
             "dim2":"val2"
         },
-        "metricType":"cumcounter"
+        "type":"cumcounter"
     }
 ]

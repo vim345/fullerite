@@ -12,12 +12,12 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/davecheney/profile"
+	"github.com/pkg/profile"
 )
 
 const (
 	name    = "fullerite"
-	version = "0.4.20"
+	version = "0.4.31"
 	desc    = "Diamond compatible metrics collector"
 )
 
@@ -26,7 +26,7 @@ var log = logrus.WithFields(logrus.Fields{"app": "fullerite"})
 func initLogrus(ctx *cli.Context) {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableColors:   true,
-		TimestampFormat: time.RFC822,
+		TimestampFormat: time.RFC850,
 		FullTimestamp:   true,
 	})
 
@@ -100,14 +100,10 @@ func main() {
 
 func start(ctx *cli.Context) {
 	if ctx.Bool("profile") {
-		pcfg := profile.Config{
-			CPUProfile:   true,
-			MemProfile:   true,
-			BlockProfile: true,
-			ProfilePath:  ".",
-		}
-		p := profile.Start(&pcfg)
-		defer p.Stop()
+		defer profile.Start(profile.CPUProfile).Stop()
+		defer profile.Start(profile.MemProfile).Stop()
+		defer profile.Start(profile.BlockProfile).Stop()
+		defer profile.Start(profile.ProfilePath("."))
 	}
 	quit := make(chan bool)
 	initLogrus(ctx)

@@ -182,6 +182,73 @@ func TestHandlerRunFlushInterval(t *testing.T) {
 	base.channel <- metric.Metric{}
 }
 
+func TestHandlerBufferSize(t *testing.T) {
+	base := BaseHandler{}
+	base.log = l.WithField("testing", "basehandler_flush")
+	base.interval = 5
+	base.maxBufferSize = 100
+	base.channel = make(chan metric.Metric)
+	base.collectorEndpoints = map[string]CollectorEnd{
+		"collector1": CollectorEnd{make(chan metric.Metric), 3},
+	}
+
+	emitFunc := func(metrics []metric.Metric) bool {
+		assert.Equal(t, 3, len(metrics))
+		return true
+	}
+
+	go base.run(emitFunc)
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric")
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric1")
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric2")
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, uint64(3), base.metricsSent)
+	assert.Equal(t, uint64(0), base.metricsDropped)
+
+	// This is just to stop goroutines that have been started before
+	base.channel <- metric.Metric{}
+	base.CollectorEndpoints()["collector1"].Channel <- metric.Metric{}
+}
+
+func TestSentinelFlushing(t *testing.T) {
+	base := BaseHandler{}
+	base.log = l.WithField("testing", "basehandler_flush")
+	base.interval = 100
+	base.maxBufferSize = 100
+	base.channel = make(chan metric.Metric)
+	base.collectorEndpoints = map[string]CollectorEnd{
+		"collector1": CollectorEnd{make(chan metric.Metric), 100},
+	}
+
+	emitFunc := func(metrics []metric.Metric) bool {
+		assert.Equal(t, 2, len(metrics))
+		return true
+	}
+
+	go base.run(emitFunc)
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric")
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric1")
+	// emit sentinel value to trigger flush
+	base.CollectorEndpoints()["collector1"].Channel <- metric.Sentinel()
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, uint64(2), base.metricsSent)
+	assert.Equal(t, uint64(0), base.metricsDropped)
+
+	// send more metrics
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric")
+	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric1")
+	// emit sentinel value to trigger flush
+	base.CollectorEndpoints()["collector1"].Channel <- metric.Sentinel()
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, uint64(4), base.metricsSent)
+	assert.Equal(t, uint64(0), base.metricsDropped)
+	assert.Equal(t, uint64(2), base.totalEmissions)
+
+	// This is just to stop goroutines that have been started before
+	base.channel <- metric.Metric{}
+	base.CollectorEndpoints()["collector1"].Channel <- metric.Metric{}
+}
+
 func TestHandlerRun(t *testing.T) {
 	base := BaseHandler{}
 	base.log = l.WithField("testing", "basehandler_run")
