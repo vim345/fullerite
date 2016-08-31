@@ -1,10 +1,9 @@
 package collector
 
 import (
+	"fullerite/dropwizard"
 	"fullerite/metric"
 	"fullerite/util"
-	"path"
-	"test_utils"
 
 	"encoding/json"
 	"fmt"
@@ -327,32 +326,6 @@ func parseURL(url string) (string, string) {
 	return ip, port
 }
 
-func extractMetricWithName(metrics []metric.Metric,
-	metricName string) (metric.Metric, bool) {
-	var m metric.Metric
-
-	for _, metric := range metrics {
-		if metric.Name == metricName {
-			return metric, true
-		}
-	}
-
-	return m, false
-}
-
-func extractMetricWithType(metrics []metric.Metric,
-	metricType string) (metric.Metric, bool) {
-	var m metric.Metric
-
-	for _, metric := range metrics {
-		if metric.MetricType == metricType {
-			return metric, true
-		}
-	}
-
-	return m, false
-}
-
 func getTestNerveUWSGI() *nerveUWSGICollector {
 	return newNerveUWSGI(make(chan metric.Metric), 12, l.WithField("testing", "nerveuwsgi")).(*nerveUWSGICollector)
 }
@@ -382,121 +355,6 @@ func TestConfigNerveUWSGI(t *testing.T) {
 	assert.Equal(t, "/etc/your/moms/house", inst.configFilePath)
 	assert.Equal(t, "littlepiggies", inst.queryPath)
 	assert.Equal(t, 12, inst.timeout)
-}
-
-func TestUWSGIMetricConversion(t *testing.T) {
-	testMeters := make(map[string]map[string]interface{})
-	testMeters["pyramid_uwsgi_metrics.tweens.5xx-responses"] = map[string]interface{}{
-		"count":     957,
-		"mean_rate": 0.0006172935981330262,
-		"m15_rate":  2.8984757611832113e-41,
-		"m5_rate":   1.8870959302511822e-119,
-		"m1_rate":   3e-323,
-
-		// this will not create a metric
-		"units": "events/second",
-	}
-	testMeters["pyramid_uwsgi_metrics.tweens.4xx-responses"] = map[string]interface{}{
-		"count":     366116,
-		"mean_rate": 0.2333071157843687,
-		"m15_rate":  0.22693345170298124,
-		"m5_rate":   0.21433439128223822,
-		"m1_rate":   0.14771304656654516,
-
-		// this will not create a metric
-		"units": "events/second",
-	}
-
-	actual := convertToMetrics(testMeters, "metricType", false)
-
-	// only the numbers are made
-	assert.Equal(t, 10, len(actual))
-	for _, m := range actual {
-		assert.Equal(t, "metricType", m.MetricType)
-
-		// the other dims are applied at a higher level
-		assert.Equal(t, 1, len(m.Dimensions))
-
-		rollup, exists := m.GetDimensionValue("rollup")
-		assert.True(t, exists)
-
-		switch m.Name {
-		case "pyramid_uwsgi_metrics.tweens.5xx-responses":
-			val, exists := map[string]float64{
-				"mean_rate": 0.0006172935981330262,
-				"m15_rate":  2.8984757611832113e-41,
-				"m5_rate":   1.8870959302511822e-119,
-				"m1_rate":   3e-323,
-				"count":     957,
-			}[rollup]
-			assert.True(t, exists, "unknown rollup "+rollup)
-			assert.Equal(t, val, m.Value)
-		case "pyramid_uwsgi_metrics.tweens.4xx-responses":
-			val, exists := map[string]float64{
-				"count":     366116,
-				"mean_rate": 0.2333071157843687,
-				"m15_rate":  0.22693345170298124,
-				"m5_rate":   0.21433439128223822,
-				"m1_rate":   0.14771304656654516,
-			}[rollup]
-			assert.True(t, exists, "unknown rollup "+rollup)
-			assert.Equal(t, val, m.Value, "mismatching value on rollup "+rollup)
-		default:
-			t.Fatalf("unknown metric name %s", m.Name)
-		}
-	}
-}
-
-func TestUWSGIMetricConversionCumulativeCountersEnabled(t *testing.T) {
-	testMeters := make(map[string]map[string]interface{})
-	testMeters["pyramid_uwsgi_metrics.tweens.5xx-responses"] = map[string]interface{}{
-		"count":     957,
-		"mean_rate": 0.0006172935981330262,
-		"m15_rate":  2.8984757611832113e-41,
-		"m5_rate":   1.8870959302511822e-119,
-		"m1_rate":   3e-323,
-
-		// this will not create a metric
-		"units": "events/second",
-	}
-	testMeters["pyramid_uwsgi_metrics.tweens.4xx-responses"] = map[string]interface{}{
-		"count":     366116,
-		"mean_rate": 0.2333071157843687,
-		"m15_rate":  0.22693345170298124,
-		"m5_rate":   0.21433439128223822,
-		"m1_rate":   0.14771304656654516,
-
-		// this will not create a metric
-		"units": "events/second",
-	}
-
-	actual := convertToMetrics(testMeters, "metricType", true)
-
-	for _, m := range actual {
-		switch m.Name {
-		case "pyramid_uwsgi_metrics.tweens.5xx-responses.mean_rate":
-			assert.Equal(t, 0.0006172935981330262, m.Value)
-		case "pyramid_uwsgi_metrics.tweens.4xx-responses.mean_rate":
-			assert.Equal(t, 0.2333071157843687, m.Value)
-		case "pyramid_uwsgi_metrics.tweens.5xx-responses.count":
-			assert.Equal(t, 957.0, m.Value)
-		case "pyramid_uwsgi_metrics.tweens.4xx-responses.count":
-			assert.Equal(t, 366116.0, m.Value)
-		default:
-			t.Fatalf("unknown metric name %s", m.Name)
-		}
-	}
-}
-
-func TestUWSGIResponseConversion(t *testing.T) {
-	uwsgiRsp := []byte(getTestUWSGIResponse())
-
-	actual, err := parseDefault(&uwsgiRsp, false)
-	assert.Nil(t, err)
-	validateUWSGIResults(t, actual)
-	for _, m := range actual {
-		assert.Equal(t, 2, len(m.Dimensions))
-	}
 }
 
 func TestErrorQueryEndpointResponse(t *testing.T) {
@@ -770,177 +628,14 @@ func TestNonConflictingServiceQueries(t *testing.T) {
 	validateEmptyChannel(t, inst.Channel())
 }
 
-func TestDropwizardCounter(t *testing.T) {
-	rawData := []byte(`
-{
-  "jetty": {
-     "percent": {
-         "foo": {
-            "active-requests": {
-              "count": 0,
-              "type": "counter"
-            }
-         }
-     }
-   }
-}
-        `)
+func TestUWSGIResponseConversion(t *testing.T) {
+	uwsgiRsp := []byte(getTestUWSGIResponse())
 
-	metrics, err := parseDefault(&rawData, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(metrics))
-}
-
-func TestInvalidDropwizard(t *testing.T) {
-	rawData := []byte(`
-{
-        "meters": {
-            "pyramid_uwsgi_metrics.tweens.2xx-responses": {
-                "units": "events/second"
-            }
-        }
-}
-        `)
-
-	metrics, err := parseDefault(&rawData, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(metrics))
-}
-
-func TestDropJVMMetrics(t *testing.T) {
-	rawData := []byte(`
-{
-  "jvm": {
-    "current_time": 1447699597200,
-    "uptime": 419631,
-    "thread_count": 315,
-    "vm": {
-      "version": "1.8.0_45-b14",
-      "name": "Java HotSpot(TM) 64-Bit Server VM"
-    },
-    "garbage-collectors": {
-      "ConcurrentMarkSweep": {
-        "runs": 13,
-        "time": 1531
-      },
-      "ParNew": {
-        "runs": 45146,
-        "time": 1324093
-      }
-    },
-    "daemon_thread_count": 96,
-    "thread-states": {
-      "terminated": 0,
-      "runnable": 0.17777777777777778,
-      "timed_waiting": 0.7714285714285715,
-      "waiting": 0.050793650793650794,
-      "new": 0,
-      "blocked": 0
-    }
-  }
-}
-        `)
-
-	metrics, err := parseDefault(&rawData, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 14, len(metrics))
-}
-
-func TestDropwizardTimer(t *testing.T) {
-	rawData := []byte(`
-{
-  "jetty": {
-    "trace-requests": {
-      "duration": {
-        "p98": 0,
-        "p99": 0,
-        "unit": "milliseconds",
-        "mean": 0
-      },
-      "rate": {
-        "count": 0,
-        "m5": 0,
-        "m15": 0,
-        "m1": 0,
-        "unit": "seconds",
-        "mean": 0
-      },
-      "type": "timer"
-    },
-    "foo": {
-      "type": "gauge",
-      "value": 5.612
-    }
-  }
-}
-        `)
-	metrics, err := parseDefault(&rawData, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 9, len(metrics))
-
-	_, ok := extractMetricWithName(metrics, "jetty.trace-requests.rate")
-	assert.True(t, ok)
-
-	_, ok = extractMetricWithName(metrics, "jetty.trace-requests.duration")
-	assert.True(t, ok)
-
-	_, ok = extractMetricWithName(metrics, "jetty.foo")
-	assert.True(t, ok)
-}
-
-func TestDropwizardGauge(t *testing.T) {
-	rawData := []byte(`
-{
-  "org.eclipse.jetty.servlet.ServletContextHandler": {
-    "percent-4xx-1m": {
-      "type": "gauge",
-      "value": 5.611051195902441e-77
-    }
-  }
-}
-        `)
-	metrics, err := parseDefault(&rawData, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(metrics))
-}
-
-func TestDropwizardJsonInput(t *testing.T) {
-	fixtureFilePath := path.Join(test_utils.DirectoryOfCurrentFile(), "/../../fixtures/dropwizard_data.json")
-	dat, err := ioutil.ReadFile(fixtureFilePath)
+	actual, err := dropwizard.Parse(uwsgiRsp, "", false)
 
 	assert.Nil(t, err)
-
-	metrics, err := parseDefault(&dat, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 560, len(metrics))
-}
-
-func TestDropwizardHistogram(t *testing.T) {
-	rawData := []byte(`
-{
-  "foo": {
-    "bar": {
-      "type": "histogram",
-      "count": 100,
-      "min": 2,
-      "max": 2,
-      "mean": 2,
-      "std_dev": 0,
-      "median": 2,
-      "p75": 2,
-      "p95": 2,
-      "p98": 2,
-      "p99": 2,
-      "p999": 2
-    }
-  }
-}
-        `)
-	metrics, err := parseDefault(&rawData, false)
-	assert.Nil(t, err)
-	assert.Equal(t, 11, len(metrics))
-	counterMetric, ok := extractMetricWithType(metrics, "COUNTER")
-	assert.True(t, ok)
-
-	assert.Equal(t, 100.0, counterMetric.Value)
+	validateUWSGIResults(t, actual)
+	for _, m := range actual {
+		assert.Equal(t, 2, len(m.Dimensions))
+	}
 }
