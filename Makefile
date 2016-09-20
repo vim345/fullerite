@@ -142,11 +142,11 @@ else ifeq ($(OS),CentOS)
 		--depends python \
 		--rpm-user "fuller" \
 		--rpm-group "fuller" \
-                --before-install "rpm/before_install.sh" \
+		--before-install "rpm/before_install.sh" \
 		--before-remove "rpm/before_rm.sh" \
 		-C build . \
 		../rpm/fullerite.systemd=/etc/systemd/system/fullerite.service \
-                ../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
+		../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
 else
 	@echo "OS not supported"
 endif
