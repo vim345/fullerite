@@ -142,11 +142,25 @@ else ifeq ($(OS),CentOS)
 		--depends python \
 		--rpm-user "fuller" \
 		--rpm-group "fuller" \
-                --before-install "rpm/before_install.sh" \
+		--before-install "rpm/before_install.sh" \
 		--before-remove "rpm/before_rm.sh" \
 		-C build . \
 		../rpm/fullerite.systemd=/etc/systemd/system/fullerite.service \
-                ../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
+		../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
+else ifeq ($(OS),AmazonAMI)
+	@fpm -s dir \
+		-t rpm \
+		--name $(FULLERITE) \
+		--version $(VERSION) \
+		--description "metrics collector" \
+		--depends python \
+		--rpm-user "fuller" \
+		--rpm-group "fuller" \
+		--before-install "rpm/before_install.sh" \
+		--before-remove "rpm/before_rm.sh" \
+		-C build . \
+		../deb/etc/init/fullerite=/etc/init/fullerite.conf \
+		../deb/etc/init/fullerite_diamond_server=/etc/init/fullerite_diamond_server.conf
 else
 	@echo "OS not supported"
 endif
