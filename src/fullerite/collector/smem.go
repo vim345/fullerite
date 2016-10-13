@@ -16,7 +16,6 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 	"fullerite/util"
-	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -52,7 +51,6 @@ var (
 	getSmemStats         = (*SmemStats).getSmemStats
 	getCmdLineDimensions = (*SmemStats).getCmdLineDimensions
 	getEnvDimensions     = (*SmemStats).getEnvDimensions
-	readCmdline          = (*SmemStats).readCmdline
 	allMetrics           = []string{"rss", "vss", "pss", "uss"}
 )
 
@@ -143,10 +141,6 @@ func (s *SmemStats) getCustomDimensions(pid int) map[string]string {
 	return dims
 }
 
-func (s *SmemStats) readCmdline(fileName string) ([]byte, error) {
-	return ioutil.ReadFile(fileName)
-}
-
 func (s *SmemStats) getEnvDimensions(pid int) map[string]string {
 	dims := make(map[string]string)
 
@@ -161,7 +155,7 @@ func (s *SmemStats) getEnvDimensions(pid int) map[string]string {
 	}
 
 	for dimName, envVar := range s.dimensionsFromEnv {
-		pattern, _ := regexp.Compile(fmt.Sprintf(`(%s=)(.*?)(\000)`, envVar))
+		pattern, _ := regexp.Compile(fmt.Sprintf(`(%s)=(.*?)(\000)`, envVar))
 		matches := pattern.FindStringSubmatch(string(environ))
 
 		if len(matches) > 1 {
@@ -173,22 +167,27 @@ func (s *SmemStats) getEnvDimensions(pid int) map[string]string {
 }
 
 func (s *SmemStats) getCmdLineDimensions(pid int) map[string]string {
-	dimensions := make(map[string]string)
-	if pid != 0 {
-		for name, rexStr := range s.dimensionsFromCmdline {
-			data, err := readCmdline(s, fmt.Sprintf("/proc/%d/cmdline", pid))
-			if err != nil {
-				s.log.Warn(err.Error())
-			} else {
-				rex, _ := regexp.Compile(rexStr)
-				match := rex.FindStringSubmatch(string(data))
-				if len(match) > 1 {
-					dimensions[name] = string(match[1])
-				}
-			}
+	dims := make(map[string]string)
+
+	if pid == 0 || len(s.dimensionsFromCmdline) == 0 {
+		return dims
+	}
+
+	data := s.getCmdLine(pid)
+
+	if data == "" {
+		return dims
+	}
+
+	for name, rexStr := range s.dimensionsFromCmdline {
+		rex, _ := regexp.Compile(rexStr)
+		match := rex.FindStringSubmatch(string(data))
+		if len(match) > 1 {
+			dims[name] = string(match[1])
 		}
 	}
-	return dimensions
+
+	return dims
 }
 
 func (s *SmemStats) getSmemStats() []smemStatLine {
@@ -206,6 +205,15 @@ func (s *SmemStats) getSmemStats() []smemStatLine {
 	}
 
 	return s.parseSmemLines(string(out))
+}
+
+func (s *SmemStats) getCmdLine(pid int) string {
+	cmdLine := []string{
+		"/bin/cat",
+		fmt.Sprintf("/proc/%d/cmdline", pid),
+	}
+
+	return string(s.runCommand(cmdLine))
 }
 
 func (s *SmemStats) getEnviron(pid int) string {
