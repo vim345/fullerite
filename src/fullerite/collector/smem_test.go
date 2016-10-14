@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"errors"
 	"fullerite/metric"
 	"os/exec"
 	"testing"
@@ -73,12 +74,14 @@ func TestSmemStatsConfigure(t *testing.T) {
 func TestSmemStatsCollect(t *testing.T) {
 	oldExecCommand := execCommand
 	oldCommandOutput := commandOutput
-	oldGetCustomDimensions := getCustomDimensions
+	oldGetCmdLineDimensions := getCmdLineDimensions
+	oldGetEnvDimensions := getEnvDimensions
 
 	defer func() {
 		execCommand = oldExecCommand
 		commandOutput = oldCommandOutput
-		getCustomDimensions = oldGetCustomDimensions
+		getCmdLineDimensions = oldGetCmdLineDimensions
+		getEnvDimensions = oldGetEnvDimensions
 	}()
 
 	execCommand = func(string, ...string) *exec.Cmd {
@@ -89,13 +92,19 @@ func TestSmemStatsCollect(t *testing.T) {
 		return []byte(smemOutput), nil
 	}
 
-	getCustomDimensions = func(_ *SmemStats, pid int) map[string]string {
+	getCmdLineDimensions = func(*SmemStats, int) map[string]string {
 		return map[string]string{
 			"dim1": "val1",
 		}
 	}
 
-	expectedDims := map[string]string{"dim1": "val1"}
+	getEnvDimensions = func(*SmemStats, int) map[string]string {
+		return map[string]string{
+			"dim2": "val2",
+		}
+	}
+
+	expectedDims := map[string]string{"dim2": "val2", "dim1": "val1"}
 	actual := []metric.Metric{}
 	expected := []metric.Metric{
 		metric.Metric{Name: "apache2.smem.pss", MetricType: "gauge", Value: 5, Dimensions: expectedDims},
@@ -162,22 +171,164 @@ func TestSmemStatsCollectNotCalled(t *testing.T) {
 	}
 }
 
-func TestGetCustomDimensions(t *testing.T) {
-	oldReadCmdline := readCmdline
-	defer func() { readCmdline = oldReadCmdline }()
+// func TestGetCmdLineDimensions(t *testing.T) {
+// 	oldReadCmdline := readCmdline
+// 	defer func() { readCmdline = oldReadCmdline }()
 
-	readCmdline = func(_ *SmemStats, _ string) ([]byte, error) {
-		return []byte("apache worker 1"), nil
+// 	readCmdline = func(*SmemStats, string) ([]byte, error) {
+// 		return []byte("apache worker 1"), nil
+// 	}
+
+// 	s := newSmemStats(nil, 0, nil).(*SmemStats)
+// 	s.dimensionsFromCmdline = map[string]string{
+// 		"worker_id": ".* worker ([0-9]+)$",
+// 	}
+
+// 	expectedDims := map[string]string{
+// 		"worker_id": "1",
+// 	}
+
+// 	assert.Equal(t, getCmdLineDimensions(s, 123), expectedDims)
+// }
+
+func TestGetCmdLineDimensions(t *testing.T) {
+	oldExecCommand := execCommand
+	oldCommandOutput := commandOutput
+
+	defer func() {
+		execCommand = oldExecCommand
+		commandOutput = oldCommandOutput
+	}()
+
+	tests := []struct {
+		pid                   int
+		cmdLineData           string
+		cmdLineReadError      error
+		dimensionsFromCmdLine map[string]string
+		expectedDimensions    map[string]string
+		msg                   string
+	}{
+		{
+			pid: 0,
+			dimensionsFromCmdLine: map[string]string{},
+			expectedDimensions:    map[string]string{},
+			msg:                   "PID is 0; so no dimensions should be reported",
+		},
+		{
+			pid: 1234,
+			dimensionsFromCmdLine: map[string]string{},
+			expectedDimensions:    map[string]string{},
+			msg:                   "Although PID is not 0, the dimensionsFromEnv is empty; so no dimensions should be reported",
+		},
+		{
+			pid:                   1234,
+			cmdLineData:           "",
+			cmdLineReadError:      errors.New("Error reading cmdLine"),
+			dimensionsFromCmdLine: map[string]string{"worker_id": ".* worker ([0-9]+)$"},
+			expectedDimensions:    map[string]string{},
+			msg:                   "/proc/PID/cmdline could not be read; so no dimensions should be reported",
+		},
+		{
+			pid:                   1234,
+			cmdLineData:           "apache worker 1",
+			cmdLineReadError:      nil,
+			dimensionsFromCmdLine: map[string]string{"worker_id": ".* worker ([0-9]+)$"},
+			expectedDimensions:    map[string]string{"worker_id": "1"},
+			msg:                   "/proc/PID/cmdline can be read; so report the proper dimensions",
+		},
+		{
+			pid:                   1234,
+			cmdLineData:           "apache woker 1",
+			cmdLineReadError:      nil,
+			dimensionsFromCmdLine: map[string]string{"worker_id": ".* worker ([0-9]+)$"},
+			expectedDimensions:    map[string]string{},
+			msg:                   "/proc/PID/cmdline can be read but does not contain the matching regex; so report no dimensions",
+		},
 	}
 
-	s := newSmemStats(nil, 0, nil).(*SmemStats)
-	s.dimensionsFromCmdline = map[string]string{
-		"worker_id": ".* worker ([0-9]+)$",
+	for _, test := range tests {
+		s := newSmemStats(nil, 0, defaultLog.WithFields(l.Fields{"collector": "SmemStats"})).(*SmemStats)
+		s.dimensionsFromCmdline = test.dimensionsFromCmdLine
+
+		execCommand = func(string, ...string) *exec.Cmd {
+			return &exec.Cmd{}
+		}
+
+		commandOutput = func(*exec.Cmd) ([]byte, error) {
+			return []byte(test.cmdLineData), test.cmdLineReadError
+		}
+
+		assert.Equal(t, test.expectedDimensions, getCmdLineDimensions(s, test.pid), test.msg)
+	}
+}
+
+func TestGetEnvDimensions(t *testing.T) {
+	oldExecCommand := execCommand
+	oldCommandOutput := commandOutput
+
+	defer func() {
+		execCommand = oldExecCommand
+		commandOutput = oldCommandOutput
+	}()
+
+	tests := []struct {
+		pid                int
+		environ            string
+		environReadError   error
+		dimensionsFromEnv  map[string]string
+		expectedDimensions map[string]string
+		msg                string
+	}{
+		{
+			pid:                0,
+			dimensionsFromEnv:  map[string]string{},
+			expectedDimensions: map[string]string{},
+			msg:                "PID is 0; so no dimensions should be reported",
+		},
+		{
+			pid:                1234,
+			dimensionsFromEnv:  map[string]string{},
+			expectedDimensions: map[string]string{},
+			msg:                "Although PID is not 0, the dimensionsFromEnv is empty; so no dimensions should be reported",
+		},
+		{
+			pid:                1234,
+			environ:            "",
+			environReadError:   errors.New("Error reading environ"),
+			dimensionsFromEnv:  map[string]string{"paasta_cluster": "PAASTA_CLUSTER_NAME"},
+			expectedDimensions: map[string]string{},
+			msg:                "The environ for the PID could not be read; so no dimensions should be reported",
+		},
+		{
+			pid:                1234,
+			environ:            "PAASTA_INSTANCE_NAME=instance-name\000PAASTA_CLUSTER_NAME=cluster-name\000",
+			environReadError:   nil,
+			dimensionsFromEnv:  map[string]string{"paasta_cluster": "PAASTA_CLUSTER_NAME"},
+			expectedDimensions: map[string]string{"paasta_cluster": "cluster-name"},
+			msg:                "environ can be read; so report the proper dimensions",
+		},
+		{
+			pid:                1234,
+			environ:            "PAASTA_INSTANCE_NAME=instance-name\000HOSTNAME=127.0.0.1\000",
+			environReadError:   nil,
+			dimensionsFromEnv:  map[string]string{"paasta_cluster": "PAASTA_CLUSTER_NAME"},
+			expectedDimensions: map[string]string{},
+			msg:                "environ can be read but does not contain the required environ variable; so report no dimensions",
+		},
 	}
 
-	expectedDims := map[string]string{
-		"worker_id": "1",
-	}
+	for _, test := range tests {
+		s := newSmemStats(nil, 0, defaultLog.WithFields(l.Fields{"collector": "SmemStats"})).(*SmemStats)
+		s.dimensionsFromEnv = test.dimensionsFromEnv
 
-	assert.Equal(t, getCustomDimensions(s, 123), expectedDims)
+		execCommand = func(string, ...string) *exec.Cmd {
+			return &exec.Cmd{}
+		}
+
+		commandOutput = func(*exec.Cmd) ([]byte, error) {
+			return []byte(test.environ), test.environReadError
+		}
+
+		assert.Equal(t, test.expectedDimensions, getEnvDimensions(s, test.pid), test.msg)
+	}
 }

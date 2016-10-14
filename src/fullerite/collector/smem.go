@@ -4,8 +4,9 @@
 // Example: {
 //   "user": "some-user", <-- This user should be able to access the /proc/<pid>/smaps files listed in the whitelist below
 //   "procsWhitelist": "apache2|tmux",
-//   "smemPath": "/usr/bin/smem" <-- Path to the smem executable
-//   "dimensionsFromCmdline": {"worker_id": "apache worker ([0-9]+)"}
+//   "smemPath": "/usr/bin/smem", <-- Path to the smem executable
+//   "dimensionsFromCmdline": {"worker_id": "apache worker ([0-9]+)"},
+//   "dimensionsFromEnv": {"env_var_1": "ENV_VAR_1", "env_var_2": "ENV_VAR_2"}, <-- Environment variables gotten from /proc/<pid>/environ
 // }
 
 package collector
@@ -15,7 +16,6 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 	"fullerite/util"
-	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -41,16 +41,17 @@ type SmemStats struct {
 	smemPath              string
 	whitelistedMetrics    []string
 	dimensionsFromCmdline map[string]string
+	dimensionsFromEnv     map[string]string
 }
 
 var (
-	requiredConfigs     = []string{"user", "procsWhitelist"}
-	execCommand         = exec.Command
-	commandOutput       = (*exec.Cmd).Output
-	getSmemStats        = (*SmemStats).getSmemStats
-	getCustomDimensions = (*SmemStats).getCustomDimensions
-	readCmdline         = (*SmemStats).readCmdline
-	allMetrics          = []string{"rss", "vss", "pss", "uss"}
+	requiredConfigs      = []string{"user", "procsWhitelist"}
+	execCommand          = exec.Command
+	commandOutput        = (*exec.Cmd).Output
+	getSmemStats         = (*SmemStats).getSmemStats
+	getCmdLineDimensions = (*SmemStats).getCmdLineDimensions
+	getEnvDimensions     = (*SmemStats).getEnvDimensions
+	allMetrics           = []string{"rss", "vss", "pss", "uss"}
 )
 
 func init() {
@@ -98,6 +99,10 @@ func (s *SmemStats) Configure(configMap map[string]interface{}) {
 	if dimensionsFromCmdline, exists := configMap["dimensionsFromCmdline"]; exists {
 		s.dimensionsFromCmdline = config.GetAsMap(dimensionsFromCmdline)
 	}
+
+	if dimensionsFromEnv, exists := configMap["dimensionsFromEnv"]; exists {
+		s.dimensionsFromEnv = config.GetAsMap(dimensionsFromEnv)
+	}
 }
 
 // Collect calls smem periodically
@@ -107,7 +112,7 @@ func (s *SmemStats) Collect() {
 	}
 
 	for _, stat := range getSmemStats(s) {
-		dims := getCustomDimensions(s, stat.pid)
+		dims := s.getCustomDimensions(stat.pid)
 		for _, element := range s.whitelistedMetrics {
 			var m metric.Metric
 			switch element {
@@ -126,45 +131,120 @@ func (s *SmemStats) Collect() {
 	}
 }
 
-func (s *SmemStats) readCmdline(fileName string) ([]byte, error) {
-	return ioutil.ReadFile(fileName)
+func (s *SmemStats) getCustomDimensions(pid int) map[string]string {
+	dims := getEnvDimensions(s, pid)
+
+	for k, v := range getCmdLineDimensions(s, pid) {
+		dims[k] = v
+	}
+
+	return dims
 }
 
-func (s *SmemStats) getCustomDimensions(pid int) map[string]string {
-	dimensions := make(map[string]string)
-	if pid != 0 {
-		for name, rexStr := range s.dimensionsFromCmdline {
-			data, err := readCmdline(s, fmt.Sprintf("/proc/%d/cmdline", pid))
-			if err != nil {
-				s.log.Warn(err.Error())
-			} else {
-				rex, _ := regexp.Compile(rexStr)
-				match := rex.FindStringSubmatch(string(data))
-				if len(match) > 1 {
-					dimensions[name] = string(match[1])
-				}
-			}
+func (s *SmemStats) getEnvDimensions(pid int) map[string]string {
+	dims := make(map[string]string)
+
+	if pid == 0 || len(s.dimensionsFromEnv) == 0 {
+		return dims
+	}
+
+	environ := s.getEnviron(pid)
+
+	if environ == "" {
+		return dims
+	}
+
+	for dimName, envVar := range s.dimensionsFromEnv {
+		pattern, _ := regexp.Compile(fmt.Sprintf(`(%s)=(.*?)(\000)`, envVar))
+		matches := pattern.FindStringSubmatch(string(environ))
+
+		if len(matches) > 1 {
+			dims[dimName] = string(matches[2])
 		}
 	}
-	return dimensions
+
+	return dims
+}
+
+func (s *SmemStats) getCmdLineDimensions(pid int) map[string]string {
+	dims := make(map[string]string)
+
+	if pid == 0 || len(s.dimensionsFromCmdline) == 0 {
+		return dims
+	}
+
+	data := s.getCmdLine(pid)
+
+	if data == "" {
+		return dims
+	}
+
+	for name, rexStr := range s.dimensionsFromCmdline {
+		rex, _ := regexp.Compile(rexStr)
+		match := rex.FindStringSubmatch(string(data))
+		if len(match) > 1 {
+			dims[name] = string(match[1])
+		}
+	}
+
+	return dims
 }
 
 func (s *SmemStats) getSmemStats() []smemStatLine {
-	var out []byte
-	var err error
-
-	cmd := execCommand(
+	cmdLine := []string{
 		"/usr/bin/sudo",
 		"-u", s.user,
 		s.smemPath,
 		"-P", s.whitelistedProcs,
-		"-c", "pss uss rss vss name pid")
+		"-c", "pss uss rss vss name pid"}
+
+	out := s.runCommand(cmdLine)
+
+	if out == nil {
+		return nil
+	}
+
+	return s.parseSmemLines(string(out))
+}
+
+func (s *SmemStats) getCmdLine(pid int) string {
+	cmdLine := []string{
+		"/bin/cat",
+		fmt.Sprintf("/proc/%d/cmdline", pid),
+	}
+
+	return string(s.runCommand(cmdLine))
+}
+
+func (s *SmemStats) getEnviron(pid int) string {
+	cmdLine := []string{
+		"/usr/bin/sudo",
+		"-u", s.user,
+		"/bin/cat",
+		fmt.Sprintf("/proc/%d/environ", pid),
+	}
+
+	environ := s.runCommand(cmdLine)
+
+	if environ == nil {
+		return ""
+	}
+
+	return string(environ)
+}
+
+func (s *SmemStats) runCommand(cmdLine []string) []byte {
+	var out []byte
+	var err error
+
+	cmd := execCommand(cmdLine[0], cmdLine[1:]...)
+
 	if out, err = commandOutput(cmd); err != nil {
 		s.log.Error(err.Error())
 		return nil
 	}
 
-	return s.parseSmemLines(string(out))
+	return out
 }
 
 func (s *SmemStats) parseSmemLines(out string) []smemStatLine {
