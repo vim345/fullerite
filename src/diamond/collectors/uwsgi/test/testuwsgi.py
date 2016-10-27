@@ -133,7 +133,7 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_read.stop()
 
         self.assertPublishedMany(publish_mock, {
-            'IdleWorkers': 23,
+            'IdleWorkers': 2,
             'BusyWorkers': 0,
             'SigWorkers': 0,
             'CheapWorkers': 0,
@@ -153,8 +153,8 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_headers.stop()
 
         self.assertPublishedMany(publish_mock, {
-            'IdleWorkers': 21,
-            'BusyWorkers': 2,
+            'IdleWorkers': 1,
+            'BusyWorkers': 1,
             'SigWorkers': 0,
             'CheapWorkers': 0,
             'PauseWorkers': 0,
@@ -200,15 +200,15 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_headers.stop()
 
         metrics = {
-            'nickname1.IdleWorkers': 12,
-            'nickname1.BusyWorkers': 11,
+            'nickname1.IdleWorkers': 0,
+            'nickname1.BusyWorkers': 2,
             'nickname1.SigWorkers': 0,
             'nickname1.CheapWorkers': 0,
             'nickname1.PauseWorkers': 0,
             'nickname1.UnknownStateWorkers': 0,
 
-            'nickname2.IdleWorkers': 12,
-            'nickname2.BusyWorkers': 11,
+            'nickname2.IdleWorkers': 0,
+            'nickname2.BusyWorkers': 2,
             'nickname2.SigWorkers': 0,
             'nickname2.CheapWorkers': 0,
             'nickname2.PauseWorkers': 0,
@@ -243,7 +243,7 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_read.stop()
 
         self.assertPublishedMany(publish_mock, {
-            'vhost.IdleWorkers': 22,
+            'vhost.IdleWorkers': 1,
             'vhost.BusyWorkers': 0,
             'vhost.SigWorkers': 1,
             'vhost.CheapWorkers': 0,
