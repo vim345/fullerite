@@ -23,7 +23,6 @@ TestTwemproxyCollector
 TestRabbitMQCollector
 ScribeCollectorTestCase
 TestCephCollectorSocketNameHandling
-TestHttpdCollector
 TestMemoryCollector
 TestDiskSpaceCollector
 TestNagiosPerfdataCollector
