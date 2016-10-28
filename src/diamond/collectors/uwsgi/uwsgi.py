@@ -150,8 +150,6 @@ class UwsgiCollector(diamond.collector.Collector):
                     metric_value = sum(memory_rss) / len(memory_rss)
 
                     self.publish(metric_name, metric_value)
-
-
                     metric_name = '.'.join([proc, 'WorkersVirtualMemory'])
                     memory_vsz = virtual_memory.get(proc, [0])
                     metric_value = sum(memory_vsz) / len(memory_vsz)
