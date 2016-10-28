@@ -33,7 +33,7 @@ class TestHttpdCollector(CollectorTestCase):
         else:
             config = get_collector_config('HttpdCollector', config)
 
-        self.collector = HttpdCollector(config, None)
+        self.collector = HttpdCollector(config=config, configfile=config['collectors']['HttpdCollector'])
 
         self.HTTPResponse = TestHTTPResponse()
 
@@ -92,9 +92,7 @@ class TestHttpdCollector(CollectorTestCase):
             'LoggingWorkers': 0,
             'FinishingWorkers': 0,
             'CleanupWorkers': 0,
-            'AccessesPerSec': 0,
-            'StartingFinishingWorkers': 0,
-            'StandbyWorkers': 5,
+            'StandbyWorkers': 4,
             'CPULoad': 0.5,
         })
 
@@ -146,7 +144,6 @@ class TestHttpdCollector(CollectorTestCase):
             'LoggingWorkers': 0,
             'FinishingWorkers': 0,
             'CleanupWorkers': 0,
-            'AccessesPerSec': 0,
         }
         self.assertPublishedMany(publish_mock, metrics)
 
@@ -192,7 +189,7 @@ class TestHttpdCollector(CollectorTestCase):
             'nickname1.TotalAccesses': 8314,
             'nickname1.ReqPerSec': 0,
             'nickname1.BytesPerSec': 165,
-            'nickname1.BytesPerReq': 5418.55,
+            'nickname1.BytesPerReq': 5418,
             'nickname1.BusyWorkers': 9,
             'nickname1.IdleWorkers': 0,
             'nickname1.WritingWorkers': 1,
@@ -203,12 +200,11 @@ class TestHttpdCollector(CollectorTestCase):
             'nickname1.LoggingWorkers': 0,
             'nickname1.FinishingWorkers': 0,
             'nickname1.CleanupWorkers': 0,
-            'nickname1.AccessesPerSec': 0,
 
             'nickname2.TotalAccesses': 8314,
             'nickname2.ReqPerSec': 0,
             'nickname2.BytesPerSec': 165,
-            'nickname2.BytesPerReq': 5418.55,
+            'nickname2.BytesPerReq': 5418,
             'nickname2.BusyWorkers': 9,
             'nickname2.IdleWorkers': 0,
             'nickname2.WritingWorkers': 1,
@@ -219,7 +215,6 @@ class TestHttpdCollector(CollectorTestCase):
             'nickname2.LoggingWorkers': 0,
             'nickname2.FinishingWorkers': 0,
             'nickname2.CleanupWorkers': 0,
-            'nickname2.AccessesPerSec': 0,
         }
 
         self.setDocExample(collector=self.collector.__class__.__name__,
@@ -265,8 +260,8 @@ class TestHttpdCollector(CollectorTestCase):
         metrics = {
             'vhost.TotalAccesses': 329,
             'vhost.ReqPerSec': 0.156966,
-            'vhost.BytesPerSec': 2417.83,
-            'vhost.BytesPerReq': 15403.6,
+            'vhost.BytesPerSec': 2417,
+            'vhost.BytesPerReq': 15403,
             'vhost.BusyWorkers': 1,
             'vhost.IdleWorkers': 17,
             'vhost.WritingWorkers': 1,
@@ -277,7 +272,6 @@ class TestHttpdCollector(CollectorTestCase):
             'vhost.LoggingWorkers': 0,
             'vhost.FinishingWorkers': 0,
             'vhost.CleanupWorkers': 0,
-            'vhost.AccessesPerSec': 0,
         }
         self.assertPublishedMany(publish_mock, metrics)
 
