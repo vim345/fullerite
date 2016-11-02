@@ -54,12 +54,6 @@ class TestUwsgiCollector(CollectorTestCase):
             Mock(return_value=self.getFixture(
                 'status-json-fake-1').getvalue()))
 
-        patch_headers = patch.object(
-            TestHTTPResponse,
-            'getheaders',
-            Mock(return_value={}))
-
-        patch_headers.start()
         patch_read.start()
         self.collector.collect()
         patch_read.stop()
@@ -101,7 +95,6 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_read.start()
         self.collector.collect()
         patch_read.stop()
-        patch_headers.stop()
 
         self.assertPublishedMany(publish_mock, {
             'IdleWorkers': 0,
@@ -111,6 +104,19 @@ class TestUwsgiCollector(CollectorTestCase):
             'PauseWorkers': 0,
             'UnknownStateWorkers': 1,
         })
+
+        patch_read = patch.object(TestHTTPResponse,
+            'read',
+            Mock(return_value=self.getFixture(
+                'status-json-fake-4').getvalue()))
+
+        patch_read.start()
+        try:
+            self.collector.collect()
+            self.fail('Should throw an exception')
+        except ValueError:
+            pass
+        patch_read.stop()
 
     @patch.object(Collector, 'publish')
     def test_should_work_with_real_data(self, publish_mock):
@@ -122,12 +128,6 @@ class TestUwsgiCollector(CollectorTestCase):
             Mock(return_value=self.getFixture(
                 'status-json-live-1').getvalue()))
 
-        patch_headers = patch.object(
-            TestHTTPResponse,
-            'getheaders',
-            Mock(return_value={}))
-
-        patch_headers.start()
         patch_read.start()
         self.collector.collect()
         patch_read.stop()
@@ -150,7 +150,6 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_read.start()
         self.collector.collect()
         patch_read.stop()
-        patch_headers.stop()
 
         self.assertPublishedMany(publish_mock, {
             'IdleWorkers': 1,
@@ -176,12 +175,6 @@ class TestUwsgiCollector(CollectorTestCase):
             Mock(return_value=self.getFixture(
                 'status-json-live-1').getvalue()))
 
-        patch_headers = patch.object(
-            TestHTTPResponse,
-            'getheaders',
-            Mock(return_value={}))
-
-        patch_headers.start()
         patch_read.start()
         self.collector.collect()
         patch_read.stop()
@@ -197,7 +190,6 @@ class TestUwsgiCollector(CollectorTestCase):
         patch_read.start()
         self.collector.collect()
         patch_read.stop()
-        patch_headers.stop()
 
         metrics = {
             'nickname1.IdleWorkers': 0,
@@ -215,32 +207,17 @@ class TestUwsgiCollector(CollectorTestCase):
             'nickname2.UnknownStateWorkers': 0,
         }
 
-        self.setDocExample(collector=self.collector.__class__.__name__,
-                           metrics=metrics,
-                           defaultpath=self.collector.config['path'])
         self.assertPublishedMany(publish_mock, metrics)
 
     @patch.object(Collector, 'publish')
     def test_sig0(self, publish_mock):
         self.setUp(config={
-            'urls': 'vhost http://localhost/server-status?auto',
+            'urls': 'vhost tcp://localhost:1789',
         })
 
-        patch_read = patch.object(
-            TestHTTPResponse,
-            'read',
-            Mock(return_value=self.getFixture(
-                'status-json-live-3').getvalue()))
-
-        patch_headers = patch.object(
-            TestHTTPResponse,
-            'getheaders',
-            Mock(return_value={}))
-
-        patch_headers.start()
-        patch_read.start()
-        self.collector.collect()
-        patch_read.stop()
+        with patch.object(self.collector, 'read_pure_tcp', return_value=self.getFixture(
+            'status-json-live-3').getvalue()):
+            self.collector.collect()
 
         self.assertPublishedMany(publish_mock, {
             'vhost.IdleWorkers': 1,

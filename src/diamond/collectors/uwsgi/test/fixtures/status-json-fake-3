@@ -1,3 +1,1 @@
-"status":"busy"
-"status":busy //gets ignored
-"status":"busz" //counts as unknown
+{"workers":[{"status":"busy"},{"status":"brandnewstatus"}]}
