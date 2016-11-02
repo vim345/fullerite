@@ -60,15 +60,21 @@ class UwsgiCollector(diamond.collector.Collector):
         return config
 
     def read_pure_tcp(self, service_host, service_port):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((service_host, service_port))
         total_data = []
-        while True:
-            chunk = s.recv(8192)
-            if not chunk:
-                break
-            total_data.append(chunk)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((service_host, service_port))
+            while True:
+                chunk = s.recv(8192)
+                if not chunk:
+                    break
+                total_data.append(chunk)
+        except socket.timeout:
+            self.log_error("Socket timed out")
+        except socket.error:
+            self.log_error("Socket error")
         data = ''.join(total_data)
+        return data
 
     def collect(self):
         for nickname in self.urls.keys():
@@ -107,6 +113,8 @@ class UwsgiCollector(diamond.collector.Collector):
                 else:
                     raise 'Unknown URL scheme'
 
+                stats = json.loads(data)
+
             except Exception, e:
                 print(e)
                 self.log.error(
@@ -114,7 +122,6 @@ class UwsgiCollector(diamond.collector.Collector):
                     service_host, str(service_port), url, e)
                 continue
 
-            stats = json.loads(data)
             counters = { 'IdleWorkers': 0, 'BusyWorkers': 0, 'SigWorkers': 0,
                          'PauseWorkers': 0, 'CheapWorkers': 0, 'UnknownStateWorkers': 0 }
             for worker in stats['workers']:

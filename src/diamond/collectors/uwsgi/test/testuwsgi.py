@@ -11,6 +11,8 @@ from mock import patch
 from diamond.collector import Collector
 from uwsgi import UwsgiCollector
 import httplib
+import json
+import logging
 
 ################################################################################
 
@@ -21,6 +23,19 @@ class TestHTTPResponse(httplib.HTTPResponse):
 
     def read(self):
         pass
+
+
+class MockSocket(object):
+    def __init__(self, sock_data):
+        self.seek = 0
+        self.sock_data = sock_data
+
+    def recv(self, chunk_size):
+        if self.seek >= len(self.sock_data):
+            return ""
+        sd = self.sock_data[self.seek:self.seek + chunk_size]
+        self.seek += chunk_size
+        return sd
 
 
 class TestUwsgiCollector(CollectorTestCase):
@@ -44,8 +59,9 @@ class TestUwsgiCollector(CollectorTestCase):
     def test_import(self):
         self.assertTrue(UwsgiCollector)
 
+    @patch.object(logging.Logger, 'error')
     @patch.object(Collector, 'publish')
-    def test_should_work_with_synthetic_data(self, publish_mock):
+    def test_should_work_with_synthetic_data(self, publish_mock, logger_mock):
         self.setUp()
 
         patch_read = patch.object(
@@ -111,11 +127,9 @@ class TestUwsgiCollector(CollectorTestCase):
                 'status-json-fake-4').getvalue()))
 
         patch_read.start()
-        try:
-            self.collector.collect()
-            self.fail('Should throw an exception')
-        except ValueError:
-            pass
+        self.assertFalse(logger_mock.called)
+        self.collector.collect()
+        self.assertTrue(logger_mock.called)
         patch_read.stop()
 
     @patch.object(Collector, 'publish')
@@ -282,6 +296,21 @@ class TestUwsgiCollector(CollectorTestCase):
         expected_urls = {'localhost': 'http://localhost:80/server-status?auto'}
 
         self.assertEqual(self.collector.urls, expected_urls)
+
+    @patch.object(Collector, 'publish')
+    def test_pure_tcp_reader(self, publish_mock):
+        self.setUp()
+        sock_data = {
+            "foo1": "bar1",
+            "foo2": "bar2",
+            "list": ["a", "b", "c", "d"],
+        }
+        sock_data_string = json.dumps(sock_data)
+        ms = MockSocket(sock_data_string)
+        with patch('socket.socket') as mock_socket:
+            mock_socket.return_value.recv = ms.recv
+            json_data = self.collector.read_pure_tcp('127.0.0.1', 7)
+            self.assertEqual(json.loads(json_data), sock_data)
 
 ################################################################################
 if __name__ == "__main__":
