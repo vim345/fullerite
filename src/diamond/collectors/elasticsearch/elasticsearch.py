@@ -23,8 +23,18 @@ except ImportError:
     import simplejson as json
 
 import diamond.collector
+import diamond.convertor
 
 RE_LOGSTASH_INDEX = re.compile('^(.*)-\d\d\d\d\.\d\d\.\d\d$')
+
+
+def _normalize_metric_value(metric_name, value):
+    if metric_name.find('kilobyte') != -1:
+        # We always report values in bytes to be compatible with all versions
+        # of ES.
+        return diamond.convertor.binary.convert(value, 'kilobyte', 'byte')
+    else:
+        return value
 
 
 class ElasticSearchCollector(diamond.collector.Collector):
@@ -84,13 +94,13 @@ class ElasticSearchCollector(diamond.collector.Collector):
         """
         config = super(ElasticSearchCollector, self).get_default_config()
         config.update({
-            'host':           '127.0.0.1',
-            'port':           9200,
-            'instances':      [],
-            'path':           'elasticsearch',
-            'stats':          ['jvm', 'thread_pool', 'indices'],
+            'host': '127.0.0.1',
+            'port': 9200,
+            'instances': [],
+            'path': 'elasticsearch',
+            'stats': ['jvm', 'thread_pool', 'indices'],
             'logstash_mode': False,
-            'cluster':       False,
+            'cluster': False,
         })
         return config
 
@@ -162,6 +172,8 @@ class ElasticSearchCollector(diamond.collector.Collector):
             current_item = current_item.get(path_element)
             if current_item is None:
                 return
+            # Standardize the units of metric values being reported
+            current_item = _normalize_metric_value(path_element, current_item)
 
         self._set_or_sum_metric(metrics, metric_path, current_item)
 
@@ -215,7 +227,14 @@ class ElasticSearchCollector(diamond.collector.Collector):
                                 index['primaries'])
 
     def collect_instance(self, alias, host, port):
-        result = self._get(host, port, '_nodes/_local/stats?all=true', 'nodes')
+        es_version = self._get(host, port, '/', 'version')['version']['number']
+        if es_version.startswith('0.'):
+            result = self._get(host, port, '_nodes/_local/stats?all=true', 'nodes')
+        else:
+            # All stats are fetched by default
+            result = self._get(host, port, '_nodes/_local/stats', 'nodes')
+
+        result = self._get(host, port, '_nodes/_local/stats', 'nodes')
         if not result:
             return
 
@@ -293,16 +312,29 @@ class ElasticSearchCollector(diamond.collector.Collector):
 
         #
         # filesystem (may not be present, depending on access restrictions)
-        if 'fs' in data and 'data' in data['fs'] and data['fs']['data']:
-            fs_data = data['fs']['data'][0]
-            self._add_metric(metrics, 'disk.reads.count', fs_data,
-                             ['disk_reads'])
-            self._add_metric(metrics, 'disk.reads.size', fs_data,
-                             ['disk_read_size_in_bytes'])
-            self._add_metric(metrics, 'disk.writes.count', fs_data,
-                             ['disk_writes'])
-            self._add_metric(metrics, 'disk.writes.size', fs_data,
-                             ['disk_write_size_in_bytes'])
+        if 'fs' in data:
+            # elasticsearch >= 5.0.0
+            if 'io_stats' in data['fs'] and 'devices' in data['fs']['io_stats']:
+                fs_data = data['fs']['io_stats']['devices'][0]
+                self._add_metric(metrics, 'disk.reads.count', fs_data,
+                                 ['read_operations'])
+                self._add_metric(metrics, 'disk.reads.size', fs_data,
+                                 ['read_kilobytes'])
+                self._add_metric(metrics, 'disk.writes.count', fs_data,
+                                 ['write_operations'])
+                self._add_metric(metrics, 'disk.writes.size', fs_data,
+                                 ['write_kilobytes'])
+            # elasticsearch < 5.0.0
+            elif 'data' in data['fs']:
+                fs_data = data['fs']['data'][0]
+                self._add_metric(metrics, 'disk.reads.count', fs_data,
+                                 ['disk_reads'])
+                self._add_metric(metrics, 'disk.reads.size', fs_data,
+                                 ['disk_read_size_in_bytes'])
+                self._add_metric(metrics, 'disk.writes.count', fs_data,
+                                 ['disk_writes'])
+                self._add_metric(metrics, 'disk.writes.size', fs_data,
+                                 ['disk_write_size_in_bytes'])
 
         #
         # jvm
@@ -352,7 +384,9 @@ class ElasticSearchCollector(diamond.collector.Collector):
 
         #
         # network
-        self._copy_two_level(metrics, 'network', data['network'])
+        if 'network' in data:
+            # elasticsearch < 5.0.0
+            self._copy_two_level(metrics, 'network', data['network'])
 
         #
         # cluster (optional)
