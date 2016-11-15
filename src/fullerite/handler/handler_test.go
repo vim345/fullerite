@@ -4,6 +4,8 @@ import (
 	"fullerite/metric"
 
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -145,6 +147,7 @@ func TestRecordTimings(t *testing.T) {
 }
 
 func TestHandlerRunFlushInterval(t *testing.T) {
+	var mu sync.Mutex
 	base := BaseHandler{}
 	base.log = l.WithField("testing", "basehandler_flush")
 	base.interval = 1
@@ -155,6 +158,8 @@ func TestHandlerRunFlushInterval(t *testing.T) {
 	emitCalledTwice := false
 	emitCalledThrice := false
 	emitFunc := func(metrics []metric.Metric) bool {
+		mu.Lock()
+		defer mu.Unlock()
 		if emitCalledOnce && !emitCalledTwice {
 			assert.Equal(t, 1, len(metrics))
 			emitCalledTwice = true
@@ -172,13 +177,15 @@ func TestHandlerRunFlushInterval(t *testing.T) {
 	base.channel <- metric.New("testMetric1")
 	base.channel <- metric.New("testMetric2")
 	time.Sleep(2 * time.Second)
+	mu.Lock()
 	assert.True(t, emitCalledOnce)
 	assert.True(t, emitCalledTwice)
 	assert.False(t, emitCalledThrice)
-	assert.Equal(t, 1, base.emissionTimes.Len())
-	assert.Equal(t, uint64(3), base.metricsSent)
-	assert.Equal(t, uint64(0), base.metricsDropped)
-	assert.Equal(t, uint64(2), base.totalEmissions)
+	mu.Unlock()
+	assert.Equal(t, 1, base.GetEmissionTimesLen())
+	assert.Equal(t, uint64(3), atomic.LoadUint64(&base.metricsSent))
+	assert.Equal(t, uint64(0), atomic.LoadUint64(&base.metricsDropped))
+	assert.Equal(t, uint64(2), atomic.LoadUint64(&base.totalEmissions))
 	base.channel <- metric.Metric{}
 }
 
@@ -202,8 +209,8 @@ func TestHandlerBufferSize(t *testing.T) {
 	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric1")
 	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric2")
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, uint64(3), base.metricsSent)
-	assert.Equal(t, uint64(0), base.metricsDropped)
+	assert.Equal(t, uint64(3), atomic.LoadUint64(&base.metricsSent))
+	assert.Equal(t, uint64(0), atomic.LoadUint64(&base.metricsDropped))
 
 	// This is just to stop goroutines that have been started before
 	base.channel <- metric.Metric{}
@@ -231,8 +238,8 @@ func TestSentinelFlushing(t *testing.T) {
 	// emit sentinel value to trigger flush
 	base.CollectorEndpoints()["collector1"].Channel <- metric.Sentinel()
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, uint64(2), base.metricsSent)
-	assert.Equal(t, uint64(0), base.metricsDropped)
+	assert.Equal(t, uint64(2), atomic.LoadUint64(&base.metricsSent))
+	assert.Equal(t, uint64(0), atomic.LoadUint64(&base.metricsDropped))
 
 	// send more metrics
 	base.CollectorEndpoints()["collector1"].Channel <- metric.New("testMetric")
@@ -240,9 +247,9 @@ func TestSentinelFlushing(t *testing.T) {
 	// emit sentinel value to trigger flush
 	base.CollectorEndpoints()["collector1"].Channel <- metric.Sentinel()
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, uint64(4), base.metricsSent)
-	assert.Equal(t, uint64(0), base.metricsDropped)
-	assert.Equal(t, uint64(2), base.totalEmissions)
+	assert.Equal(t, uint64(4), atomic.LoadUint64(&base.metricsSent))
+	assert.Equal(t, uint64(0), atomic.LoadUint64(&base.metricsDropped))
+	assert.Equal(t, uint64(2), atomic.LoadUint64(&base.totalEmissions))
 
 	// This is just to stop goroutines that have been started before
 	base.channel <- metric.Metric{}
@@ -250,6 +257,7 @@ func TestSentinelFlushing(t *testing.T) {
 }
 
 func TestHandlerRun(t *testing.T) {
+	var mu sync.Mutex
 	base := BaseHandler{}
 	base.log = l.WithField("testing", "basehandler_run")
 	base.interval = 1
@@ -259,6 +267,8 @@ func TestHandlerRun(t *testing.T) {
 	emitCalled := false
 	emitFunc := func(metrics []metric.Metric) bool {
 		assert.Equal(t, 1, len(metrics))
+		mu.Lock()
+		defer mu.Unlock()
 		emitCalled = true
 		return true
 	}
@@ -268,11 +278,13 @@ func TestHandlerRun(t *testing.T) {
 
 	base.channel <- metric.New("testMetric")
 	time.Sleep(1 * time.Second)
+	mu.Lock()
 	assert.True(t, emitCalled)
-	assert.Equal(t, 1, base.emissionTimes.Len())
-	assert.Equal(t, uint64(1), base.metricsSent)
-	assert.Equal(t, uint64(0), base.metricsDropped)
-	assert.Equal(t, uint64(1), base.totalEmissions)
+	mu.Unlock()
+	assert.Equal(t, 1, base.GetEmissionTimesLen())
+	assert.Equal(t, uint64(1), atomic.LoadUint64(&base.metricsSent))
+	assert.Equal(t, uint64(0), atomic.LoadUint64(&base.metricsDropped))
+	assert.Equal(t, uint64(1), atomic.LoadUint64(&base.totalEmissions))
 	base.channel <- metric.Metric{}
 }
 
