@@ -15,7 +15,8 @@ import (
 
 func TestStartHandlersEmptyConfig(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
-	handlers := startHandlers(config.Config{})
+	handlers := createHandlers(config.Config{})
+	startHandlers(handlers)
 
 	assert.Zero(t, len(handlers), "should not create any Handler")
 }
@@ -24,9 +25,10 @@ func TestStartHandlerUnknownHandler(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
 
 	c := make(map[string]interface{})
-	handler := startHandler("unknown handler", config.Config{}, c)
+	h := createHandler("unknown handler", config.Config{}, c)
+	startHandlers([]handler.Handler{h})
 
-	assert.Nil(t, handler)
+	assert.Nil(t, h)
 }
 
 func checkEmission(t *testing.T, coll string, h handler.Handler, expected bool) {

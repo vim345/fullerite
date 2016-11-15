@@ -301,6 +301,7 @@ func (base *BaseHandler) InitListeners(globalConfig config.Config) {
 	base.SetCollectorEndpoints(collectorEndpoints)
 }
 
+// GetEmissionTimesLen returns base.emissionTimes.Len thread-safe
 func (base *BaseHandler) GetEmissionTimesLen() int {
 	mu.Lock()
 	defer mu.Unlock()

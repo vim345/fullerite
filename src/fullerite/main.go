@@ -113,19 +113,22 @@ func start(ctx *cli.Context) {
 	if err != nil {
 		return
 	}
+	handlers := createHandlers(c)
+	hook := NewLogErrorHook(handlers)
+	log.Logger.Hooks.Add(hook)
+
+	startHandlers(handlers)
 	collectors := startCollectors(c)
-	handlers := startHandlers(c)
+
 	collectorStatChan := make(chan metric.CollectorEmission)
 
 	internalServer := internalserver.New(c,
 		handlerStatFunc(handlers),
 		readCollectorStat(collectorStatChan))
+
 	go internalServer.Run()
 
 	readFromCollectors(collectors, handlers, collectorStatChan)
-
-	hook := NewLogErrorHook(handlers)
-	log.Logger.Hooks.Add(hook)
 
 	<-quit
 }
@@ -187,7 +190,8 @@ func visualize(ctx *cli.Context) {
 	collector := startCollector("AdHoc", c, configMap)
 	c.Collectors = []string{"AdHoc"}
 	c.DiamondCollectors = []string{}
-	handlers := startHandlers(c)
+	handlers := createHandlers(c)
+	startHandlers(handlers)
 
 	// Read the metrics from the AdHoc collector
 	go readFromCollector(collector, handlers)
