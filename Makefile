@@ -63,7 +63,7 @@ test: tests
 tests: deps diamond_core_test diamond_collector_test
 	@echo Testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
-		gom test -cover $$pkg || exit 1;\
+		gom test -race -cover $$pkg || exit 1;\
 	done
 
 qbt:
