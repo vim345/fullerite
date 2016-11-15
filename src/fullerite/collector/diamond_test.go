@@ -1,3 +1,5 @@
+// +build !race
+
 package collector
 
 import (
@@ -40,6 +42,8 @@ func TestDiamondConfigure(t *testing.T) {
 	assert.Equal(d.Port(), "0", "should be the defined port")
 }
 
+// The test contains a data race. the method `connectToDiamondCollector()` reads the port inside *Diamond
+// while this is written by the `go d.Collect()` routine
 func TestDiamondCollect(t *testing.T) {
 	config := make(map[string]interface{})
 	config["port"] = "0"

@@ -121,8 +121,9 @@ func TestReadFromCollector(t *testing.T) {
 		m2.AddDimension("collectorCanonicalName", "Foobar")
 		collector.Channel() <- m2
 		time.Sleep(time.Duration(2) * time.Second)
-		m2.AddDimension("collectorCanonicalName", "Foobar")
-		collector.Channel() <- m2
+		m3 := metric.New("world")
+		m3.AddDimension("collectorCanonicalName", "Foobar")
+		collector.Channel() <- m3
 		close(collector.Channel())
 	}()
 	collectorMetrics := map[string]uint64{}
