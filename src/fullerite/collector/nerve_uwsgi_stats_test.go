@@ -79,7 +79,22 @@ func getNerveConfigForTest() []byte {
 	return []byte(raw)
 }
 
-func getTestUWSGIStatsResponse() string {
+func getArtificialUWSGIStatsResponse() string {
+	return `{
+        "workers":[
+		{"status":"idle"},
+		{"status":"busy"},
+		{"status":"pause"},
+		{"status":"cheap"},
+		{"status":"sig255"},
+		{"status":"invalid"},
+		{"status":"idle"},
+		{"status":"cheap255"}
+	]
+	}`
+}
+
+func getRealUWSGIStatsResponse() string {
 	return `{
 	"version":"XXXXXXXXXXXX",
 	"listen_queue":0,
@@ -277,7 +292,35 @@ func getTestUWSGIStatsResponse() string {
 	`
 }
 
-func validateUWSGIStatsResults(t *testing.T, actual []metric.Metric) {
+func validateArtificialUWSGIStatsResults(t *testing.T, actual []metric.Metric) {
+	assert.Equal(t, 6, len(actual))
+
+	for _, m := range actual {
+
+		switch m.Name {
+		case "IdleWorkers":
+			assert.Equal(t, 2.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "BusyWorkers":
+			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "SigWorkers":
+			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "CheapWorkers":
+			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "PauseWorkers":
+			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "UnknownStateWorkers":
+			assert.Equal(t, 2.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		}
+	}
+}
+
+func validateRealUWSGIStatsResults(t *testing.T, actual []metric.Metric) {
 	assert.Equal(t, 6, len(actual))
 
 	for _, m := range actual {
@@ -387,9 +430,50 @@ func convertURL(url string) (string, string) {
 	return ip, port
 }
 
-func TestNerveUWSGIStatsCollect(t *testing.T) {
+func TestNerveUWSGIArtificialStatsCollect(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		fmt.Fprint(w, getTestUWSGIStatsResponse())
+		fmt.Fprint(w, getArtificialUWSGIStatsResponse())
+	}))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := convertURL(server.URL)
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	assert.Nil(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath": tmpFile.Name(),
+		"queryPath":      "",
+	}
+
+	inst := getTestNerveUWSGIStats()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	for i := 0; i < 6; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+	validateArtificialUWSGIStatsResults(t, actual)
+	validateStatsDimensions(t, actual, "test_service", port)
+	validateStatsEmptyChannel(t, inst.Channel())
+}
+
+func TestNerveUWSGIRealStatsCollect(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		fmt.Fprint(w, getRealUWSGIStatsResponse())
 	}))
 	defer server.Close()
 
@@ -424,14 +508,14 @@ func TestNerveUWSGIStatsCollect(t *testing.T) {
 		actual = append(actual, <-inst.Channel())
 	}
 
-	validateUWSGIStatsResults(t, actual)
+	validateRealUWSGIStatsResults(t, actual)
 	validateStatsDimensions(t, actual, "test_service", port)
 	validateStatsEmptyChannel(t, inst.Channel())
 }
 
 func TestNonConflictingStatsServiceQueries(t *testing.T) {
 	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		fmt.Fprint(w, getTestUWSGIStatsResponse())
+		fmt.Fprint(w, getRealUWSGIStatsResponse())
 	}))
 	defer goodServer.Close()
 
@@ -472,7 +556,7 @@ func TestNonConflictingStatsServiceQueries(t *testing.T) {
 		actual = append(actual, <-inst.Channel())
 	}
 
-	validateUWSGIStatsResults(t, actual)
+	validateRealUWSGIStatsResults(t, actual)
 	validateStatsDimensions(t, actual, "test_service", goodPort)
 	validateStatsEmptyChannel(t, inst.Channel())
 }
