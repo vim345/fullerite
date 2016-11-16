@@ -6,16 +6,14 @@ import (
 	"fullerite/metric"
 )
 
-func startHandlers(c config.Config) (handlers []handler.Handler) {
-	log.Info("Starting handlers...")
+func createHandlers(c config.Config) (handlers []handler.Handler) {
 	for name, config := range c.Handlers {
-		handlers = append(handlers, startHandler(name, c, config))
+		handlers = append(handlers, createHandler(name, c, config))
 	}
 	return handlers
 }
 
-func startHandler(name string, globalConfig config.Config, instanceConfig map[string]interface{}) handler.Handler {
-	log.Info("Starting handler ", name)
+func createHandler(name string, globalConfig config.Config, instanceConfig map[string]interface{}) handler.Handler {
 	handlerInst := handler.New(name)
 	if handlerInst == nil {
 		return nil
@@ -32,8 +30,16 @@ func startHandler(name string, globalConfig config.Config, instanceConfig map[st
 	// now run a listener channel for each collector
 	handlerInst.InitListeners(globalConfig)
 
-	go handlerInst.Run()
 	return handlerInst
+}
+
+func startHandlers(handlers []handler.Handler) {
+	log.Info("Starting handlers...")
+	for _, handler := range handlers {
+		if handler != nil {
+			go handler.Run()
+		}
+	}
 }
 
 func writeToHandlers(handlers []handler.Handler, metric metric.Metric) {

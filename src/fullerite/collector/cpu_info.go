@@ -61,8 +61,8 @@ func (c CPUInfo) Collect() {
 	metric := metric.New(c.metricName)
 	metric.Value = value
 	metric.AddDimension("model", model)
-	c.Channel() <- metric
 	c.log.Debug(metric)
+	c.Channel() <- metric
 }
 
 func (c CPUInfo) getCPUInfo() (float64, string, error) {
