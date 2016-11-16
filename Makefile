@@ -1,6 +1,6 @@
 FULLERITE      := fullerite
 BEATIT         := beatit
-VERSION        := 0.4.37
+VERSION        := 0.5.0
 SRCDIR         := src
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
@@ -63,7 +63,7 @@ test: tests
 tests: deps diamond_core_test diamond_collector_test
 	@echo Testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
-		gom test -cover $$pkg || exit 1;\
+		gom test -race -cover $$pkg || exit 1;\
 	done
 
 qbt:

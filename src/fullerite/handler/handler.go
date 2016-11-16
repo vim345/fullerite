@@ -3,6 +3,7 @@ package handler
 import (
 	"fullerite/config"
 	"fullerite/metric"
+	"sync"
 	"sync/atomic"
 
 	"container/list"
@@ -25,6 +26,8 @@ const (
 var defaultLog = l.WithFields(l.Fields{"app": "fullerite", "pkg": "handler"})
 
 var handlerConstructs map[string]func(chan metric.Metric, int, int, time.Duration, *l.Entry) Handler
+
+var mu sync.Mutex
 
 // RegisterHandler takes handler name and constructor function and returns handler
 func RegisterHandler(name string, f func(chan metric.Metric, int, int, time.Duration, *l.Entry) Handler) {
@@ -171,12 +174,12 @@ func (base *BaseHandler) SetDefaultDimensions(defaults map[string]string) {
 }
 
 // Channel : the channel to handler listens for metrics on
-func (base BaseHandler) Channel() chan metric.Metric {
+func (base *BaseHandler) Channel() chan metric.Metric {
 	return base.channel
 }
 
 // CollectorEndpoints : the channels to handler listens for metrics on
-func (base BaseHandler) CollectorEndpoints() map[string]CollectorEnd {
+func (base *BaseHandler) CollectorEndpoints() map[string]CollectorEnd {
 	return base.collectorEndpoints
 }
 
@@ -189,27 +192,27 @@ func (base *BaseHandler) SetCollectorEndpoints(c map[string]CollectorEnd) {
 }
 
 // Name : the name of the handler
-func (base BaseHandler) Name() string {
+func (base *BaseHandler) Name() string {
 	return base.name
 }
 
 // MaxBufferSize : the maximum number of metrics that should be buffered before sending
-func (base BaseHandler) MaxBufferSize() int {
+func (base *BaseHandler) MaxBufferSize() int {
 	return base.maxBufferSize
 }
 
 // Prefix : the prefix (with punctuation) to use on each emitted metric
-func (base BaseHandler) Prefix() string {
+func (base *BaseHandler) Prefix() string {
 	return base.prefix
 }
 
 // DefaultDimensions : dimensions that should be included in any metric
-func (base BaseHandler) DefaultDimensions() map[string]string {
+func (base *BaseHandler) DefaultDimensions() map[string]string {
 	return base.defaultDimensions
 }
 
 // Interval : the maximum interval that the handler should buffer stats for
-func (base BaseHandler) Interval() int {
+func (base *BaseHandler) Interval() int {
 	return base.interval
 }
 
@@ -232,13 +235,13 @@ func (base *BaseHandler) SetCollectorBlackList(blackList []string) {
 }
 
 // IsCollectorBlackListed : return true if collectorName is blacklisted in the handler
-func (base BaseHandler) IsCollectorBlackListed(collectorName string) (bool, bool) {
+func (base *BaseHandler) IsCollectorBlackListed(collectorName string) (bool, bool) {
 	val, exists := base.blackListedCollectors[collectorName]
 	return val, exists
 }
 
 // CollectorBlackList : return handler specific black listed collectors
-func (base BaseHandler) CollectorBlackList() map[string]bool {
+func (base *BaseHandler) CollectorBlackList() map[string]bool {
 	return base.blackListedCollectors
 }
 
@@ -251,18 +254,18 @@ func (base *BaseHandler) SetCollectorWhiteList(whiteList []string) {
 }
 
 // IsCollectorWhiteListed : return true if collectorName is blacklisted in the handler
-func (base BaseHandler) IsCollectorWhiteListed(collectorName string) (bool, bool) {
+func (base *BaseHandler) IsCollectorWhiteListed(collectorName string) (bool, bool) {
 	val, exists := base.whiteListedCollectors[collectorName]
 	return val, exists
 }
 
 // CollectorWhiteList : return handler specific black listed collectors
-func (base BaseHandler) CollectorWhiteList() map[string]bool {
+func (base *BaseHandler) CollectorWhiteList() map[string]bool {
 	return base.whiteListedCollectors
 }
 
 // MaxIdleConnectionsPerHost : return max idle connections per host
-func (base BaseHandler) MaxIdleConnectionsPerHost() int {
+func (base *BaseHandler) MaxIdleConnectionsPerHost() int {
 	return base.maxIdleConnectionsPerHost
 }
 
@@ -298,6 +301,13 @@ func (base *BaseHandler) InitListeners(globalConfig config.Config) {
 	base.SetCollectorEndpoints(collectorEndpoints)
 }
 
+// GetEmissionTimesLen returns base.emissionTimes.Len thread-safe
+func (base *BaseHandler) GetEmissionTimesLen() int {
+	mu.Lock()
+	defer mu.Unlock()
+	return base.emissionTimes.Len()
+}
+
 func getCollectorBatchSize(collectorName string,
 	globalConfig config.Config,
 	defaultBufSize int) (result int) {
@@ -314,17 +324,19 @@ func getCollectorBatchSize(collectorName string,
 }
 
 // KeepAliveInterval - return keep alive interval
-func (base BaseHandler) KeepAliveInterval() int {
+func (base *BaseHandler) KeepAliveInterval() int {
 	return base.keepAliveInterval
 }
 
 // String returns the handler name in a printable format.
-func (base BaseHandler) String() string {
+func (base *BaseHandler) String() string {
 	return base.name + "Handler"
 }
 
 // InternalMetrics : Returns the internal metrics that are being collected by this handler
-func (base BaseHandler) InternalMetrics() metric.InternalMetrics {
+func (base *BaseHandler) InternalMetrics() metric.InternalMetrics {
+	mu.Lock()
+	defer mu.Unlock()
 	counters := map[string]float64{
 		"totalEmissions": float64(base.totalEmissions),
 		"metricsDropped": float64(base.metricsDropped),
@@ -478,6 +490,7 @@ func (base *BaseHandler) recordEmissions(timingsChannel <-chan emissionTiming) {
 		atomic.AddUint64(&base.totalEmissions, 1)
 		now := time.Now()
 
+		mu.Lock()
 		base.emissionTimes.PushBack(timing)
 
 		// now kill the list of old times, iterate through the list until we find
@@ -492,6 +505,7 @@ func (base *BaseHandler) recordEmissions(timingsChannel <-chan emissionTiming) {
 			base.emissionTimes.Remove(toRemove[i])
 		}
 		base.log.Debug("We removed ", len(toRemove), " entries and now have ", base.emissionTimes.Len())
+		mu.Unlock()
 	}
 }
 
