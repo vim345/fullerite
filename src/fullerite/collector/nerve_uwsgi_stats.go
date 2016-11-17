@@ -123,8 +123,19 @@ func parseJSONData(raw []byte, ccEnabled bool) ([]metric.Metric, error) {
 	registry["PauseWorkers"] = 0
 	registry["CheapWorkers"] = 0
 	registry["UnknownStateWorkers"] = 0
-	for _, worker := range result["workers"].([]interface{}) {
-		status := worker.(map[string]interface{})["status"].(string)
+	workers, ok := result["workers"].([]interface{})
+	if !ok {
+		return results, fmt.Errorf("\"workers\" field not found or not an array")
+	}
+	for _, worker := range workers {
+		workerMap, ok := worker.(map[string]interface{})
+		if !ok {
+			return results, fmt.Errorf("worker record is not a map")
+		}
+		status, ok := workerMap["status"].(string)
+		if !ok {
+			return results, fmt.Errorf("status not found or not a string")
+		}
 		if strings.Index(status, "sig") == 0 {
 			status = "sig"
 		}

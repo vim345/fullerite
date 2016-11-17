@@ -513,7 +513,7 @@ func TestNerveUWSGIRealStatsCollect(t *testing.T) {
 	validateStatsEmptyChannel(t, inst.Channel())
 }
 
-func TestNonConflictingStatsServiceQueries(t *testing.T) {
+func TestNonResponseStatsQueries(t *testing.T) {
 	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
 		fmt.Fprint(w, getRealUWSGIStatsResponse())
 	}))
@@ -521,6 +521,54 @@ func TestNonConflictingStatsServiceQueries(t *testing.T) {
 
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
 		return // no response
+	}))
+	defer badServer.Close()
+
+	goodIP, goodPort := convertURL(goodServer.URL)
+	badIP, badPort := convertURL(badServer.URL)
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff":    util.EndPoint{goodIP, goodPort},
+		"other_service.does.lots.of.stuff": util.EndPoint{badIP, badPort},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath": tmpFile.Name(),
+		"queryPath":      "",
+	}
+
+	inst := getTestNerveUWSGIStats()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	for i := 0; i < 6; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateRealUWSGIStatsResults(t, actual)
+	validateStatsDimensions(t, actual, "test_service", goodPort)
+	validateStatsEmptyChannel(t, inst.Channel())
+}
+
+func TestInvalidJSONStatsQueries(t *testing.T) {
+	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		fmt.Fprint(w, getRealUWSGIStatsResponse())
+	}))
+	defer goodServer.Close()
+
+	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		fmt.Fprint(w, "{\"workers\":[{\"a\":\"b\"}]}")
 	}))
 	defer badServer.Close()
 
