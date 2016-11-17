@@ -60,8 +60,7 @@ class ProcPidCollector(diamond.collector.Collector):
         for service, pid_path in self.config['pid_paths'].items():
             fds = self.get_fds(self.get_proc_path(pid_path))
             try:
-                self.dimensions = {}
-                self.dimensions['service'] = service
-                self.publish('proc.pid.fds', fds)
+                self.dimensions = {'service': service}
+                self.publish('proc_pid_stats.fds', fds)
             except Exception, e:
                 self.log.error("ProcPidCollector Error: %s", e)

@@ -81,7 +81,7 @@ class TestProcPidCollector(CollectorTestCase):
         mock_get_fds.assert_has_calls([call('/proc/1'),
                                        call('/proc/2')],
                                       any_order=True)
-        self.assertPublished(mock_publish, 'proc.pid.fds', [5, 3])
+        self.assertPublished(mock_publish, 'proc_pid_stats.fds', [5, 3])
 
 
 
