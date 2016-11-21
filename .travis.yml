@@ -1,7 +1,9 @@
 language: go
 
 install:
-  - "pip install --user -r requirements-dev.txt"
+  - "apt-cache policy libxml2-dev"
+  - "pip install --user tox"
   - bash scripts/gitcookie.sh
 go:
   - 1.6
+script: make test

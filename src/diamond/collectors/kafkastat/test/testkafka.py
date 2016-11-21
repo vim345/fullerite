@@ -175,6 +175,7 @@ class TestKafkaCollector(CollectorTestCase):
             'GarbageCollector.PSMarkSweep.CollectionTime': 160,
         }
 
+        print publish_mock.call_args_list
         self.assertPublishedMany(publish_mock, expected_metrics)
 
 ###############################################################################

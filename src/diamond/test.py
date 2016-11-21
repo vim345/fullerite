@@ -10,6 +10,7 @@ import traceback
 import optparse
 import logging
 import configobj
+from mock import call
 
 try:
     import cPickle as pickle
@@ -158,8 +159,7 @@ class CollectorTestCase(unittest.TestCase):
             expected_value=len(value)
             self.assertEqual(actual_value, expected_value, message)
             for i, v in enumerate(value):
-                call = calls[i]
-                assert (key, v) in call
+                assert call(key, v) in calls
         else:
             self.assertEqual(actual_value, expected_value, message)
             if expected_value:
