@@ -139,12 +139,12 @@ func parseJSONData(raw []byte, ccEnabled bool) ([]metric.Metric, error) {
 		if strings.Index(status, "sig") == 0 {
 			status = "sig"
 		}
-		status = strings.Title(status) + "Workers"
-		_, exists := registry[status]
+		metricName := strings.Title(status) + "Workers"
+		_, exists := registry[metricName]
 		if !exists {
-			status = "UnknownStateWorkers"
+			metricName = "UnknownStateWorkers"
 		}
-		registry[status]++
+		registry[metricName]++
 	}
 	for key, value := range registry {
 		results = append(results, metric.WithValue(key, float64(value)))
