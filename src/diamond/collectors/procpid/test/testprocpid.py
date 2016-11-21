@@ -41,7 +41,7 @@ class TestProcPidCollector(CollectorTestCase):
 
     def test_get_proc_path(self):
         mock_open_file = mock_open(read_data='2312')
-        with patch('proc_pid.open', mock_open_file):
+        with patch('proc_pid.open', mock_open_file, create=True):
             ret = self.collector.get_proc_path('/var/whatever')
             mock_open_file.assert_called_with('/var/whatever')
             assert ret == '/proc/2312'

@@ -34,6 +34,8 @@ export PATH
 GO15VENDOREXPERIMENT := 0
 export GO15VENDOREXPERIMENT
 
+export GOM_VENDOR_NAME=.
+
 all: clean fmt lint $(FULLERITE) $(BEATIT) test
 
 .PHONY: clean
