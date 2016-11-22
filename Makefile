@@ -34,8 +34,6 @@ export PATH
 GO15VENDOREXPERIMENT := 0
 export GO15VENDOREXPERIMENT
 
-export GOM_VENDOR_NAME=.
-
 all: clean fmt lint $(FULLERITE) $(BEATIT) test
 
 .PHONY: clean
@@ -51,6 +49,8 @@ clean:
 deps:
 	@echo Getting dependencies...
 	@go get github.com/mattn/gom
+	@cd src/github.com/mattn/gom && git checkout --quiet f23898ded119fd78fc5224dd9ee091fe4da03abc
+	@go build -o bin/gom github.com/mattn/gom/
 	@gom install > /dev/null
 
 $(FULLERITE): $(SOURCES) deps
