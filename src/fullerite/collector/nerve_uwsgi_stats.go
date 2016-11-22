@@ -20,10 +20,9 @@ import (
 type nerveUWSGIStatsCollector struct {
 	baseCollector
 
-	configFilePath    string
-	queryPath         string
-	timeout           int
-	servicesWhitelist []string
+	configFilePath string
+	queryPath      string
+	timeout        int
 }
 
 func init() {
@@ -51,9 +50,6 @@ func (n *nerveUWSGIStatsCollector) Configure(configMap map[string]interface{}) {
 	}
 	if val, exists := configMap["configFilePath"]; exists {
 		n.configFilePath = val.(string)
-	}
-	if val, exists := configMap["servicesWhitelist"]; exists {
-		n.servicesWhitelist = config.GetAsSlice(val)
 	}
 
 	if val, exists := configMap["http_timeout"]; exists {
@@ -93,7 +89,7 @@ func (n *nerveUWSGIStatsCollector) queryService(serviceName string, port int) {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
 		return
 	}
-	metrics, err := parseJSONData(rawResponse, n.serviceInWhitelist(serviceName))
+	metrics, err := parseJSONData(rawResponse)
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
@@ -109,7 +105,7 @@ func (n *nerveUWSGIStatsCollector) queryService(serviceName string, port int) {
 	}
 }
 
-func parseJSONData(raw []byte, ccEnabled bool) ([]metric.Metric, error) {
+func parseJSONData(raw []byte) ([]metric.Metric, error) {
 	result := make(map[string]interface{})
 	err := json.Unmarshal(raw, &result)
 	results := []metric.Metric{}
@@ -181,15 +177,4 @@ func readJSONFromEndpoint(endpoint string, timeout int) ([]byte, error) {
 	}
 
 	return txt, nil
-}
-
-// serviceInWhitelist returns true if the service name passed as argument
-// is found among the ones whitelisted by the user
-func (n *nerveUWSGIStatsCollector) serviceInWhitelist(service string) bool {
-	for _, s := range n.servicesWhitelist {
-		if s == service {
-			return true
-		}
-	}
-	return false
 }
