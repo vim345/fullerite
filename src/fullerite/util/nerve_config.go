@@ -38,6 +38,7 @@ type nerveConfigData struct {
 type NerveService struct {
 	Name      string
 	Namespace string
+	Hostname  string
 	Port      int
 }
 
@@ -79,8 +80,9 @@ func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, erro
 			service := new(NerveService)
 			service.Name = strings.Split(rawServiceName, ".")[0]
 			service.Namespace = strings.Split(rawServiceName, ".")[1]
-			port := extractPort(serviceConfig)
+			hostname, port := extractHostnameAndPort(serviceConfig)
 			if port != -1 {
+				service.Hostname = hostname
 				service.Port = port
 				if namespaceIncluded {
 					services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
@@ -97,7 +99,7 @@ func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, erro
 	return results, nil
 }
 
-func extractPort(serviceConfig map[string]interface{}) int {
+func extractHostnameAndPort(serviceConfig map[string]interface{}) (string, int) {
 	checkConfig := make(map[string]interface{})
 
 	if checkArray, ok := serviceConfig["checks"].([]interface{}); ok {
@@ -113,7 +115,12 @@ func extractPort(serviceConfig map[string]interface{}) int {
 	}
 
 	if len(uri) == 0 {
-		return -1
+		return "", -1
+	}
+
+	hostname, ok := checkConfig["host"].(string)
+	if !ok {
+		hostname = "localhost"
 	}
 
 	uriArray := strings.Split(uri, "/")
@@ -121,13 +128,13 @@ func extractPort(serviceConfig map[string]interface{}) int {
 		protocol := strings.TrimSpace(uriArray[1])
 		port := uriArray[3]
 		if !httpRegexp.MatchString(protocol) {
-			return -1
+			return "", -1
 		}
 		if portInt, err := strconv.ParseInt(port, 10, 64); err == nil {
-			return int(portInt)
+			return hostname, int(portInt)
 		}
 	}
-	return -1
+	return "", -1
 }
 
 // getIps is responsible for getting all the ips that are associated with this NIC

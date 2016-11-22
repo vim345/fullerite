@@ -74,14 +74,14 @@ func (n *nerveUWSGIStatsCollector) Collect() {
 	n.log.Debug("Finished parsing Nerve config into ", services)
 
 	for _, service := range services {
-		go n.queryService(service.Name, service.Port)
+		go n.queryService(service.Name, service.Hostname, service.Port)
 	}
 }
 
-func (n *nerveUWSGIStatsCollector) queryService(serviceName string, port int) {
+func (n *nerveUWSGIStatsCollector) queryService(serviceName string, hostname string, port int) {
 	serviceLog := n.log.WithField("service", serviceName)
 
-	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.queryPath)
+	endpoint := fmt.Sprintf("http://%s:%d/%s", hostname, port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 
 	rawResponse, err := readJSONFromEndpoint(endpoint, n.timeout)

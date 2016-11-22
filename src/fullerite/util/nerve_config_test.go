@@ -148,9 +148,9 @@ func badURINerveConfig() []byte {
 
 func TestNerveConfigParsing(t *testing.T) {
 	expected := map[NerveService]bool{
-		NerveService{Name: "example_service", Namespace: "mesosstage_main", Port: 22224}: true,
-		NerveService{Name: "example_service", Namespace: "main", Port: 13752}:            true,
-		NerveService{Name: "example_service", Namespace: "another", Port: 13752}:         true,
+		NerveService{Name: "example_service", Namespace: "mesosstage_main", Hostname: "127.0.0.1", Port: 22224}: true,
+		NerveService{Name: "example_service", Namespace: "main", Hostname: "127.0.0.1", Port: 13752}:            true,
+		NerveService{Name: "example_service", Namespace: "another", Hostname: "127.0.0.1", Port: 13752}:         true,
 	}
 
 	cfgString := getTestNerveConfig()
