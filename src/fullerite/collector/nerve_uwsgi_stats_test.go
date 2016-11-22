@@ -292,29 +292,29 @@ func getRealUWSGIStatsResponse() string {
 	`
 }
 
-func validateArtificialUWSGIStatsResults(t *testing.T, actual []metric.Metric) {
+func validateUWSGIStatsResults(t *testing.T, actual []metric.Metric, results [6]float64) {
 	assert.Equal(t, 6, len(actual))
 
 	for _, m := range actual {
 
 		switch m.Name {
 		case "IdleWorkers":
-			assert.Equal(t, 2.0, m.Value)
+			assert.Equal(t, results[0], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "BusyWorkers":
-			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, results[1], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "SigWorkers":
-			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, results[2], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "CheapWorkers":
-			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, results[3], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "PauseWorkers":
-			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, results[4], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "UnknownStateWorkers":
-			assert.Equal(t, 2.0, m.Value)
+			assert.Equal(t, results[5], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		}
 	}
@@ -430,9 +430,9 @@ func convertURL(url string) (string, string) {
 	return ip, port
 }
 
-func TestNerveUWSGIArtificialStatsCollect(t *testing.T) {
+func DoTesting(t *testing.T, firstResponse string, secondResponse string, results [6]float64) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		fmt.Fprint(w, getArtificialUWSGIStatsResponse())
+		fmt.Fprint(w, firstResponse)
 	}))
 	defer server.Close()
 
@@ -466,51 +466,17 @@ func TestNerveUWSGIArtificialStatsCollect(t *testing.T) {
 	for i := 0; i < 6; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
-	validateArtificialUWSGIStatsResults(t, actual)
+	validateUWSGIStatsResults(t, actual, results)
 	validateStatsDimensions(t, actual, "test_service", port)
 	validateStatsEmptyChannel(t, inst.Channel())
 }
 
+func TestNerveUWSGIArtificialStatsCollect(t *testing.T) {
+	DoTesting(t, getArtificialUWSGIStatsResponse(), "", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
+}
+
 func TestNerveUWSGIRealStatsCollect(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		fmt.Fprint(w, getRealUWSGIStatsResponse())
-	}))
-	defer server.Close()
-
-	// assume format is http://ipaddr:port
-	ip, port := convertURL(server.URL)
-	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
-		"test_service.things.and.stuff": util.EndPoint{ip, port},
-	})
-
-	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
-	assert.Nil(t, err)
-	defer os.Remove(tmpFile.Name())
-
-	marshalled, err := json.Marshal(minimalNerveConfig)
-	assert.Nil(t, err)
-
-	_, err = tmpFile.Write(marshalled)
-	assert.Nil(t, err)
-
-	cfg := map[string]interface{}{
-		"configFilePath": tmpFile.Name(),
-		"queryPath":      "",
-	}
-
-	inst := getTestNerveUWSGIStats()
-	inst.Configure(cfg)
-
-	go inst.Collect()
-
-	actual := []metric.Metric{}
-	for i := 0; i < 6; i++ {
-		actual = append(actual, <-inst.Channel())
-	}
-
-	validateRealUWSGIStatsResults(t, actual)
-	validateStatsDimensions(t, actual, "test_service", port)
-	validateStatsEmptyChannel(t, inst.Channel())
+	DoTesting(t, getRealUWSGIStatsResponse(), "", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
 }
 
 func TestNonResponseStatsQueries(t *testing.T) {
