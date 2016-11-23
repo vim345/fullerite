@@ -17,10 +17,10 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
-// Nerve uWSGI collector - fetches stats from uWSGI stats servers published over HTTP
+// Nerve uWSGI collector - fetches counts of idle and busy workers from uWSGI stats servers published over HTTP
 // http://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
-// It reads the location of uWSGI stats servers from SmartStack 
-type nerveUWSGIStatsCollector struct {
+// It reads the location of uWSGI stats servers from SmartStack
+type nerveUWSGIIdleworkersCollector struct {
 	baseCollector
 
 	configFilePath string
@@ -29,18 +29,18 @@ type nerveUWSGIStatsCollector struct {
 }
 
 func init() {
-	RegisterCollector("NerveUWSGIStats", newNerveUWSGIStats)
+	RegisterCollector("NerveUWSGIIdleworkers", newNerveUWSGIIdleworkers)
 }
 
 // Default values of configuration fields
-func newNerveUWSGIStats(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
-	col := new(nerveUWSGIStatsCollector)
+func newNerveUWSGIIdleworkers(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
+	col := new(nerveUWSGIIdleworkersCollector)
 
 	col.log = log
 	col.channel = channel
 	col.interval = initialInterval
 
-	col.name = "NerveUWSGIStats"
+	col.name = "NerveUWSGIIdleworkers"
 	col.configFilePath = "/etc/nerve/nerve.conf.json"
 	col.queryPath = "status/uwsgi"
 	col.timeout = 2
@@ -49,7 +49,7 @@ func newNerveUWSGIStats(channel chan metric.Metric, initialInterval int, log *l.
 }
 
 // Rewrites config variables from the global config
-func (n *nerveUWSGIStatsCollector) Configure(configMap map[string]interface{}) {
+func (n *nerveUWSGIIdleworkersCollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["queryPath"]; exists {
 		n.queryPath = val.(string)
 	}
@@ -65,7 +65,7 @@ func (n *nerveUWSGIStatsCollector) Configure(configMap map[string]interface{}) {
 }
 
 // Parses nerve config from HTTP uWSGI stats endpoints
-func (n *nerveUWSGIStatsCollector) Collect() {
+func (n *nerveUWSGIIdleworkersCollector) Collect() {
 	rawFileContents, err := ioutil.ReadFile(n.configFilePath)
 	if err != nil {
 		n.log.Warn("Failed to read the contents of file ", n.configFilePath, " because ", err)
@@ -85,7 +85,7 @@ func (n *nerveUWSGIStatsCollector) Collect() {
 }
 
 // Fetches and computes status stats from an HTTP endpoint
-func (n *nerveUWSGIStatsCollector) queryService(serviceName string, hostname string, port int) {
+func (n *nerveUWSGIIdleworkersCollector) queryService(serviceName string, hostname string, port int) {
 	serviceLog := n.log.WithField("service", serviceName)
 
 	endpoint := fmt.Sprintf("http://%s:%d/%s", hostname, port, n.queryPath)
