@@ -79,7 +79,7 @@ func getNerveConfigForTest() []byte {
 	return []byte(raw)
 }
 
-func getArtificialUWSGIIdleworkersResponse() string {
+func getArtificialUWSGIWorkerStatsResponse() string {
 	return `{
         "workers":[
 		{"status":"idle"},
@@ -94,7 +94,7 @@ func getArtificialUWSGIIdleworkersResponse() string {
 	}`
 }
 
-func getRealUWSGIIdleworkersResponse() string {
+func getRealUWSGIWorkerStatsResponse() string {
 	return `{
 	"version":"XXXXXXXXXXXX",
 	"listen_queue":0,
@@ -292,7 +292,7 @@ func getRealUWSGIIdleworkersResponse() string {
 	`
 }
 
-func validateUWSGIIdleworkersResults(t *testing.T, actual []metric.Metric, results [6]float64) {
+func validateUWSGIWorkerStatsResults(t *testing.T, actual []metric.Metric, results [6]float64) {
 	assert.Equal(t, 6, len(actual))
 
 	for _, m := range actual {
@@ -342,12 +342,12 @@ func validateStatsEmptyChannel(t *testing.T, c chan metric.Metric) {
 	}
 }
 
-func getTestNerveUWSGIIdleworkers() *nerveUWSGIIdleworkersCollector {
-	return newNerveUWSGIIdleworkers(make(chan metric.Metric), 12, l.WithField("testing", "nerveuwsgistats")).(*nerveUWSGIIdleworkersCollector)
+func getTestNerveUWSGIWorkerStats() *uWSGINerveWorkerStatsCollector {
+	return newUWSGINerveWorkerStats(make(chan metric.Metric), 12, l.WithField("testing", "nerveuwsgistats")).(*uWSGINerveWorkerStatsCollector)
 }
 
-func TestDefaultConfigNerveUWSGIIdleworkers(t *testing.T) {
-	inst := getTestNerveUWSGIIdleworkers()
+func TestDefaultConfigNerveUWSGIWorkerStats(t *testing.T) {
+	inst := getTestNerveUWSGIWorkerStats()
 	inst.Configure(make(map[string]interface{}))
 
 	assert.Equal(t, 12, inst.Interval())
@@ -356,7 +356,7 @@ func TestDefaultConfigNerveUWSGIIdleworkers(t *testing.T) {
 	assert.Equal(t, "status/uwsgi", inst.queryPath)
 }
 
-func TestConfigNerveUWSGIIdleworkers(t *testing.T) {
+func TestConfigNerveUWSGIWorkerStats(t *testing.T) {
 	cfg := map[string]interface{}{
 		"interval":       345,
 		"configFilePath": "/etc/your/moms/house",
@@ -364,7 +364,7 @@ func TestConfigNerveUWSGIIdleworkers(t *testing.T) {
 		"http_timeout":   12,
 	}
 
-	inst := getTestNerveUWSGIIdleworkers()
+	inst := getTestNerveUWSGIWorkerStats()
 	inst.Configure(cfg)
 
 	assert.Equal(t, 345, inst.Interval())
@@ -451,7 +451,7 @@ func DoTesting(t *testing.T, firstResponse string, secondResponse string, result
 		"queryPath":      "",
 	}
 
-	inst := getTestNerveUWSGIIdleworkers()
+	inst := getTestNerveUWSGIWorkerStats()
 	inst.Configure(cfg)
 
 	go inst.Collect()
@@ -460,23 +460,23 @@ func DoTesting(t *testing.T, firstResponse string, secondResponse string, result
 	for i := 0; i < 6; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
-	validateUWSGIIdleworkersResults(t, actual, results)
+	validateUWSGIWorkerStatsResults(t, actual, results)
 	validateStatsDimensions(t, actual, "test_service", goodPort)
 	validateStatsEmptyChannel(t, inst.Channel())
 }
 
 func TestNerveUWSGIArtificialStatsCollect(t *testing.T) {
-	DoTesting(t, getArtificialUWSGIIdleworkersResponse(), "", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
+	DoTesting(t, getArtificialUWSGIWorkerStatsResponse(), "", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
 }
 
 func TestNerveUWSGIRealStatsCollect(t *testing.T) {
-	DoTesting(t, getRealUWSGIIdleworkersResponse(), "", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
+	DoTesting(t, getRealUWSGIWorkerStatsResponse(), "", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
 }
 
 func TestNonResponseStatsQueries(t *testing.T) {
-	DoTesting(t, getRealUWSGIIdleworkersResponse(), "none", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
+	DoTesting(t, getRealUWSGIWorkerStatsResponse(), "none", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
 }
 
 func TestInvalidJSONStatsQueries(t *testing.T) {
-	DoTesting(t, getArtificialUWSGIIdleworkersResponse(), "{\"workers\":[{\"a\":\"b\"}]}", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
+	DoTesting(t, getArtificialUWSGIWorkerStatsResponse(), "{\"workers\":[{\"a\":\"b\"}]}", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
 }
