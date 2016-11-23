@@ -17,6 +17,9 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
+// Nerve uWSGI collector - fetches stats from uWSGI stats servers published over HTTP
+// http://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
+// It reads the location of uWSGI stats servers from SmartStack 
 type nerveUWSGIStatsCollector struct {
 	baseCollector
 
@@ -29,6 +32,7 @@ func init() {
 	RegisterCollector("NerveUWSGIStats", newNerveUWSGIStats)
 }
 
+// Default values of configuration fields
 func newNerveUWSGIStats(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
 	col := new(nerveUWSGIStatsCollector)
 
@@ -44,6 +48,7 @@ func newNerveUWSGIStats(channel chan metric.Metric, initialInterval int, log *l.
 	return col
 }
 
+// Rewrites config variables from the global config
 func (n *nerveUWSGIStatsCollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["queryPath"]; exists {
 		n.queryPath = val.(string)
@@ -59,6 +64,7 @@ func (n *nerveUWSGIStatsCollector) Configure(configMap map[string]interface{}) {
 	n.configureCommonParams(configMap)
 }
 
+// Parses nerve config from HTTP uWSGI stats endpoints
 func (n *nerveUWSGIStatsCollector) Collect() {
 	rawFileContents, err := ioutil.ReadFile(n.configFilePath)
 	if err != nil {
@@ -78,6 +84,7 @@ func (n *nerveUWSGIStatsCollector) Collect() {
 	}
 }
 
+// Fetches and computes status stats from an HTTP endpoint
 func (n *nerveUWSGIStatsCollector) queryService(serviceName string, hostname string, port int) {
 	serviceLog := n.log.WithField("service", serviceName)
 
@@ -105,6 +112,7 @@ func (n *nerveUWSGIStatsCollector) queryService(serviceName string, hostname str
 	}
 }
 
+// Counts status stats from JSON content
 func parseJSONData(raw []byte) ([]metric.Metric, error) {
 	result := make(map[string]interface{})
 	err := json.Unmarshal(raw, &result)
@@ -148,6 +156,7 @@ func parseJSONData(raw []byte) ([]metric.Metric, error) {
 	return results, err
 }
 
+// Fetches the JSON stats content from HTTP endpoint
 func readJSONFromEndpoint(endpoint string, timeout int) ([]byte, error) {
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Second,
