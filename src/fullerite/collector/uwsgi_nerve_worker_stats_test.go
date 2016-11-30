@@ -447,8 +447,9 @@ func DoTesting(t *testing.T, firstResponse string, secondResponse string, result
 	assert.Nil(t, err)
 
 	cfg := map[string]interface{}{
-		"configFilePath": tmpFile.Name(),
-		"queryPath":      "",
+		"configFilePath":   tmpFile.Name(),
+		"queryPath":        "",
+		"serviceWhitelist": []string{"test_service"},
 	}
 
 	inst := getTestNerveUWSGIWorkerStats()
