@@ -425,7 +425,7 @@ func DoTesting(t *testing.T, firstResponse string, secondResponse string, result
 	if badIP == "" {
 		// If whitelisting fails, non_whitelisted_service will send on a closed channel
 		minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
-			"test_service.things.and.stuff": util.EndPoint{goodIP, goodPort},
+			"test_service.things.and.stuff":            util.EndPoint{goodIP, goodPort},
 			"non_whitelisted_service.things.and.stuff": util.EndPoint{goodIP, goodPort},
 		})
 		marshalled, err := json.Marshal(minimalNerveConfig)
@@ -449,8 +449,8 @@ func DoTesting(t *testing.T, firstResponse string, secondResponse string, result
 	assert.Nil(t, err)
 
 	cfg := map[string]interface{}{
-		"configFilePath":   tmpFile.Name(),
-		"queryPath":        "",
+		"configFilePath":    tmpFile.Name(),
+		"queryPath":         "",
 		"servicesWhitelist": []string{"test_service"},
 	}
 
