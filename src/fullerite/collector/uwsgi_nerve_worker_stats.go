@@ -24,9 +24,10 @@ import (
 type uWSGINerveWorkerStatsCollector struct {
 	baseCollector
 
-	configFilePath string
-	queryPath      string
-	timeout        int
+	configFilePath    string
+	queryPath         string
+	timeout           int
+	servicesWhitelist []string
 }
 
 func init() {
@@ -57,6 +58,9 @@ func (n *uWSGINerveWorkerStatsCollector) Configure(configMap map[string]interfac
 	if val, exists := configMap["configFilePath"]; exists {
 		n.configFilePath = val.(string)
 	}
+	if val, exists := configMap["servicesWhitelist"]; exists {
+		n.servicesWhitelist = config.GetAsSlice(val)
+	}
 
 	if val, exists := configMap["http_timeout"]; exists {
 		n.timeout = config.GetAsInt(val, 2)
@@ -81,7 +85,9 @@ func (n *uWSGINerveWorkerStatsCollector) Collect() {
 	n.log.Debug("Finished parsing Nerve config into ", services)
 
 	for _, service := range services {
-		go n.queryService(service.Name, service.Port)
+		if n.serviceInWhitelist(service) {
+			go n.queryService(service.Name, service.Port)
+		}
 	}
 }
 
@@ -111,6 +117,17 @@ func (n *uWSGINerveWorkerStatsCollector) queryService(serviceName string, port i
 	for _, m := range metrics {
 		n.Channel() <- m
 	}
+}
+
+// serviceInWhitelist returns true if the service name passed as argument
+// is found among the ones whitelisted by the user
+func (n *uWSGINerveWorkerStatsCollector) serviceInWhitelist(service util.NerveService) bool {
+	for _, s := range n.servicesWhitelist {
+		if s == service.Name {
+			return true
+		}
+	}
+	return false
 }
 
 // Counts status stats from JSON content
