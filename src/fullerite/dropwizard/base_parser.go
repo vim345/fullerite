@@ -99,8 +99,15 @@ func (parser *BaseParser) metricFromMap(metricMap map[string]interface{},
 	metricName string,
 	metricType string) []metric.Metric {
 	results := []metric.Metric{}
+	dims := make(map[string]string)
 
 	for rollup, value := range metricMap {
+		// First check for dimension set if present
+		if rollup == "dimensions" {
+			dims = value.(map[string]string)
+			continue
+		}
+
 		mName := metricName
 		mType := metricType
 		matched, _ := regexp.MatchString("m[0-9]+_rate", rollup)
@@ -123,6 +130,7 @@ func (parser *BaseParser) metricFromMap(metricMap map[string]interface{},
 		}
 	}
 
+	metric.AddToAll(&results, dims)
 	return results
 }
 
