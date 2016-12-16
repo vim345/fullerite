@@ -81,7 +81,7 @@ func TestUWSGIMetricConversionDims(t *testing.T) {
 
 		// this will not create a metric
 		"units":      "events/second",
-		"dimensions": map[string]string{"run": "test"},
+		"dimensions": map[string]interface{}{"run": "test"},
 	}
 	testMeters["pyramid_uwsgi_metrics.tweens.4xx-responses"] = map[string]interface{}{
 		"count":     366116,
@@ -92,7 +92,7 @@ func TestUWSGIMetricConversionDims(t *testing.T) {
 
 		// this will not create a metric
 		"units":      "events/second",
-		"dimensions": map[string]string{"run": "test"},
+		"dimensions": map[string]interface{}{"run": "test"},
 	}
 	parser := NewUWSGIMetric([]byte(``), "", false)
 
