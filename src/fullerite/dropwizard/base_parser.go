@@ -106,7 +106,12 @@ func (parser *BaseParser) metricFromMap(metricMap map[string]interface{},
 		// See uwsgi_metric.go:68 for explanation on the range over value
 		if rollup == "dimensions" {
 			for dimName, dimVal := range value.(map[string]interface{}) {
-				dims[dimName] = dimVal.(string)
+				// Handle nil valued dimensions
+				if strVal, ok := dimVal.(string); ok {
+					dims[dimName] = strVal
+				} else {
+					dims[dimName] = "null"
+				}
 			}
 			continue
 		}
