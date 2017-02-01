@@ -109,6 +109,8 @@ func (parser *BaseParser) metricFromMap(metricMap map[string]interface{},
 				// Handle nil valued dimensions
 				if strVal, ok := dimVal.(string); ok {
 					dims[dimName] = strVal
+				} else {
+					dims[dimName] = "null"
 				}
 			}
 			continue
