@@ -67,11 +67,9 @@ func NewUWSGIMetric(data []byte, schemaVer string, ccEnabled bool) *UWSGIMetric 
 	parser.data = data
 	parser.schemaVer = schemaVer
 	parser.ccEnabled = ccEnabled
-	err := json.Unmarshal(data, parser)
-	if err != nil {
-		// Assign a nil version that's easy to manage
-		parser.UWSGIVersion = "0.0.0"
-	}
+	parser.UWSGIVersion = "0.0.0"
+	// Overwrite default version string if it exists in the payload
+	json.Unmarshal(data, parser)
 	return parser
 }
 
