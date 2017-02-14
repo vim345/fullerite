@@ -11,5 +11,5 @@ src/golang.org/*
 .project
 .vagrant
 src/fullerite/collector/collector.test
-_vendor/
+vendor/
 *.pprof
