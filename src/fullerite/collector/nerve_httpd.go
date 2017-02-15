@@ -20,24 +20,24 @@ import (
 
 var (
 	getNerveHTTPDMetrics = (*NerveHTTPD).getMetrics
-	knownApacheMetrics   = map[string]bool{
-		"ReqPerSec":        true,
-		"BytesPerSec":      true,
-		"BytesPerReq":      true,
-		"BusyWorkers":      true,
-		"Total Accesses":   true,
-		"IdleWorkers":      true,
-		"StartingWorkers":  true,
-		"ReadingWorkers":   true,
-		"WritingWorkers":   true,
-		"KeepaliveWorkers": true,
-		"DnsWorkers":       true,
-		"ClosingWorkers":   true,
-		"LoggingWorkers":   true,
-		"FinishingWorkers": true,
-		"CleanupWorkers":   true,
-		"StandbyWorkers":   true,
-		"CPULoad":          true,
+	knownApacheMetrics   = map[string]string{
+		"ReqPerSec":        metric.Gauge,
+		"BytesPerSec":      metric.Gauge,
+		"BytesPerReq":      metric.Gauge,
+		"BusyWorkers":      metric.Gauge,
+		"Total Accesses":   metric.CumulativeCounter,
+		"IdleWorkers":      metric.Gauge,
+		"StartingWorkers":  metric.Gauge,
+		"ReadingWorkers":   metric.Gauge,
+		"WritingWorkers":   metric.Gauge,
+		"KeepaliveWorkers": metric.Gauge,
+		"DnsWorkers":       metric.Gauge,
+		"ClosingWorkers":   metric.Gauge,
+		"LoggingWorkers":   metric.Gauge,
+		"FinishingWorkers": metric.Gauge,
+		"CleanupWorkers":   metric.Gauge,
+		"StandbyWorkers":   metric.Gauge,
+		"CPULoad":          metric.Gauge,
 	}
 	metricRegexp = regexp.MustCompile(`^([A-Za-z ]+):\s+(.+)$`)
 )
@@ -197,7 +197,7 @@ func extractApacheMetrics(data []byte) []metric.Metric {
 
 func buildApacheMetric(key, value string) (metric.Metric, error) {
 	var tmpMetric metric.Metric
-	if _, ok := knownApacheMetrics[key]; ok {
+	if metricType, ok := knownApacheMetrics[key]; ok {
 		whiteRegexp := regexp.MustCompile(`\s+`)
 		metricName := whiteRegexp.ReplaceAllString(key, "")
 		metricValue, err := strconv.ParseFloat(value, 64)
@@ -205,7 +205,9 @@ func buildApacheMetric(key, value string) (metric.Metric, error) {
 		if err != nil {
 			return tmpMetric, err
 		}
-		return metric.WithValue(metricName, metricValue), nil
+		m := metric.WithValue(metricName, metricValue)
+		m.MetricType = metricType
+		return m, nil
 	}
 	return tmpMetric, errors.New("invalid metric")
 }
@@ -215,17 +217,22 @@ func extractScoreBoardMetrics(key, value string) []metric.Metric {
 	charCounter := func(str string, pattern string) float64 {
 		return float64(strings.Count(str, pattern))
 	}
-	results = append(results, metric.WithValue("IdleWorkers", charCounter(value, "_")))
-	results = append(results, metric.WithValue("StartingWorkers", charCounter(value, "S")))
-	results = append(results, metric.WithValue("ReadingWorkers", charCounter(value, "R")))
-	results = append(results, metric.WithValue("WritingWorkers", charCounter(value, "W")))
-	results = append(results, metric.WithValue("KeepaliveWorkers", charCounter(value, "K")))
-	results = append(results, metric.WithValue("DnsWorkers", charCounter(value, "D")))
-	results = append(results, metric.WithValue("ClosingWorkers", charCounter(value, "C")))
-	results = append(results, metric.WithValue("LoggingWorkers", charCounter(value, "L")))
-	results = append(results, metric.WithValue("FinishingWorkers", charCounter(value, "G")))
-	results = append(results, metric.WithValue("CleanupWorkers", charCounter(value, "I")))
-	results = append(results, metric.WithValue("StandbyWorkers", charCounter(value, "_")))
+	metricWithValueAndType := func(str string, value float64) metric.Metric {
+		m := metric.WithValue(str, value)
+		m.MetricType = knownApacheMetrics[str]
+		return m
+	}
+	results = append(results, metricWithValueAndType("IdleWorkers", charCounter(value, "_")))
+	results = append(results, metricWithValueAndType("StartingWorkers", charCounter(value, "S")))
+	results = append(results, metricWithValueAndType("ReadingWorkers", charCounter(value, "R")))
+	results = append(results, metricWithValueAndType("WritingWorkers", charCounter(value, "W")))
+	results = append(results, metricWithValueAndType("KeepaliveWorkers", charCounter(value, "K")))
+	results = append(results, metricWithValueAndType("DnsWorkers", charCounter(value, "D")))
+	results = append(results, metricWithValueAndType("ClosingWorkers", charCounter(value, "C")))
+	results = append(results, metricWithValueAndType("LoggingWorkers", charCounter(value, "L")))
+	results = append(results, metricWithValueAndType("FinishingWorkers", charCounter(value, "G")))
+	results = append(results, metricWithValueAndType("CleanupWorkers", charCounter(value, "I")))
+	results = append(results, metricWithValueAndType("StandbyWorkers", charCounter(value, "_")))
 	return results
 }
 
