@@ -103,11 +103,11 @@ protobuf: deps $(PROTO_SFX)
 
 lint: deps $(SOURCES)
 	@echo Linting $(FULLERITE) sources...
-	@$(foreach src, $(SOURCES), _vendor/bin/golint $(src);)
+	@$(foreach src, $(SOURCES), vendor/bin/golint $(src);)
 
 cyclo: deps $(SOURCES)
 	@echo Checking code complexity...
-	@_vendor/bin/gocyclo $(SOURCES)
+	@vendor/bin/gocyclo $(SOURCES)
 
 pkg: package
 package: clean $(FULLERITE) $(BEATIT)
