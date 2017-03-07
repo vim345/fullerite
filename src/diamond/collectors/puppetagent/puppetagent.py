@@ -60,5 +60,5 @@ class PuppetAgentCollector(diamond.collector.Collector):
                 if value is None or isinstance(value, basestring):
                     continue
 
-                metric = '.'.join([sect, stat])
+                metric = '.'.join(['puppet', sect, stat])
                 self.publish(metric, value)
