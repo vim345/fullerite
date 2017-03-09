@@ -14,8 +14,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # 192.168.33.210-229
   nodes = [
-    { name: 'test', memory: '512', box: 'trusty',  master: true, },
+    { name: 'fullerite-vm1', memory: '512', box: 'trusty',  master: true, },
   ]
+
+  go_tgz = "go1.7.3.linux-amd64.tar.gz"
 
   if Vagrant.has_plugin?("vagrant-cachier")
     config.cache.scope = :box
@@ -42,10 +44,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         vm_config.vm.synced_folder sync_dir.fetch(:source), sync_dir.fetch(:dest)
       end
 
-      vm_config.vm.provision "shell", inline: "apt-get update && apt-get -y dist-upgrade && apt-get install -y git"
-      vm_config.vm.provision "shell", privileged: true, inline: "[ ! -f go1.5.2.linux-amd64.tar.gz ] && wget -q https://storage.googleapis.com/golang/go1.5.2.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.5.2.linux-amd64.tar.gz"
+      vm_config.vm.provision "shell", inline: "apt-get update && apt-get -y dist-upgrade && apt-get install -y git python-pip"
+      vm_config.vm.provision "shell", privileged: true, inline: "[ ! -f #{go_tgz} ] && wget -q https://storage.googleapis.com/golang/#{go_tgz} && tar -C /usr/local -xzf #{go_tgz}"
       vm_config.vm.provision "shell", inline: "echo 'PATH=/usr/local/go/bin:$PATH' >> .profile"
-      vm_config.vm.provision "shell", privileged: true, inline: "cp /vagrant/vagrant/fullerite.conf /etc/fullerite.conf"
+      vm_config.vm.provision "shell", inline: "pip install --user -r /vagrant/requirements-dev.txt"
+      vm_config.vm.provision "shell", privileged: true, inline: "mkdir /etc/fullerite && cp /vagrant/vagrant/fullerite.conf /etc/fullerite.conf && rsync -r /vagrant/vagrant/conf.d/ /etc/fullerite/conf.d/"
 
     end
 
