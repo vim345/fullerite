@@ -105,12 +105,13 @@ class JolokiaCollector(diamond.collector.Collector):
                        " False by default.",
             'host': 'Hostname',
             'port': 'Port',
+            'domain_blacklist': 'A list of blacklisted domains (no read request will be sent for these domains)',
             'mbean_blacklist': 'A list of blacklisted mbeans',
             'rewrite': "This sub-section of the config contains pairs of"
                        " from-to regex rewrites.",
             'url_path': 'Path to jolokia.  typically "jmx" or "jolokia"',
             'listing_max_depth': 'max depth of domain listings tree, 0=deepest, 1=keys only, 2=weird',
-            'read_limit': 'Request size to read from jolokia, defaults to 1000, 0 = no limit'
+            'read_limit': 'Request size to read from jolokia, defaults to 1000, 0 = no limit',
         })
         return config_help
 
@@ -122,6 +123,7 @@ class JolokiaCollector(diamond.collector.Collector):
             'rewrite': [],
             'url_path': 'jolokia',
             'host': 'localhost',
+            'domain_blacklist': [],
             'mbean_blacklist': [],
             'port': 8778,
             'listing_max_depth': 1,
@@ -193,7 +195,7 @@ class JolokiaCollector(diamond.collector.Collector):
                 self.domain_keys = domains.keys()
                 self.last_list_request = listing.get('timestamp', int(time.time()))
             for domain in self.domain_keys:
-                if domain not in self.IGNORE_DOMAINS:
+                if domain not in self.IGNORE_DOMAINS and domain not in self.config['domain_blacklist']:
                     self.publish_metric_from_domain(domain)
         except KeyError:
             # The reponse was totally empty, or not an expected format
@@ -208,7 +210,6 @@ class JolokiaCollector(diamond.collector.Collector):
         for k, v in mbeans.iteritems():
             if self.check_mbean(k):
                 self.collect_bean(k, v)
-
 
     def read_json(self, request):
         json_str = request.read()
