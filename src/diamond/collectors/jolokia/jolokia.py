@@ -145,6 +145,14 @@ class JolokiaCollector(diamond.collector.Collector):
         if isinstance(self.config['rewrite'], dict):
             self.rewrite = self.config['rewrite']
 
+    def process_config(self):
+        """
+        Intended to put any code that should be run after any config reload
+        event
+        """
+        super(JolokiaCollector, self).process_config()
+        self.domain_blacklist = set(self.IGNORE_DOMAINS + self.config['domain_blacklist'])
+
     def check_mbean(self, mbean):
         if not self.mbeans:
             return True
@@ -195,7 +203,7 @@ class JolokiaCollector(diamond.collector.Collector):
                 self.domain_keys = domains.keys()
                 self.last_list_request = listing.get('timestamp', int(time.time()))
             for domain in self.domain_keys:
-                if domain not in self.IGNORE_DOMAINS and domain not in self.config['domain_blacklist']:
+                if domain not in self.domain_blackilist:
                     self.publish_metric_from_domain(domain)
         except KeyError:
             # The reponse was totally empty, or not an expected format
