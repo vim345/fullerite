@@ -203,7 +203,7 @@ class JolokiaCollector(diamond.collector.Collector):
                 self.domain_keys = domains.keys()
                 self.last_list_request = listing.get('timestamp', int(time.time()))
             for domain in self.domain_keys:
-                if domain not in self.domain_blackilist:
+                if domain not in self.domain_blacklist:
                     self.publish_metric_from_domain(domain)
         except KeyError:
             # The reponse was totally empty, or not an expected format
