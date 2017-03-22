@@ -151,6 +151,7 @@ class HAProxyCollector(diamond.collector.Collector):
             'pass': "Password",
             'ignore_servers': "Ignore servers, just collect frontend and "
                               + "backend stats",
+            'extra_prefix': "Prefix the metric name with the given string",
         })
         return config_help
 
@@ -165,6 +166,7 @@ class HAProxyCollector(diamond.collector.Collector):
             'user':             'admin',
             'pass':             'password',
             'ignore_servers':   False,
+            'extra_prefix':     None,
         })
         return config
 
@@ -272,7 +274,11 @@ class HAProxyCollector(diamond.collector.Collector):
                 if status:
                     self.dimensions.update({'status': status})
 
-                metric_name = '.'.join(['haproxy', headings[index]])
+                if self._get_config_value(section, 'extra_prefix'):
+                    metric_prefix = self._get_config_value(section, 'extra_prefix') + '_haproxy'
+                else:
+                    metric_prefix = 'haproxy'
+                metric_name = '.'.join([metric_prefix, headings[index]])
                 if section_name:
                     self.dimensions['section_server'] = section_name
                 if headings[index] in self.CUMULATIVE_COUNTERS:
