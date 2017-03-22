@@ -18,6 +18,7 @@ class TestHAProxyCollector(CollectorTestCase):
     def setUp(self):
         config = get_collector_config('HAProxyCollector', {
             'interval': 10,
+            'extra_prefix': 'edgestage',
         })
 
         self.collector = HAProxyCollector(config, None)
