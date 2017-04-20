@@ -9,13 +9,16 @@ CONFIG_FILE="/etc/fullerite.conf"
 LOG_FILE="/var/log/fullerite/fullerite.log"
 ERR_LOG_FILE="/var/log/fullerite/fullerite.err"
 LOG_LEVEL="info"
+DISABLE_FULLERITE=
 
 if [ -e "/etc/default/fullerite" ]; then
   . /etc/default/fullerite
 fi
 
-sudo -u "$USER" /usr/bin/fullerite \
-  --config "$CONFIG_FILE" \
-  --log_level "$LOG_LEVEL" 2>&1 >>"$LOG_FILE" | \
-  sudo -u "$USER" tee --append "$ERR_LOG_FILE"
+if [ ! "$DISABLE_FULLERITE" ]; then
+  sudo -u "$USER" /usr/bin/fullerite \
+    --config "$CONFIG_FILE" \
+    --log_level "$LOG_LEVEL" 2>&1 >>"$LOG_FILE" | \
+    sudo -u "$USER" tee --append "$ERR_LOG_FILE"
+fi
 end script
