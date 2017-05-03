@@ -86,8 +86,7 @@ func (s *Scribe) Configure(configMap map[string]interface{}) {
 	s.configureCommonParams(configMap)
 }
 
-// Run runs the handler main loop
-func (s *Scribe) Run() {
+func (s *Scribe) connectToScribe() {
 	server := fmt.Sprintf("%s:%d", s.endpoint, s.port)
 	conn, err := net.Dial("tcp", server)
 
@@ -99,6 +98,11 @@ func (s *Scribe) Run() {
 		client := thrift.NewClient(t, false)
 		s.scribeClient = &scribe.ScribeClient{Client: client}
 	}
+}
+
+// Run runs the handler main loop
+func (s *Scribe) Run() {
+	s.connectToScribe()
 
 	s.run(s.emitMetrics)
 }
@@ -108,6 +112,7 @@ func (s *Scribe) emitMetrics(metrics []metric.Metric) bool {
 
 	if s.scribeClient == nil {
 		s.log.Warn("Cannot connect to scribe server. Skipping send.")
+		s.connectToScribe()
 		return false
 	}
 
@@ -131,6 +136,7 @@ func (s *Scribe) emitMetrics(metrics []metric.Metric) bool {
 
 		if err != nil {
 			s.log.Errorf("Failed to write to scribe. Error: %s", err.Error())
+			s.connectToScribe()
 			return false
 		}
 	}
