@@ -525,16 +525,16 @@ func (base *BaseHandler) emitAndTime(
 		duration:    emissionDuration,
 		metricsSent: numMetrics,
 	}
-	base.log.Info(
-		fmt.Sprintf("POST of %d metrics to %s took %f seconds",
-			numMetrics,
-			base.name,
-			emissionDuration.Seconds(),
-		),
-	)
 	callbackChannel <- timing
 
 	if result {
+		base.log.Info(
+			fmt.Sprintf("POST of %d metrics to %s took %f seconds",
+				numMetrics,
+				base.name,
+				emissionDuration.Seconds(),
+			),
+		)
 		atomic.AddUint64(&base.metricsSent, uint64(numMetrics))
 	} else {
 		atomic.AddUint64(&base.metricsDropped, uint64(numMetrics))
