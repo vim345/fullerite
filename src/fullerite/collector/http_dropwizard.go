@@ -10,6 +10,9 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
+// The HTTP Dropwizard Collector allows to collect metrics emitted by java/python services
+// with one of the schemas defined at dropwizard/base_parser.go#L80.
+// User needs to specify port and path where the service'metrics endpoint is setup.
 type httpDropwizardCollector struct {
 	baseCollector
 
@@ -19,8 +22,11 @@ type httpDropwizardCollector struct {
 
 // ServiceEndpoint defines a struct for endpoints
 type ServiceEndpoint struct {
+	// Name is the service name
 	Name string
+	// Port is the service metrics endpoint port
 	Port string
+	// Path is the service metrics endpoint path (i.e. status/metrics)
 	Path string
 }
 
