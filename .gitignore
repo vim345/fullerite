@@ -12,4 +12,3 @@ src/github.com/
 .vagrant
 src/fullerite/collector/collector.test
 *.pprof
-src/fullerite/glide.lock
