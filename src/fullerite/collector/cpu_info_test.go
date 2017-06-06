@@ -2,8 +2,8 @@ package collector
 
 import (
 	"fullerite/metric"
+	"fullerite/test_utils"
 	"path"
-	"test_utils"
 
 	"testing"
 	"time"

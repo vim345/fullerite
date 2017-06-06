@@ -2,9 +2,9 @@ package dropwizard
 
 import (
 	"fullerite/metric"
+	"fullerite/test_utils"
 	"io/ioutil"
 	"path"
-	"test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
