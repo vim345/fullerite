@@ -2,12 +2,13 @@ FULLERITE      := fullerite
 BEATIT         := beatit
 VERSION        := 0.5.11
 SRCDIR         := src
+GLIDE          := glide
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
 PKGS           := \
-	$(BEATIT) \
 	$(FULLERITE) \
+	$(FULLERITE)/$(BEATIT) \
 	$(FULLERITE)/collector \
 	$(FULLERITE)/config \
 	$(FULLERITE)/handler \
@@ -28,11 +29,10 @@ comma := ,
 GOPATH  := $(shell pwd -L)
 export GOPATH
 
-PATH := bin:$(PATH)
+PATH := $(GOPATH)/bin:$(PATH)
 export PATH
 
-GO15VENDOREXPERIMENT := 0
-export GO15VENDOREXPERIMENT
+unexport GOROOT
 
 all: clean fmt lint $(FULLERITE) $(BEATIT) test
 
@@ -48,30 +48,32 @@ clean:
 
 deps:
 	@echo Getting dependencies...
-	@go get github.com/mattn/gom
-	@cd src/github.com/mattn/gom && git checkout --quiet f23898ded119fd78fc5224dd9ee091fe4da03abc
-	@go build -o bin/gom github.com/mattn/gom/
-	@gom install > /dev/null
+	@go get github.com/Masterminds/glide
+	@cd src/github.com/Masterminds/glide && git checkout --quiet v0.12.3
+	@go build -o bin/glide github.com/Masterminds/glide/
+	@cd $(GOPATH)/src/$(FULLERITE) && $(GLIDE) install
+	@go build -o bin/golint fullerite/vendor/github.com/golang/lint/golint/
+	@go build -o bin/gocyclo fullerite/vendor/github.com/fzipp/gocyclo/
 
 $(FULLERITE): $(SOURCES) deps
 	@echo Building $(FULLERITE)...
-	@gom build -o bin/$(FULLERITE) $@
+	@go build -o bin/$(FULLERITE) $@
 
 $(BEATIT): $(BEATIT_SOURCES)
 	@echo Building $(BEATIT)...
-	@gom build -o bin/$(BEATIT) $@
+	@go build -o bin/$(BEATIT) fullerite/beatit
 
 test: tests
 tests: deps diamond_core_test diamond_collector_test
 	@echo Testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
-		gom test -race -cover $$pkg || exit 1;\
+		go test -race -cover $$pkg || exit 1;\
 	done
 
 qbt:
 	@echo Fast testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
-		gom test -v -cover $$pkg || exit 1;\
+		go test -v -cover $$pkg || exit 1;\
 	done
 
 diamond_core_test:
@@ -82,17 +84,15 @@ diamond_collector_test:
 
 coverage_report: deps
 	@echo Creating a coverage rport for $(FULLERITE)
-	@$(foreach pkg, $(PKGS), gom test -coverprofile=coverage.out -coverpkg=$(subst $(space),$(comma),$(PKGS)) $(pkg);)
-	@gom tool cover -html=coverage.out
-
-
+	@$(foreach pkg, $(PKGS), go test -coverprofile=coverage.out -coverpkg=$(subst $(space),$(comma),$(PKGS)) $(pkg);)
+	@go tool cover -html=coverage.out
 
 fmt: deps $(SOURCES)
-	@$(foreach pkg, $(PKGS), gom fmt $(pkg);)
+	@$(foreach pkg, $(PKGS), go fmt $(pkg);)
 
 vet: deps $(SOURCES)
 	@echo Vetting $(FULLERITE) sources...
-	@$(foreach pkg, $(PKGS), gom vet $(pkg);)
+	@$(foreach pkg, $(PKGS), go vet $(pkg);)
 
 proto: protobuf
 protobuf: deps $(PROTO_SFX)
@@ -103,11 +103,11 @@ protobuf: deps $(PROTO_SFX)
 
 lint: deps $(SOURCES)
 	@echo Linting $(FULLERITE) sources...
-	@$(foreach src, $(SOURCES), vendor/bin/golint $(src);)
+	@$(foreach src, $(SOURCES), golint $(src);)
 
 cyclo: deps $(SOURCES)
 	@echo Checking code complexity...
-	@vendor/bin/gocyclo $(SOURCES)
+	@gocyclo $(SOURCES)
 
 pkg: package
 package: clean $(FULLERITE) $(BEATIT)
