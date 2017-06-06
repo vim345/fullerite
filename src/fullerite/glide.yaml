@@ -1,0 +1,34 @@
+package: fullerite
+import:
+- package: github.com/Sirupsen/logrus
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
+- package: github.com/alyu/configparser
+  version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
+- package: github.com/andygrunwald/megos
+  version: 5a1b5a99315853a986abab3905011f00772b2e4f
+- package: github.com/codegangsta/cli
+  version: 8cea2901d4b2c28b97001e67a7d2d60e227f3da6
+- package: github.com/fsouza/go-dockerclient
+  version: 02a8beb401b20e112cff3ea740545960b667eab1
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
+  version: 98fa357170587e470c5f27d3c3ea0947b71eb455
+- package: github.com/pkg/profile
+  version: 7b053ad66e2a49baca9cc97b982dcea0e182bda4
+- package: github.com/prometheus/procfs
+- package: github.com/samuel/go-thrift
+  subpackages:
+  - examples/scribe
+  - thrift
+  version: e9042807f4f5bf47563df6992d3ea0857313e2be
+- package: github.com/golang/lint/golint
+  version: 8f348af5e29faa4262efdc14302797f23774e477
+- package: golang.org/x/tools
+- package: github.com/fzipp/gocyclo
+  varsion: 6acd4345c835499920e8426c7e4e8d7a34f1bb83
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+  - require
