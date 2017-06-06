@@ -32,8 +32,6 @@ export GOPATH
 PATH := $(GOPATH)/bin:$(PATH)
 export PATH
 
-unexport GOROOT
-
 all: clean fmt lint $(FULLERITE) $(BEATIT) test
 
 .PHONY: clean
