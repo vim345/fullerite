@@ -7,7 +7,7 @@ import (
 	"fullerite/collector"
 	"fullerite/handler"
 	"fullerite/metric"
-	"test_utils"
+	"fullerite/test_utils"
 
 	"github.com/stretchr/testify/assert"
 )

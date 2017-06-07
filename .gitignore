@@ -1,8 +1,8 @@
 bin/*
 build/*
 pkg/*
-src/github.com/*
-src/golang.org/*
+src/fullerite/vendor/
+src/github.com/
 *.deb
 *.secret
 *.swp
@@ -11,5 +11,4 @@ src/golang.org/*
 .project
 .vagrant
 src/fullerite/collector/collector.test
-vendor/
 *.pprof
