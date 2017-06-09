@@ -89,9 +89,9 @@ existing functionality of fullerite - it is probably best to open a pull request
 
 ## Adding new dependency
 
-If you want to add new external dependency to fullerite, please make sure it is added to `Gomfile`.
+If you want to add new external dependency to fullerite, please make sure it is added to `src/fullerite/glide.yaml`.
 Do not forget to specify `TAG` or `commit_id` of external git repository.  More information about
-`Gomfile` can be found at https://github.com/mattn/gom.
+`glide` can be found at https://github.com/Masterminds/glide.
 
 ## Ensure code is formatted, tested and passes golint.
 
@@ -101,10 +101,3 @@ please fix them before opening a pull request.
 ## Building and compiling
 
 Running `make` should build the fullerite go binary and place it in the `bin` directory.
-
-## Building package fails or gom install fails
-
-If you have vendored external dependencies in `src/` directory or `pkg` directory from old build configuration, you should
-delete `src/github.com`, `pkg` and `src/golang.org` before running `gom install` or attempting to build the package.
-
-Aforementioned directories are artifacts of old build configuration before we moved to using `gom` for managing dependencies.
