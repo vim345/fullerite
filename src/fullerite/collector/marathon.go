@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"fullerite/metric"
+	"fullerite/config"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -19,8 +20,8 @@ var (
 	sendMarathonMetrics = (*MarathonStats).sendMarathonMetrics
 	getMarathonMetrics  = (*MarathonStats).getMarathonMetrics
 
-	getMarathonMetricsURL = func(ip string) string { return fmt.Sprintf("http://%s/metrics", ip) }
-	getMarathonLeaderURL  = func(ip string) string { return fmt.Sprintf("http://%s/v2/leader", ip) }
+	getMarathonMetricsURL = func(host string) string { return fmt.Sprintf("http://%s/metrics", host) }
+	getMarathonLeaderURL  = func(host string) string { return fmt.Sprintf("http://%s/v2/leader", host) }
 )
 
 const (
@@ -30,8 +31,9 @@ const (
 // MarathonStats Collector for marathon leader stats
 type MarathonStats struct {
 	baseCollector
-	IP     string
-	client http.Client
+	IP           string
+	client       http.Client
+	marathonHost string
 }
 
 type buildError struct {
@@ -67,10 +69,17 @@ func newMarathonStats(channel chan metric.Metric, initialInterval int, log *l.En
 // Configure just calls the default configure
 func (m *MarathonStats) Configure(configMap map[string]interface{}) {
 	m.configureCommonParams(configMap)
+
+	c := config.GetAsMap(configMap)
+	if marathonHost, exists := c["marathonHost"]; exists && len(marathonHost) > 0 {
+		m.marathonHost = marathonHost
+	} else {
+		m.log.Error("Marathon host not specified in config")
+	}
 }
 
 func (m *MarathonStats) isLeader() bool {
-	url := getMarathonLeaderURL(m.IP)
+	url := getMarathonLeaderURL(m.marathonHost)
 	r, err := m.client.Get(url)
 
 	if err != nil {
@@ -198,7 +207,7 @@ func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
 
 
 func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
-	url := getMarathonMetricsURL(m.IP)
+	url := getMarathonMetricsURL(m.marathonHost)
 	r, err := m.client.Get(url)
 
 	if err != nil {
