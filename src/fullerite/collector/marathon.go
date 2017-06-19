@@ -142,7 +142,7 @@ type parse func(map[string]interface{}, []metric.Metric) ([]metric.Metric, error
 
 func metricMaker(valueName string, valueType string) parse {
 	return func(value map[string]interface{}, metrics []metric.Metric) ([]metric.Metric, error) {
-        var err error = nil
+		var err error = nil
 		for k, v := range value {
 			var met metric.Metric
 			vmap, ok := v.(map[string]interface{})
@@ -151,10 +151,11 @@ func metricMaker(valueName string, valueType string) parse {
 			}
 			for k2, v2 := range vmap {
 				if k2 == valueName {
-                    vfloat, ok := v2.(float64)
-                    if !ok {
-                        err = buildError{fmt.Sprintf("Failed to convert %s to float", k)}
-                    }
+					vfloat, ok := v2.(float64)
+					if !ok {
+						// Sometimes marathon outputs non-floats.  We'll ignore them
+						break
+					}
 					met = metric.WithValue("marathon."+k, vfloat)
 					met.MetricType = valueType
 					metrics = append(metrics, met)
@@ -198,7 +199,7 @@ func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
 				metrics, err = f(vmap, metrics)
 
 				if err != nil {
-					m.log.Warn("Could not decode ", vmap)
+					m.log.Warn("Could not decode ", err)
 				}
 			} else {
 				m.log.Warn("Could not convert %s to proper format: ", k)
