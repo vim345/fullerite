@@ -151,11 +151,11 @@ func metricMaker(valueName string, valueType string) parse {
 			}
 			for k2, v2 := range vmap {
 				if k2 == valueName {
-                    met, ok := v2.(float64)
+                    vfloat, ok := v2.(float64)
                     if !ok {
-                        err = buildError{fmt.Sprtintf("Failed to convert %s to float", k)}
+                        err = buildError{fmt.Sprintf("Failed to convert %s to float", k)}
                     }
-					met = metric.WithValue("marathon."+k, v2.(float64))
+					met = metric.WithValue("marathon."+k, vfloat)
 					met.MetricType = valueType
 					metrics = append(metrics, met)
 					break
