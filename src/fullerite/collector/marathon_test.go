@@ -85,7 +85,7 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 	}{
 		{
 			`{"gauges": {"foo.bar": {"value": 10}}}`,
-			[]struct{Name string; Value float64; T string}{{"foo.bar", 10.0, metric.Gauge}},
+			[]struct{Name string; Value float64; T string}{{"marathon.foo.bar", 10.0, metric.Gauge}},
 			false,
 			"Should parse a simple input",
 		},
@@ -94,13 +94,13 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 		},
 		{
 			`{"version": "3.0.0", "gauges": {"bar.foo": {"value": 20}}}`,
-			[]struct{Name string; Value float64; T string}{{"bar.foo", 20.0, metric.Gauge}},
+			[]struct{Name string; Value float64; T string}{{"marathon.bar.foo", 20.0, metric.Gauge}},
 			false,
 			"Should ignore the version field",
 		},
 		{
 			`{"version": "3.0.0", "gauges": {"bar.foo": {"value": 20}}, "counters": {"foo.bar": {"count": 30}}}`,
-			[]struct{Name string; Value float64; T string}{{"bar.foo", 20.0, metric.Gauge}, {"foo.bar", 30.0, metric.Counter}},
+			[]struct{Name string; Value float64; T string}{{"marathon.bar.foo", 20.0, metric.Gauge}, {"marathon.foo.bar", 30.0, metric.Counter}},
 			false,
 			"Should work with multiple metrics",
 		},

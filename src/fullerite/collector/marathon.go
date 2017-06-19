@@ -141,7 +141,7 @@ func metricMaker(valueName string, valueType string) parse {
 			}
 			for k2, v2 := range vmap {
 				if k2 == valueName {
-					met = metric.WithValue(k, v2.(float64))
+					met = metric.WithValue("marathon." + k, v2.(float64))
 					met.MetricType = valueType
 					metrics = append(metrics, met)
 					break
