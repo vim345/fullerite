@@ -3,8 +3,8 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
-	"fullerite/metric"
 	"fullerite/config"
+	"fullerite/metric"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -138,10 +138,10 @@ func (m *MarathonStats) sendMarathonMetrics() {
 	}
 }
 
-type parse func(map[string]interface{}, []metric.Metric)([]metric.Metric, error)
+type parse func(map[string]interface{}, []metric.Metric) ([]metric.Metric, error)
 
 func metricMaker(valueName string, valueType string) parse {
-	return func(value map[string]interface{}, metrics []metric.Metric)([]metric.Metric, error) {
+	return func(value map[string]interface{}, metrics []metric.Metric) ([]metric.Metric, error) {
 		for k, v := range value {
 			var met metric.Metric
 			vmap, ok := v.(map[string]interface{})
@@ -150,7 +150,7 @@ func metricMaker(valueName string, valueType string) parse {
 			}
 			for k2, v2 := range vmap {
 				if k2 == valueName {
-					met = metric.WithValue("marathon." + k, v2.(float64))
+					met = metric.WithValue("marathon."+k, v2.(float64))
 					met.MetricType = valueType
 					metrics = append(metrics, met)
 					break
@@ -161,7 +161,6 @@ func metricMaker(valueName string, valueType string) parse {
 		return metrics, nil
 	}
 }
-
 
 func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
 	var f interface{}
@@ -179,8 +178,8 @@ func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
 
 	metrics := make([]metric.Metric, 0, len(u))
 
-	jsonToMetricMap := map[string]parse {
-		"gauges": metricMaker("value", metric.Gauge),
+	jsonToMetricMap := map[string]parse{
+		"gauges":   metricMaker("value", metric.Gauge),
 		"counters": metricMaker("count", metric.Counter),
 	}
 
@@ -204,7 +203,6 @@ func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
 
 	return metrics, nil
 }
-
 
 func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
 	url := getMarathonMetricsURL(m.marathonHost)

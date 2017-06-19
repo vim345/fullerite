@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-//	"time"
+	//	"time"
 
 	"fullerite/metric"
 
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMarathonStatsNewMarathonStats (t *testing.T) {
+func TestMarathonStatsNewMarathonStats(t *testing.T) {
 	oldExternalIP := externalIP
 	defer func() { externalIP = oldExternalIP }()
 
@@ -75,17 +75,21 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 
 	tests := []struct {
 		rawResponse string
-		expected    []struct{
+		expected    []struct {
 			Name  string
 			Value float64
 			T     string
 		}
-		err         bool
-		msg         string
+		err bool
+		msg string
 	}{
 		{
 			`{"gauges": {"foo.bar": {"value": 10}}}`,
-			[]struct{Name string; Value float64; T string}{{"marathon.foo.bar", 10.0, metric.Gauge}},
+			[]struct {
+				Name  string
+				Value float64
+				T     string
+			}{{"marathon.foo.bar", 10.0, metric.Gauge}},
 			false,
 			"Should parse a simple input",
 		},
@@ -94,13 +98,21 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 		},
 		{
 			`{"version": "3.0.0", "gauges": {"bar.foo": {"value": 20}}}`,
-			[]struct{Name string; Value float64; T string}{{"marathon.bar.foo", 20.0, metric.Gauge}},
+			[]struct {
+				Name  string
+				Value float64
+				T     string
+			}{{"marathon.bar.foo", 20.0, metric.Gauge}},
 			false,
 			"Should ignore the version field",
 		},
 		{
 			`{"version": "3.0.0", "gauges": {"bar.foo": {"value": 20}}, "counters": {"foo.bar": {"count": 30}}}`,
-			[]struct{Name string; Value float64; T string}{{"marathon.bar.foo", 20.0, metric.Gauge}, {"marathon.foo.bar", 30.0, metric.Counter}},
+			[]struct {
+				Name  string
+				Value float64
+				T     string
+			}{{"marathon.bar.foo", 20.0, metric.Gauge}, {"marathon.foo.bar", 30.0, metric.Counter}},
 			false,
 			"Should work with multiple metrics",
 		},
