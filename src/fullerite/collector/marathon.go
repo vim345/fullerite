@@ -138,8 +138,13 @@ func (m *MarathonStats) sendMarathonMetrics() {
 	}
 }
 
+// parse takes a map[string]interface{} and a running slice of metrics and returns
+//  an updated slice with the metrics pulled from the map
 type parse func(map[string]interface{}, []metric.Metric) ([]metric.Metric, error)
 
+// metricMaker returns a function that will parse the metrics out of a map
+// All the metric parsing is nearly identical; the only difference is the type
+//  and what the value is named in the json
 func metricMaker(valueName string, valueType string) parse {
 	return func(value map[string]interface{}, metrics []metric.Metric) ([]metric.Metric, error) {
 		for k, v := range value {
@@ -179,9 +184,13 @@ func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
 
 	metrics := make([]metric.Metric, 0, len(u))
 
+	// Mapping from the name of a metric type returned from Marathon to the function
+	//  that will parse it
 	jsonToMetricMap := map[string]parse{
 		"gauges":   metricMaker("value", metric.Gauge),
 		"counters": metricMaker("count", metric.Counter),
+		// Meters also include events per second, but we'll ignore those for now
+		"meters": metricMaker("count", metric.Counter),
 	}
 
 	for k, v := range u {
