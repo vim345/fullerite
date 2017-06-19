@@ -148,17 +148,13 @@ func metricMaker(valueName string, valueType string) parse {
 			if !ok {
 				return metrics, buildError{fmt.Sprintf("%s not in expected format", valueName)}
 			}
-			for k2, v2 := range vmap {
-				if k2 == valueName {
-					vfloat, ok := v2.(float64)
-					if !ok {
-						// Sometimes marathon outputs non-floats.  We'll ignore them
-						break
-					}
+			v2, exists := vmap[valueName]
+			if exists {
+				vfloat, ok := v2.(float64)
+				if ok {
 					met = metric.WithValue("marathon."+k, vfloat)
 					met.MetricType = valueType
 					metrics = append(metrics, met)
-					break
 				}
 			}
 		}
