@@ -14,6 +14,8 @@ import (
 )
 
 var (
+	hostname = os.Hostname
+
 	sendMarathonMetrics = (*MarathonStats).sendMarathonMetrics
 	getMarathonMetrics  = (*MarathonStats).getMarathonMetrics
 
@@ -102,10 +104,11 @@ func (m *MarathonStats) isLeader() bool {
 
 	s := strings.Split(leader, ":")
 
-	hostname, err := os.Hostname()
+	hostname, err := hostname()
 
 	if err != nil {
 		m.log.Error("Cannot determine hostname: ", err.Error())
+		return false
 	}
 
 	return s[0] == hostname
@@ -118,33 +121,83 @@ func (m *MarathonStats) Collect() {
 	}
 }
 
-func toSendMetric(name string) bool {
-	if name == "counters" {
-		return true
-	} else if name == "gauges" {
-		return true
-	} else {
-		return false
+func (m *MarathonStats) sendMarathonMetrics() {
+	metrics := getMarathonMetrics(m)
+
+	for _, metric := range metrics {
+		m.Channel() <- metric
 	}
 }
 
-func (m *MarathonStats) sendMarathonMetrics() {
-	metrics := m.getMarathonMetrics()
+type parse func(map[string]interface{}, []metric.Metric)([]metric.Metric, error)
 
-	for metricType, metricValues := range metrics {
-		if toSendMetric(metricType) {
-			for k, v := range metricValues {
-				s, err := buildMarathonMetric(metricType, k, v)
-				if err != nil {
-					m.log.Error("Error building Marathon Metric: ", err)
+func metricMaker(valueName string, valueType string) parse {
+	return func(value map[string]interface{}, metrics []metric.Metric)([]metric.Metric, error) {
+		for k, v := range value {
+			var met metric.Metric
+			vmap, ok := v.(map[string]interface{})
+			if !ok {
+				return metrics, buildError{fmt.Sprintf("%s not in expected format", valueName)}
+			}
+			for k2, v2 := range vmap {
+				if k2 == valueName {
+					met = metric.WithValue(k, v2.(float64))
+					met.MetricType = valueType
+					metrics = append(metrics, met)
+					break
 				}
-				m.Channel() <- s
+			}
+		}
+
+		return metrics, nil
+	}
+}
+
+
+func (m *MarathonStats) unmarshalJSON(b []byte) ([]metric.Metric, error) {
+	var f interface{}
+	decodeErr := json.Unmarshal(b, &f)
+
+	if decodeErr != nil {
+		return nil, buildError{fmt.Sprintf("Could not convert bytes to JSON: ", decodeErr)}
+	}
+
+	u, ok := f.(map[string]interface{})
+
+	if !ok {
+		return nil, buildError{"Could not convert JSON to map of strings"}
+	}
+
+	metrics := make([]metric.Metric, 0, len(u))
+
+	jsonToMetricMap := map[string]parse {
+		"gauges": metricMaker("value", metric.Gauge),
+		"counters": metricMaker("count", metric.Counter),
+	}
+
+	for k, v := range u {
+		f, exists := jsonToMetricMap[k]
+		if exists {
+			vmap, ok := v.(map[string]interface{})
+			// if we have trouble with one metric, keep going
+			if ok {
+				var err error
+				metrics, err = f(vmap, metrics)
+
+				if err != nil {
+					m.log.Warn("Could not decode ", vmap)
+				}
+			} else {
+				m.log.Warn("Could not convert %s to proper format: ", k)
 			}
 		}
 	}
+
+	return metrics, nil
 }
 
-func (m *MarathonStats) getMarathonMetrics() map[string]map[string]interface{} {
+
+func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
 	url := getMarathonMetricsURL(m.IP)
 	r, err := m.client.Get(url)
 
@@ -161,60 +214,13 @@ func (m *MarathonStats) getMarathonMetrics() map[string]map[string]interface{} {
 	}
 
 	contents, _ := ioutil.ReadAll(r.Body)
-	var types map[string]string
 
-	decodeErr := json.Unmarshal([]byte(contents), &types)
+	metrics, err := m.unmarshalJSON([]byte(contents))
 
-	if decodeErr != nil {
-		m.log.Error("Unable to decode marathon metrics JSON: ", decodeErr.Error())
+	if err != nil {
+		m.log.Error("Unable to decode marathon metrics JSON: ", err)
 		return nil
 	}
 
-	var allMetrics map[string]map[string]interface{}
-	var metric map[string]interface{}
-
-	for k, v := range types {
-		if k != "version" {
-			decodeErr := json.Unmarshal([]byte(v), &metric)
-
-			if decodeErr != nil {
-				m.log.Error("Unable to decode marathon metrics JSON: ", decodeErr.Error())
-				return nil
-			}
-
-			allMetrics[k] = metric
-		}
-	}
-
-	return allMetrics
-}
-
-func buildMarathonMetric(metricType string, k string, v interface{}) (metric.Metric, error) {
-	var m metric.Metric
-	var err error
-	switch metricType {
-	case "gauges":
-		m, err = buildMarathonMetricWithValueName(k, v.(string), "value")
-	case "counters":
-		m, err = buildMarathonMetricWithValueName(k, v.(string), "count")
-	default:
-		err = buildError{fmt.Sprintf("%s is not a supported metric type", metricType)}
-	}
-
-	return m, err
-}
-
-func buildMarathonMetricWithValueName(k string, v string, valueName string) (metric.Metric, error) {
-	var valueMap map[string]float64
-	var m metric.Metric
-
-	decodeErr := json.Unmarshal([]byte(v), &valueMap)
-
-	if decodeErr != nil {
-		return m, decodeErr
-	}
-
-	m = metric.WithValue(k, valueMap[valueName])
-
-	return m, nil
+	return metrics
 }
