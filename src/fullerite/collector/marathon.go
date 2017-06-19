@@ -142,7 +142,6 @@ type parse func(map[string]interface{}, []metric.Metric) ([]metric.Metric, error
 
 func metricMaker(valueName string, valueType string) parse {
 	return func(value map[string]interface{}, metrics []metric.Metric) ([]metric.Metric, error) {
-		var err error = nil
 		for k, v := range value {
 			var met metric.Metric
 			vmap, ok := v.(map[string]interface{})
@@ -164,7 +163,7 @@ func metricMaker(valueName string, valueType string) parse {
 			}
 		}
 
-		return metrics, err
+		return metrics, nil
 	}
 }
 
