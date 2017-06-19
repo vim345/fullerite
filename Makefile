@@ -6,6 +6,7 @@ GLIDE          := glide
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
 PROTO_SFX      := $(HANDLER_DIR)/signalfx.proto
 GEN_PROTO_SFX  := $(HANDLER_DIR)/signalfx.pb.go
+EXTRA_VERSION  ?= 0
 PKGS           := \
 	$(FULLERITE) \
 	$(FULLERITE)/$(BEATIT) \
@@ -131,6 +132,7 @@ ifeq ($(OS),Ubuntu)
 		--before-install "deb/before_install.sh" \
 		--before-remove "deb/before_rm.sh" \
 		--after-remove "deb/post_rm.sh" \
+		--iteration "$(EXTRA_VERSION)" \
 		-C build .
 # CentOS 7 Only
 else ifeq ($(OS),CentOS)
@@ -144,6 +146,7 @@ else ifeq ($(OS),CentOS)
 		--rpm-group "fuller" \
 		--before-install "rpm/before_install.sh" \
 		--before-remove "rpm/before_rm.sh" \
+		--iteration "$(EXTRA_VERSION)" \
 		-C build . \
 		../rpm/fullerite.systemd=/etc/systemd/system/fullerite.service \
 		../rpm/fullerite.sysconfig=/etc/sysconfig/fullerite
@@ -158,6 +161,7 @@ else ifeq ($(OS),AmazonAMI)
 		--rpm-group "fuller" \
 		--before-install "rpm/before_install.sh" \
 		--before-remove "rpm/before_rm.sh" \
+		--iteration "$(EXTRA_VERSION)" \
 		-C build . \
 		../deb/etc/init/fullerite=/etc/init/fullerite.conf \
 		../deb/etc/init/fullerite_diamond_server=/etc/init/fullerite_diamond_server.conf
