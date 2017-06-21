@@ -31,6 +31,7 @@ func (e leaderError) Error() string {
 	return e.Reason
 }
 
+// IsLeader checks if a given host is the marathon leader
 func IsLeader(host string, endpoint string, client http.Client) (bool, error) {
 	url := getLeaderURL(host, endpoint)
 
@@ -60,6 +61,7 @@ func IsLeader(host string, endpoint string, client http.Client) (bool, error) {
 	return s[0] == h, nil
 }
 
+// MarathonGet performs a get against a URL and return either the body of the response or an error
 func MarathonGet(url string, client http.Client) ([]byte, error) {
 	r, err := client.Get(url)
 	if err != nil {
