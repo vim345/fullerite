@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	//	"time"
 
 	"fullerite/metric"
 
@@ -32,43 +31,6 @@ func TestMarathonStatsNewMarathonStats(t *testing.T) {
 	assert.Equal(t, http.Client{Timeout: getTimeout}, sut.client)
 }
 
-func TestMarathonStatsIsLeader(t *testing.T) {
-	oldGetMarathonLeaderURL := getMarathonLeaderURL
-	defer func() { getMarathonLeaderURL = oldGetMarathonLeaderURL }()
-
-	oldHostname := hostname
-	defer func() { hostname = oldHostname }()
-
-	tests := []struct {
-		ourHostname string
-		rawResponse string
-		expected    bool
-		msg         string
-	}{
-		{"thequeen", "{\"leader\":\"thequeen:2017\"}", true, "Should return true when hostnames match"},
-		{"thequeen", "{\"leader\":\"thequeen\"}", true, "Should return true when hostnames match and there's not port"},
-		{"notthequeen", "{\"leader\":\"thequeen:2017\"}", false, "Should return false when hostnames don't match"},
-		{"foobar", "", false, "Should return false on empty response"},
-		{"foobar", "{\"leder\":\"me\"}", false, "Should return false when \"leader\" is not in the response"},
-	}
-
-	for _, test := range tests {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintln(w, test.rawResponse)
-		}))
-		defer ts.Close()
-
-		getMarathonLeaderURL = func(ip string) string { return ts.URL }
-		hostname = func() (string, error) { return test.ourHostname, nil }
-
-		sut := newMarathonStats(nil, 10, defaultLog).(*MarathonStats)
-		actual := sut.isLeader()
-
-		assert.Equal(t, test.expected, actual, test.msg)
-	}
-}
-
 func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 	oldGetMarathonMetricsURL := getMarathonMetricsURL
 	defer func() { getMarathonMetricsURL = oldGetMarathonMetricsURL }()
@@ -89,7 +51,7 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 				Name  string
 				Value float64
 				T     string
-			}{{"marathon.foo.bar", 10.0, metric.Gauge}},
+			}{{"foo.bar", 10.0, metric.Gauge}},
 			false,
 			"Should parse a simple input",
 		},
@@ -102,7 +64,7 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 				Name  string
 				Value float64
 				T     string
-			}{{"marathon.bar.foo", 20.0, metric.Gauge}},
+			}{{"bar.foo", 20.0, metric.Gauge}},
 			false,
 			"Should ignore the version field",
 		},
@@ -112,7 +74,7 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 				Name  string
 				Value float64
 				T     string
-			}{{"marathon.bar.foo", 20.0, metric.Gauge}, {"marathon.foo.bar", 30.0, metric.Counter}},
+			}{{"bar.foo", 20.0, metric.Gauge}, {"foo.bar.count", 30.0, metric.CumulativeCounter}},
 			false,
 			"Should work with multiple metrics",
 		},
