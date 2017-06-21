@@ -29,9 +29,9 @@ const (
 // MarathonStats Collector for marathon leader stats
 type MarathonStats struct {
 	baseCollector
-	client        http.Client
-	marathonHost  string
-	paastaCluster string
+	client          http.Client
+	marathonHost    string
+	extraDimensions map[string]string
 }
 
 func init() {
@@ -46,6 +46,7 @@ func newMarathonStats(channel chan metric.Metric, initialInterval int, log *l.En
 	m.interval = initialInterval
 	m.name = "MarathonStats"
 	m.client = http.Client{Timeout: marathonGetTimeout}
+	m.extraDimensions = make(map[string]string)
 
 	return m
 }
@@ -61,11 +62,11 @@ func (m *MarathonStats) Configure(configMap map[string]interface{}) {
 		m.log.Error("Marathon host not specified in config")
 	}
 
-	if paastaCluster, exists := c["paastaCluster"]; exists && len(paastaCluster) > 0 {
-		m.paastaCluster = paastaCluster
-	} else {
-		// If paastaCluster is not specified, don't use it
-		m.paastaCluster = ""
+	if extraDims, exists := c["extraDimensions"]; exists {
+		dims := config.GetAsMap(extraDims)
+		for dim, value := range dims {
+			m.extraDimensions[dim] = value
+		}
 	}
 }
 
@@ -108,11 +109,7 @@ func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
 		"service": "marathon",
 	})
 
-	if m.paastaCluster != "" {
-		metric.AddToAll(&metrics, map[string]string{
-			"paasta_cluster": m.paastaCluster,
-		})
-	}
+	metric.AddToAll(&metrics, m.extraDimensions)
 
 	return metrics
 }

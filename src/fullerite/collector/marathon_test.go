@@ -97,3 +97,12 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 		}
 	}
 }
+
+func TestMarathonStatsConfigure(t *testing.T) {
+	sut := newMarathonStats(nil, 10, defaultLog).(*MarathonStats)
+	sut.Configure(map[string]interface{}{
+		"marathonHost":    "foobar",
+		"extraDimensions": "{\"cluster\": \"bar\"}"})
+
+	assert.Equal(t, sut.extraDimensions["cluster"], "bar")
+}
