@@ -64,7 +64,8 @@ func (m *MarathonStats) Configure(configMap map[string]interface{}) {
 	if paastaCluster, exists := c["paastaCluster"]; exists && len(paastaCluster) > 0 {
 		m.paastaCluster = paastaCluster
 	} else {
-		m.log.Error("Paasta cluster not specified in config")
+		// If paastaCluster is not specified, don't use it
+		m.paastaCluster = ""
 	}
 }
 
@@ -104,9 +105,14 @@ func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
 	}
 
 	metric.AddToAll(&metrics, map[string]string{
-		"service":        "marathon",
-		"paasta_cluster": m.paastaCluster,
+		"service": "marathon",
 	})
+
+	if m.paastaCluster != "" {
+		metric.AddToAll(&metrics, map[string]string{
+			"paasta_cluster": m.paastaCluster,
+		})
+	}
 
 	return metrics
 }
