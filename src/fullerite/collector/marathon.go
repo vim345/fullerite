@@ -34,22 +34,6 @@ type MarathonStats struct {
 	marathonHost string
 }
 
-type buildError struct {
-	Reason string
-}
-
-func (e buildError) Error() string {
-	return e.Reason
-}
-
-type httpError struct {
-	Status int
-}
-
-func (e httpError) Error() string {
-	return fmt.Sprintf("%s: %s", http.StatusText(e.Status), e.Status)
-}
-
 func init() {
 	RegisterCollector("MarathonStats", newMarathonStats)
 }
