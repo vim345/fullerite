@@ -62,7 +62,7 @@ func (m *MarathonStats) Configure(configMap map[string]interface{}) {
 		m.log.Error("Marathon host not specified in config")
 	}
 
-	if extraDims, exists := c["extraDimensions"]; exists {
+	if extraDims, exists := configMap["extraDimensions"]; exists {
 		dims := config.GetAsMap(extraDims)
 		for dim, value := range dims {
 			m.extraDimensions[dim] = value
