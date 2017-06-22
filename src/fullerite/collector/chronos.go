@@ -30,7 +30,7 @@ const (
 type ChronosStats struct {
 	baseCollector
 	client          http.Client
-	chronosHost    string
+	chronosHost     string
 	extraDimensions map[string]string
 }
 

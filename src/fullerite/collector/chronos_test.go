@@ -101,7 +101,7 @@ func TestChronosStatsGetChronosMetrics(t *testing.T) {
 func TestChronosStatsConfigure(t *testing.T) {
 	sut := newChronosStats(nil, 10, defaultLog).(*ChronosStats)
 	sut.Configure(map[string]interface{}{
-		"chronosHost":    "foobar",
+		"chronosHost":     "foobar",
 		"extraDimensions": "{\"cluster\": \"bar\"}"})
 
 	assert.Equal(t, sut.extraDimensions["cluster"], "bar")
