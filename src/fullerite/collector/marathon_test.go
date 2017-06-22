@@ -13,11 +13,6 @@ import (
 )
 
 func TestMarathonStatsNewMarathonStats(t *testing.T) {
-	oldExternalIP := externalIP
-	defer func() { externalIP = oldExternalIP }()
-
-	externalIP = mockExternalIP
-
 	c := make(chan metric.Metric)
 	i := 10
 	l := defaultLog.WithFields(l.Fields{"collector": "Marathon"})
@@ -27,7 +22,6 @@ func TestMarathonStatsNewMarathonStats(t *testing.T) {
 	assert.Equal(t, c, sut.channel)
 	assert.Equal(t, i, sut.interval)
 	assert.Equal(t, l, sut.log)
-	assert.Equal(t, httptest.DefaultRemoteAddr, sut.IP)
 	assert.Equal(t, http.Client{Timeout: getTimeout}, sut.client)
 }
 
@@ -102,4 +96,13 @@ func TestMarathonStatsGetMarathonMetrics(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMarathonStatsConfigure(t *testing.T) {
+	sut := newMarathonStats(nil, 10, defaultLog).(*MarathonStats)
+	sut.Configure(map[string]interface{}{
+		"marathonHost":    "foobar",
+		"extraDimensions": "{\"cluster\": \"bar\"}"})
+
+	assert.Equal(t, sut.extraDimensions["cluster"], "bar")
 }

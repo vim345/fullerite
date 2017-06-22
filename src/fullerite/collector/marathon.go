@@ -29,9 +29,9 @@ const (
 // MarathonStats Collector for marathon leader stats
 type MarathonStats struct {
 	baseCollector
-	IP           string
-	client       http.Client
-	marathonHost string
+	client          http.Client
+	marathonHost    string
+	extraDimensions map[string]string
 }
 
 func init() {
@@ -46,12 +46,7 @@ func newMarathonStats(channel chan metric.Metric, initialInterval int, log *l.En
 	m.interval = initialInterval
 	m.name = "MarathonStats"
 	m.client = http.Client{Timeout: marathonGetTimeout}
-
-	if ip, err := externalIP(); err != nil {
-		m.log.Error("Cannot determine IP: ", err.Error())
-	} else {
-		m.IP = ip
-	}
+	m.extraDimensions = make(map[string]string)
 
 	return m
 }
@@ -65,6 +60,13 @@ func (m *MarathonStats) Configure(configMap map[string]interface{}) {
 		m.marathonHost = marathonHost
 	} else {
 		m.log.Error("Marathon host not specified in config")
+	}
+
+	if extraDims, exists := configMap["extraDimensions"]; exists {
+		dims := config.GetAsMap(extraDims)
+		for dim, value := range dims {
+			m.extraDimensions[dim] = value
+		}
 	}
 }
 
@@ -106,6 +108,8 @@ func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
 	metric.AddToAll(&metrics, map[string]string{
 		"service": "marathon",
 	})
+
+	metric.AddToAll(&metrics, m.extraDimensions)
 
 	return metrics
 }
