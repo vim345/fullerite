@@ -35,7 +35,7 @@ func (e leaderError) Error() string {
 func IsLeader(host string, endpoint string, client http.Client) (bool, error) {
 	url := getLeaderURL(host, endpoint)
 
-	contents, err := MarathonGet(url, client)
+	contents, err := GetWrapper(url, client)
 	if err != nil {
 		return false, err
 	}
@@ -61,8 +61,8 @@ func IsLeader(host string, endpoint string, client http.Client) (bool, error) {
 	return s[0] == h, nil
 }
 
-// MarathonGet performs a get against a URL and return either the body of the response or an error
-func MarathonGet(url string, client http.Client) ([]byte, error) {
+// GetWrapper performs a get against a URL and return either the body of the response or an error
+func GetWrapper(url string, client http.Client) ([]byte, error) {
 	r, err := client.Get(url)
 	if err != nil {
 		return nil, err

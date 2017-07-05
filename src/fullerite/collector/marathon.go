@@ -92,7 +92,7 @@ func (m *MarathonStats) sendMarathonMetrics() {
 func (m *MarathonStats) getMarathonMetrics() []metric.Metric {
 	url := getMarathonMetricsURL(m.marathonHost)
 
-	contents, err := util.MarathonGet(url, m.client)
+	contents, err := util.GetWrapper(url, m.client)
 	if err != nil {
 		m.log.Error("Could not load metrics from marathon: ", err.Error())
 		return nil
