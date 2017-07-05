@@ -92,7 +92,7 @@ func (m *ChronosStats) sendChronosMetrics() {
 func (m *ChronosStats) getChronosMetrics() []metric.Metric {
 	url := getChronosMetricsURL(m.chronosHost)
 
-	contents, err := util.MarathonGet(url, m.client)
+	contents, err := util.GetWrapper(url, m.client)
 	if err != nil {
 		m.log.Error("Could not load metrics from chronos: ", err.Error())
 		return nil
