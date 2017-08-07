@@ -72,7 +72,13 @@ tests: deps diamond_core_test diamond_collector_test
 qbt:
 	@echo Fast testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
-		go test -v -cover $$pkg || exit 1;\
+		go test -v -cover $(GO_TEST_ARGS) $$pkg || exit 1;\
+	done
+
+qct:
+	@echo Fast testing fullerite collectors
+	@for pkg in $(FULLERITE)/collector; do \
+		go test -v -cover $$pkg $(GO_TEST_ARGS) || exit 1;\
 	done
 
 diamond_core_test:
