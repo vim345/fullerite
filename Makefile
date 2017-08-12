@@ -50,6 +50,7 @@ deps:
 	@go get github.com/Masterminds/glide
 	@cd src/github.com/Masterminds/glide && git checkout --quiet v0.12.3
 	@go build -o bin/glide github.com/Masterminds/glide/
+	@rm -rf $(GOPATH)/src/$(FULLERITE)/vendor/
 	@cd $(GOPATH)/src/$(FULLERITE) && $(GLIDE) install
 	@go build -o bin/golint fullerite/vendor/github.com/golang/lint/golint/
 	@go build -o bin/gocyclo fullerite/vendor/github.com/fzipp/gocyclo/
