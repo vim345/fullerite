@@ -44,7 +44,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         vm_config.vm.synced_folder sync_dir.fetch(:source), sync_dir.fetch(:dest)
       end
 
-      vm_config.vm.provision "shell", inline: "apt-get update && apt-get -y dist-upgrade && apt-get install -y git python-pip"
+      vm_config.vm.provision "shell", inline: "apt-get update && apt-get -y dist-upgrade && apt-get install -y git python-pip python-mock"
       vm_config.vm.provision "shell", privileged: true, inline: "[ ! -f #{go_tgz} ] && wget -q https://storage.googleapis.com/golang/#{go_tgz} && tar -C /usr/local -xzf #{go_tgz}"
       vm_config.vm.provision "shell", inline: "echo 'PATH=/usr/local/go/bin:$PATH' >> .profile"
       vm_config.vm.provision "shell", inline: "pip install --user -r /vagrant/requirements-dev.txt"
