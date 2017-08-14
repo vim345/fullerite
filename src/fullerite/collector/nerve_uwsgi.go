@@ -111,7 +111,9 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	})
 	serviceLog.Debug("Sending ", len(metrics), " to channel")
 	for _, m := range metrics {
-		n.Channel() <- m
+		if !n.ContainsBlacklistedDimension(m.Dimensions) {
+			n.Channel() <- m
+		}
 	}
 }
 

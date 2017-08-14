@@ -639,3 +639,56 @@ func TestUWSGIResponseConversion(t *testing.T) {
 		assert.Equal(t, 2, len(m.Dimensions))
 	}
 }
+
+func TestNerveUWSGICollectWithBlacklist(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		fmt.Fprint(w, getTestUWSGIResponse())
+	}))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.blacklist": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":       tmpFile.Name(),
+		"queryPath":            "",
+		"dimensions_blacklist": map[string]string{"rollup": "mean"},
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	for i := 0; i < 4; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	dropped := metric.Metric{
+			Name: "othertimer",
+			MetricType: "gauge",
+			Value: 345.0,
+			Dimensions: map[string]string{
+				"rollup": "mean",
+				"type":"timer",
+				"service":"test_service",
+				"port":port}}
+	actual = append(actual, dropped)
+	validateUWSGIResults(t, actual)
+	validateFullDimensions(t, actual, "test_service", port)
+	validateEmptyChannel(t, inst.Channel())
+}
