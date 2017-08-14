@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"fullerite/metric"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,4 +38,34 @@ func TestNew(t *testing.T) {
 func TestNewInvalidCollector(t *testing.T) {
 	c := New("INVALID COLLECTOR")
 	assert.Nil(t, c, "should not create a Collector")
+}
+
+func TestRemoveBlacklistedDimensions(t *testing.T) {
+	c := make(map[string]interface{})
+	c["dimensions_blacklist"] = map[string]string{"rollup":"p9[0-9]+"}
+	col := New("Test")
+	col.Configure(c)
+
+	// Remove p95 rollup
+	m := metric.Metric{Name: "test_gauge", MetricType: "gauge", Value: 10, Dimensions: map[string]string{"rollup": "p95"}}
+	result := col.ContainsBlacklistedDimension(m.Dimensions)
+	assert.True(t, result)
+
+	// Accept p50 rollup
+	m = metric.Metric{Name: "test_gauge", MetricType: "gauge", Value: 10, Dimensions: map[string]string{"rollup": "p50"}}
+	result = col.ContainsBlacklistedDimension(m.Dimensions)
+	assert.False(t, result)
+
+	// Dimension set is empty
+	m = metric.Metric{Name: "test_gauge", MetricType: "gauge", Value: 10}
+	assert.Equal(t, len(m.Dimensions), 0)
+	result = col.ContainsBlacklistedDimension(m.Dimensions)
+	assert.False(t, result)
+}
+
+func TestDimensionsBlacklistNotSet(t *testing.T) {
+	col := New("Test")
+	m := metric.Metric{Name: "test_gauge", MetricType: "gauge", Value: 10, Dimensions: map[string]string{"rollup": "p95"}}
+	result := col.ContainsBlacklistedDimension(m.Dimensions)
+	assert.False(t, result)
 }

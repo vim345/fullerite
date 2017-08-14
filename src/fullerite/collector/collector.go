@@ -5,6 +5,7 @@ import (
 	"fullerite/metric"
 
 	"strings"
+	"regexp"
 
 	l "github.com/Sirupsen/logrus"
 )
@@ -34,6 +35,9 @@ type Collector interface {
 	SetPrefix(string)
 	Blacklist() []string
 	SetBlacklist([]string)
+	DimensionsBlacklist() map[string]string
+	SetDimensionsBlacklist(map[string]string)
+	ContainsBlacklistedDimension(map[string]string) bool
 }
 
 var collectorConstructs map[string]func(chan metric.Metric, int, *l.Entry) Collector
@@ -80,6 +84,7 @@ type baseCollector struct {
 	canonicalName string
 	prefix        string
 	blacklist     []string
+	dimensions_blacklist map[string]string
 
 	// intentionally exported
 	log *l.Entry
@@ -100,6 +105,9 @@ func (col *baseCollector) configureCommonParams(configMap map[string]interface{}
 		col.blacklist = config.GetAsSlice(asInterface)
 	}
 
+	if asInterface, exists := configMap["dimensions_blacklist"]; exists {
+		col.dimensions_blacklist = config.GetAsMap(asInterface)
+	}
 }
 
 // SetInterval : set the interval to collect on
@@ -125,6 +133,11 @@ func (col *baseCollector) SetCanonicalName(name string) {
 // SetBlacklist : set collector optional metrics blacklist
 func (col *baseCollector) SetBlacklist(blacklist []string) {
 	col.blacklist = blacklist
+}
+
+// SetDimensionsBlacklist : set collector optional dimensions blacklist
+func (col *baseCollector) SetDimensionsBlacklist(blacklist map[string]string) {
+	col.dimensions_blacklist = blacklist
 }
 
 // CanonicalName : collector canonical name
@@ -165,4 +178,23 @@ func (col baseCollector) String() string {
 // Blacklist returns the list of metrics to be blacklisted for this collector
 func (col *baseCollector) Blacklist() []string {
 	return col.blacklist
+}
+
+// DimensionsBlacklist returns the list of dimensions to be blacklisted for this collector
+func (col *baseCollector) DimensionsBlacklist() map[string]string {
+	return col.dimensions_blacklist
+}
+
+// ContainsBlacklistedDimension returns the true if dimensions passed as argument
+// contain values blacklisted by the user
+func (col *baseCollector) ContainsBlacklistedDimension(dimensions map [string]string) bool {
+	for k, v := range col.DimensionsBlacklist() {
+		if match, err := regexp.MatchString(v, dimensions[k]); match {
+			return true
+		} else if err != nil {
+			// Immediately return if there is any error
+			break
+		}
+	}
+	return false
 }
