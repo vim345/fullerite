@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"encoding/json"
+	"fmt"
 	"fullerite/metric"
 	"io/ioutil"
 	"os/exec"
@@ -18,19 +20,33 @@ const (
 )
 
 // YamlMetrics collector extracts metrics from YAML data files
-// Currently only supports top-level keys
-// Converts truthy/falsey values to 1/0 respectively
-// Otherwise, emits any keys with numeric (or stringy numeric) values
-//   config:
+//
+// Supports two modes:
+//   - 'simple' (default):
+//     reads YAML and trys to extract float64 gauges from top level keys
+//       - keys with numeric values
+//       - keys with stringy numeric values (eg "123", "123.01")
+//       - booleans and stringy bools: converts to 1/0 for true/false
+//       - does not support adding dimensions
+//       - designed to read arbrary data, eg facter.yaml
+//   - 'fullerite':
+//     enabled by 'format: "fullerite"'
+//     reads YAML 'metrics' key as an array of metrics
+//     for each of those, convert to a metrics.Metric object if possible
+//     (via remarshalling to JSON and using standard JSON unmarshal into object)
+//
+//  Config:
+//     metricPrefix     - prefix to add to Metrics, default 'yamlMetrics'. "" for no prefix.
 //     yamlSource       - location of YAML/JSON file to read
 //     yamlKeyWhitelist - array of regexps to filter keys processed,
 //                        useful in particular for facter or similar output
+//                        (only used in simple mode)
 //
 type YamlMetrics struct {
 	baseCollector
 	metricPrefix     string
 	yamlSource       string
-	YamlKeyWhitelist []string
+	yamlKeyWhitelist []string
 }
 
 func init() {
@@ -60,10 +76,10 @@ func (c *YamlMetrics) Configure(configMap map[string]interface{}) {
 		switch val := v.(type) {
 		case []interface{}:
 			for _, v := range val {
-				c.YamlKeyWhitelist = append(c.YamlKeyWhitelist, v.(string))
+				c.yamlKeyWhitelist = append(c.yamlKeyWhitelist, v.(string))
 			}
 		case []string:
-			c.YamlKeyWhitelist = val
+			c.yamlKeyWhitelist = val
 		}
 	}
 	if metricPrefix, exists := configMap["metricPrefix"]; exists {
@@ -98,7 +114,7 @@ func processYamlAcceptedValues(v interface{}) (float64, bool) {
 }
 
 func (c *YamlMetrics) yamlKeyMatchesWhitelist(k string) bool {
-	for _, w := range c.YamlKeyWhitelist {
+	for _, w := range c.yamlKeyWhitelist {
 		ok, err := regexp.Match(w, []byte(k))
 		if err != nil {
 			c.log.Error("Invalid regexp in yamlKeyWhitelist: ", k)
@@ -111,32 +127,78 @@ func (c *YamlMetrics) yamlKeyMatchesWhitelist(k string) bool {
 	return false
 }
 
-// GetMetrics Get metrics from the YAML supplied
-func (c *YamlMetrics) GetMetrics(yamlData []byte) map[string]float64 {
-	m := make(map[string]interface{})
-	metrics := make(map[string]float64)
-	if len(yamlData) == 0 {
-		return metrics
-	}
-	err := yaml.Unmarshal(yamlData, &m)
-	if err != nil {
-		c.log.Error("Could not unmarshall YAML: ", err.Error())
-	}
-	// only keep values that convert to float
-	for k, v := range m {
-		if len(c.YamlKeyWhitelist) > 0 && !c.yamlKeyMatchesWhitelist(k) {
+// 'advanced' format - YAML representation of metric.Metric objects
+func (c *YamlMetrics) getFulleriteFormatMetrics(m []interface{}) (metrics []metric.Metric) {
+	var metric metric.Metric
+	for _, v := range m {
+		j, err := json.Marshal(v)
+		if err != nil {
+			c.log.Error("getFulleriteFormatMetrics: Skipping, could not Marshal '%s': %s", v, err.Error())
 			continue
 		}
-		if newVal, ok := processYamlAcceptedValues(v); ok == true {
-			metrics[k] = newVal
+		c.log.Debug(fmt.Sprintf("Got metric defn: %s", j))
+		if err := json.Unmarshal(j, &metric); err != nil {
+			c.log.Error("getFulleriteFormatMetrics: Skipping, could not Unmarshal '%s': %s", string(j), err.Error())
+			continue
+		}
+		metrics = append(metrics, metric)
+	}
+	return metrics
+}
+
+// simple k/v format; only keep values that convert to float
+func (c *YamlMetrics) getSimpleFormatMetrics(m map[string]interface{}) (metrics []metric.Metric) {
+	for k, v := range m {
+		if len(c.yamlKeyWhitelist) > 0 && !c.yamlKeyMatchesWhitelist(k) {
+			continue
+		}
+		if newVal, ok := processYamlAcceptedValues(v); ok {
+			s := c.buildMetric(k, newVal)
+			metrics = append(metrics, s)
 		}
 	}
 	return metrics
 }
 
+// GetMetrics Get metrics from the YAML supplied
+func (c *YamlMetrics) GetMetrics(yamlData []byte) (metrics []metric.Metric) {
+	m := make(map[string]interface{})
+	if len(yamlData) == 0 {
+		return metrics
+	}
+	err := yaml.Unmarshal(yamlData, &m)
+	if err != nil {
+		c.log.Error("Could not unmarshal YAML: ", err.Error())
+		c.log.Debug(fmt.Sprintf("%s", yamlData))
+	}
+	if f, ok := m["format"]; ok && f.(string) == "fullerite" {
+		switch val := m["metrics"].(type) {
+		case []interface{}:
+			return c.getFulleriteFormatMetrics(val)
+		default:
+			return metrics
+		}
+	}
+	return c.getSimpleFormatMetrics(m)
+}
+
 // Collect Compares box IP against leader IP and if true, sends data.
 func (c *YamlMetrics) Collect() {
-	go c.sendMetrics()
+	method, source := extractYamlSourceMethodAndSource(c.yamlSource)
+	var y []byte
+	var err error
+	if method == "file" {
+		y, err = c.getYamlFromFile(source)
+	} else if method == "shell" {
+		y, err = c.getYamlFromShell(source)
+	} else if method == "exec" {
+		y, err = c.getYamlFromExec(source)
+	}
+	if err != nil {
+		c.log.Error("Could not get YAML from source: ", err.Error())
+		return
+	}
+	go c.sendMetrics(c.GetMetrics(y))
 }
 
 func (c *YamlMetrics) getYamlFromFile(file string) ([]byte, error) {
@@ -168,23 +230,8 @@ func extractYamlSourceMethodAndSource(s string) (string, string) {
 }
 
 // sendMetrics Send to baseCollector channel.
-func (c *YamlMetrics) sendMetrics() {
-	method, source := extractYamlSourceMethodAndSource(c.yamlSource)
-	var y []byte
-	var err error
-	if method == "file" {
-		y, err = c.getYamlFromFile(source)
-	} else if method == "shell" {
-		y, err = c.getYamlFromShell(source)
-	} else if method == "exec" {
-		y, err = c.getYamlFromExec(source)
-	}
-	if err != nil {
-		c.log.Error("Could not get YAML from source: ", err.Error())
-		return
-	}
-	for k, v := range c.GetMetrics(y) {
-		s := c.buildMetric(k, v)
+func (c *YamlMetrics) sendMetrics(m []metric.Metric) {
+	for _, s := range m {
 		c.Channel() <- s
 	}
 }
