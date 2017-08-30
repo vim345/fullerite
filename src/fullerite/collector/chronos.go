@@ -85,7 +85,9 @@ func (m *ChronosStats) Collect() {
 func (m *ChronosStats) sendChronosMetrics() {
 	metrics := getChronosMetrics(m)
 	for _, metric := range metrics {
-		m.Channel() <- metric
+		if !m.ContainsBlacklistedDimension(metric.Dimensions) {
+			m.Channel() <- metric
+		}
 	}
 }
 

@@ -85,7 +85,9 @@ func (m *MarathonStats) Collect() {
 func (m *MarathonStats) sendMarathonMetrics() {
 	metrics := getMarathonMetrics(m)
 	for _, metric := range metrics {
-		m.Channel() <- metric
+		if !m.ContainsBlacklistedDimension(metric.Dimensions) {
+			m.Channel() <- metric
+		}
 	}
 }
 
