@@ -98,6 +98,8 @@ func (h *httpDropwizardCollector) queryService(s ServiceEndpoint) {
 	})
 	serviceLog.Debug("Sending ", len(metrics), " to channel")
 	for _, m := range metrics {
-		h.Channel() <- m
+		if !h.ContainsBlacklistedDimension(m.Dimensions) {
+			h.Channel() <- m
+		}
 	}
 }
