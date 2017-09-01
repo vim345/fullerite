@@ -42,7 +42,7 @@ func TestNewInvalidCollector(t *testing.T) {
 
 func TestRemoveBlacklistedDimensions(t *testing.T) {
 	c := make(map[string]interface{})
-	c["dimensions_blacklist"] = map[string]string{"rollup":"p9[0-9]+"}
+	c["dimensions_blacklist"] = map[string]string{"rollup": "p9[0-9]+"}
 	col := New("Test")
 	col.Configure(c)
 

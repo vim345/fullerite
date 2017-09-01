@@ -679,14 +679,14 @@ func TestNerveUWSGICollectWithBlacklist(t *testing.T) {
 	}
 
 	dropped := metric.Metric{
-			Name: "othertimer",
-			MetricType: "gauge",
-			Value: 345.0,
-			Dimensions: map[string]string{
-				"rollup": "mean",
-				"type":"timer",
-				"service":"test_service",
-				"port":port}}
+		Name:       "othertimer",
+		MetricType: "gauge",
+		Value:      345.0,
+		Dimensions: map[string]string{
+			"rollup":  "mean",
+			"type":    "timer",
+			"service": "test_service",
+			"port":    port}}
 	actual = append(actual, dropped)
 	validateUWSGIResults(t, actual)
 	validateFullDimensions(t, actual, "test_service", port)

@@ -189,8 +189,9 @@ func (d *DockerStats) extractMetrics(container *docker.Container, stats *docker.
 
 // buildMetrics creates the actual metrics for the given container.
 func (d DockerStats) buildMetrics(container *docker.Container, containerStats *docker.Stats, cpuPercentage float64) []metric.Metric {
+	mem := containerStats.MemoryStats.Usage - containerStats.MemoryStats.Stats.Cache
 	ret := []metric.Metric{
-		buildDockerMetric("DockerMemoryUsed", metric.Gauge, float64(containerStats.MemoryStats.Usage)),
+		buildDockerMetric("DockerMemoryUsed", metric.Gauge, float64(mem)),
 		buildDockerMetric("DockerMemoryLimit", metric.Gauge, float64(containerStats.MemoryStats.Limit)),
 		buildDockerMetric("DockerCpuPercentage", metric.Gauge, cpuPercentage),
 		buildDockerMetric("DockerCpuThrottledPeriods", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledPeriods)),
