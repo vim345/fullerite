@@ -170,6 +170,7 @@ func (c *YamlMetrics) GetMetrics(yamlData []byte) (metrics []metric.Metric) {
 	if err != nil {
 		c.log.Error("Could not unmarshal YAML: ", err.Error())
 		c.log.Debug(fmt.Sprintf("%s", yamlData))
+		return metrics
 	}
 	if f, ok := m["format"]; ok && f.(string) == "fullerite" {
 		switch val := m["metrics"].(type) {
