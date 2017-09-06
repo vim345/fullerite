@@ -73,14 +73,7 @@ func (c *YamlMetrics) Configure(configMap map[string]interface{}) {
 		c.yamlSource = yamlSource.(string)
 	}
 	if v, exists := configMap["yamlKeyWhitelist"]; exists {
-		switch val := v.(type) {
-		case []interface{}:
-			for _, v := range val {
-				c.yamlKeyWhitelist = append(c.yamlKeyWhitelist, v.(string))
-			}
-		case []string:
-			c.yamlKeyWhitelist = val
-		}
+		c.yamlKeyWhitelist = config.GetAsSlice(v)
 	}
 	if metricPrefix, exists := configMap["metricPrefix"]; exists {
 		c.metricPrefix = metricPrefix.(string)
