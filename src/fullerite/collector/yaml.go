@@ -3,6 +3,7 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"fullerite/config"
 	"fullerite/metric"
 	"io/ioutil"
 	"os/exec"
@@ -36,7 +37,7 @@ const (
 //     (via remarshalling to JSON and using standard JSON unmarshal into object)
 //
 //  Config:
-//     metricPrefix     - prefix to add to Metrics, default 'yamlMetrics'. "" for no prefix.
+//     metricPrefix     - prefix to add to Metrics, default 'yamlMetrics'.
 //     yamlSource       - location of YAML/JSON file to read
 //     yamlKeyWhitelist - array of regexps to filter keys processed,
 //                        useful in particular for facter or similar output
@@ -76,7 +77,11 @@ func (c *YamlMetrics) Configure(configMap map[string]interface{}) {
 		c.yamlKeyWhitelist = config.GetAsSlice(v)
 	}
 	if metricPrefix, exists := configMap["metricPrefix"]; exists {
-		c.metricPrefix = metricPrefix.(string)
+		if metricPrefix == "" {
+			c.log.Error("metricPrefix cannot be an empty string")
+		} else {
+			c.metricPrefix = metricPrefix.(string)
+		}
 	}
 	c.configureCommonParams(configMap)
 }
@@ -134,6 +139,7 @@ func (c *YamlMetrics) getFulleriteFormatMetrics(m []interface{}) (metrics []metr
 			c.log.Error("getFulleriteFormatMetrics: Skipping, could not Unmarshal '%s': %s", string(j), err.Error())
 			continue
 		}
+		metric.Name = c.metricPrefix + "." + metric.Name
 		metrics = append(metrics, metric)
 	}
 	return metrics
@@ -232,10 +238,7 @@ func (c *YamlMetrics) sendMetrics(m []metric.Metric) {
 
 // buildMetric Takes a k/v, adds common dimensions, and returns a metric to send
 func (c *YamlMetrics) buildMetric(k string, v float64) metric.Metric {
-	metricName := k
-	if c.metricPrefix != "" {
-		metricName = c.metricPrefix + "." + k
-	}
+	metricName := c.metricPrefix + "." + k
 	m := metric.New(metricName)
 	m.Value = v
 	return m
