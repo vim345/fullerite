@@ -4,8 +4,8 @@ import (
 	"fullerite/config"
 	"fullerite/metric"
 
-	"strings"
 	"regexp"
+	"strings"
 
 	l "github.com/Sirupsen/logrus"
 )
@@ -77,13 +77,13 @@ func New(name string) Collector {
 
 type baseCollector struct {
 	// fulfill most of the rote parts of the collector interface
-	channel       chan metric.Metric
-	name          string
-	interval      int
-	collectorType string
-	canonicalName string
-	prefix        string
-	blacklist     []string
+	channel              chan metric.Metric
+	name                 string
+	interval             int
+	collectorType        string
+	canonicalName        string
+	prefix               string
+	blacklist            []string
 	dimensions_blacklist map[string]string
 
 	// intentionally exported
@@ -187,7 +187,7 @@ func (col *baseCollector) DimensionsBlacklist() map[string]string {
 
 // ContainsBlacklistedDimension returns the true if dimensions passed as argument
 // contain values blacklisted by the user
-func (col *baseCollector) ContainsBlacklistedDimension(dimensions map [string]string) bool {
+func (col *baseCollector) ContainsBlacklistedDimension(dimensions map[string]string) bool {
 	for k, v := range col.DimensionsBlacklist() {
 		if match, err := regexp.MatchString(v, dimensions[k]); match {
 			return true
