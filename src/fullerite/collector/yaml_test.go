@@ -36,7 +36,29 @@ func TestYamlMetricsConfigure(t *testing.T) {
 	assert.Equal(t, "/tmp/yaml_metrics.yaml", c.yamlSource, "should be the new yaml file")
 }
 
-func getMetricsTestHarness(y []byte, log *l.Entry, config map[string]interface{}) []metric.Metric {
+func getYamlMetricsDefaultWhitelist() []interface{} {
+	a := make([]interface{}, 3)
+	a[0] = "uptime"
+	a[1] = "^sfx_"
+	a[2] = "^test"
+	return a
+}
+
+func getMetricsSimpleFormatTestHarness(y []byte, log *l.Entry, config map[string]interface{}) []metric.Metric {
+	if log == nil {
+		log = test_utils.BuildLogger()
+	}
+	if len(config) == 0 {
+		config = make(map[string]interface{})
+		config["metricPrefix"] = "pre"
+		config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
+	}
+	c := NewYamlMetrics(nil, 12, log).(*YamlMetrics)
+	c.Configure(config)
+	return c.GetMetrics(y)
+}
+
+func getMetricsFulleriteFormatTestHarness(y []byte, log *l.Entry, config map[string]interface{}) []metric.Metric {
 	if log == nil {
 		log = test_utils.BuildLogger()
 	}
@@ -56,6 +78,25 @@ func getTestableLogger() (*l.Entry, *test.Hook) {
 	return testLog, hook
 }
 
+func TestYamlMetricsGetMetricSimpleNoWhitelist(t *testing.T) {
+	y := []byte(heredoc.Doc(`---
+		test1: 123
+		test2: 456
+  `))
+	config := make(map[string]interface{})
+	config["metricPrefix"] = "pre"
+	should := []metric.Metric{}
+	testLog, hook := getTestableLogger()
+	metrics := getMetricsSimpleFormatTestHarness(y, testLog, config)
+	compareShouldAndGot(t, should, metrics)
+	assert.Equal(t, 1, len(hook.Entries), "We got just one error")
+	assert.Equal(t,
+		"Must specify yamlKeyWhitelist for simple format metrics",
+		hook.LastEntry().Message,
+		"The error message was correct",
+	)
+}
+
 func TestYamlMetricsGetMetricSimple(t *testing.T) {
 	y := []byte(heredoc.Doc(`---
 		test1: 123
@@ -65,7 +106,7 @@ func TestYamlMetricsGetMetricSimple(t *testing.T) {
 		{Name: "pre.test1", Value: 123},
 		{Name: "pre.test2", Value: 456},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
 }
 
@@ -77,7 +118,7 @@ func TestYamlMetricsGetMetricWithStrings(t *testing.T) {
 	should := []metric.Metric{
 		{Name: "pre.test1", Value: 123},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
 }
 
@@ -86,7 +127,7 @@ func TestYamlMetricsGetMetricShouldReturnEmptyAndProduceErrorOnBrokenYaml(t *tes
 	nullLog, hook := test.NewNullLogger()
 	testLog := test_utils.BuildLogger()
 	testLog.Logger = nullLog
-	metrics := getMetricsTestHarness(y, testLog, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, testLog, nil)
 	assert.Equal(t, 1, len(hook.Entries), "We got one error message")
 	assert.Equal(t, 0, len(metrics), "metrics list should be empty")
 }
@@ -96,7 +137,7 @@ func TestYamlMetricsGetMetricShouldReturnEmptyAndProduceNoErrorOnEmptyYaml(t *te
 	nullLog, hook := test.NewNullLogger()
 	testLog := test_utils.BuildLogger()
 	testLog.Logger = nullLog
-	metrics := getMetricsTestHarness(y, testLog, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, testLog, nil)
 	assert.Equal(t, 0, len(hook.Entries), "We did not get error message")
 	assert.Equal(t, 0, len(metrics), "metrics list should be empty")
 }
@@ -111,7 +152,7 @@ func TestYamlMetricsGetMetricWithNestedValues(t *testing.T) {
 	should := []metric.Metric{
 		{Name: "pre.test1", Value: 123},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
 }
 
@@ -121,7 +162,7 @@ func TestYamlMetricsGetMetricWithFulleriteFormatNoMetrics(t *testing.T) {
 		metrics:
 		test3: 456
 	`))
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	assert.Equal(t, 0, len(metrics), "no metrics are returned")
 }
 
@@ -147,7 +188,7 @@ func TestYamlMetricsGetMetricWithFulleriteFormat(t *testing.T) {
 		{Name: "pre.test1", Value: 123, MetricType: "gauge"},
 		{Name: "pre.test2", Value: 789, MetricType: "gauge"},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	assert.Equal(t, 2, len(metrics), "two metrics are returned")
 	for i, v := range metrics {
 		s := should[i]
@@ -177,7 +218,7 @@ func TestYamlMetricsGetMetricWithFulleriteFormatBogusMetrics(t *testing.T) {
 	nullLog, hook := test.NewNullLogger()
 	testLog := test_utils.BuildLogger()
 	testLog.Logger = nullLog
-	metrics := getMetricsTestHarness(y, testLog, nil)
+	metrics := getMetricsFulleriteFormatTestHarness(y, testLog, nil)
 	assert.Equal(t, 0, len(metrics), "no metrics are returned")
 	assert.Equal(t, 3, len(hook.Entries), "We got error messages for each bogus case")
 }
@@ -197,7 +238,7 @@ func TestYamlMetricsGetMetricWithFulleriteFormatNoDimensions(t *testing.T) {
 		{Name: "pre.test1", Value: 123},
 		{Name: "pre.test2", Value: 789},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsFulleriteFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
 }
 
@@ -229,7 +270,7 @@ func TestYamlMetricsGetMetricWithBooleanValues(t *testing.T) {
 		{Name: "pre.test_real_true", Value: 1},
 		{Name: "pre.test_real_false", Value: 0},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
 }
 
@@ -250,29 +291,7 @@ func TestYamlMetricsGetMetricWithJsonInput(t *testing.T) {
 		{Name: "pre.test_real_true", Value: 1},
 		{Name: "pre.test_real_false", Value: 0},
 	}
-	metrics := getMetricsTestHarness(y, nil, nil)
-	compareShouldAndGot(t, should, metrics)
-}
-
-func TestYamlMetricsGetMetricsWithWhitelist(t *testing.T) {
-	config := make(map[string]interface{})
-	a := make([]interface{}, 2)
-	a[0] = "uptime"
-	a[1] = "^sfx_"
-	config["yamlKeyWhitelist"] = a
-	config["interval"] = 9999
-	config["metricPrefix"] = "pre"
-	y := []byte(heredoc.Doc(`---
-		uptime: 123
-		should_be_sfx_filtered: 123
-		sfx_wibble: 666
-		sfx_wobble: should_not_happen
-	`))
-	should := []metric.Metric{
-		{Name: "pre.uptime", Value: 123},
-		{Name: "pre.sfx_wibble", Value: 666},
-	}
-	metrics := getMetricsTestHarness(y, nil, config)
+	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
 }
 
@@ -281,6 +300,7 @@ func TestYamlMetricsCollectOnceDefaultPrefix(t *testing.T) {
 	yamlFile := "/tmp/yaml_metrics.yaml"
 	defer os.Remove(yamlFile)
 	config["yamlSource"] = yamlFile
+	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	y := []byte(heredoc.Doc(`---
 		test1: 123
 	`))
@@ -310,6 +330,7 @@ func TestYamlMetricsCollectOnceNoPrefix(t *testing.T) {
 	defer os.Remove(yamlFile)
 	config["yamlSource"] = yamlFile
 	config["metricPrefix"] = ""
+	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	y := []byte(heredoc.Doc(`---
 		test1: 123
 	`))
@@ -344,6 +365,7 @@ func TestYamlMetricsCollectOnceNewPrefix(t *testing.T) {
 	defer os.Remove(yamlFile)
 	config["yamlSource"] = yamlFile
 	config["metricPrefix"] = "wibble"
+	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	y := []byte(heredoc.Doc(`---
 		test1: 123
 	`))
@@ -372,6 +394,7 @@ func TestYamlMetricsCollectNoShellExec(t *testing.T) {
 	execFile := "/tmp/yaml_metrics_exec.yaml"
 	defer os.Remove(execFile)
 	config["yamlSource"] = fmt.Sprintf("exec:%s", execFile)
+	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	y := []byte(heredoc.Doc(`#!/bin/sh
 		echo "{test1: 123, test2: 456}"
 	`))
@@ -399,6 +422,7 @@ func TestYamlMetricsCollectShellExec(t *testing.T) {
 	config := make(map[string]interface{})
 	shellCommand := `echo 123 | sed 's/\(.*\)/{testshell: \1}/'`
 	config["yamlSource"] = fmt.Sprintf("shell:%s", shellCommand)
+	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	testChannel := make(chan metric.Metric)
 	testLog, hook := getTestableLogger()
 	c := NewYamlMetrics(testChannel, 123, testLog).(*YamlMetrics)

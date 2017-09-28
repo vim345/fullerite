@@ -147,8 +147,12 @@ func (c *YamlMetrics) getFulleriteFormatMetrics(m []interface{}) (metrics []metr
 
 // simple k/v format; only keep values that convert to float
 func (c *YamlMetrics) getSimpleFormatMetrics(m map[string]interface{}) (metrics []metric.Metric) {
+	if len(c.yamlKeyWhitelist) == 0 {
+		c.log.Error("Must specify yamlKeyWhitelist for simple format metrics")
+		return metrics
+	}
 	for k, v := range m {
-		if len(c.yamlKeyWhitelist) > 0 && !c.yamlKeyMatchesWhitelist(k) {
+		if !c.yamlKeyMatchesWhitelist(k) {
 			continue
 		}
 		if newVal, ok := processYamlAcceptedValues(v); ok {
