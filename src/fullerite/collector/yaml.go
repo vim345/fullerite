@@ -18,6 +18,7 @@ import (
 const (
 	defaultYamlCollectorName = "YamlMetrics"
 	defaultYamlSource        = "/var/lib/fullerite/yaml_metrics.yaml"
+	defaultYamlSourceMethod  = "file"
 	defaultYamlFormat        = "fullerite"
 	defaultYamlMetricPrefix  = "YamlMetrics"
 )
@@ -42,9 +43,13 @@ const (
 //       - booleans and stringy bools: converts to 1/0 for true/false
 //       - does not support adding dimensions
 //
+//  Can read YAML data via different 'yamlSourceMethod': read from file ('file'), run a shell
+//  pipeline ('shell'), or directly exec a script ('exec').
+//
 //  Config:
 //     metricPrefix     - prefix to add to Metrics, default 'yamlMetrics'.
-//     yamlSource       - location of YAML/JSON file to read
+//     yamlSource       - source of YAML/JSON
+//     yamlSourceMethod - method to call source: file, shell, exec (defaut: file)
 //     yamlKeyWhitelist - array of regexps to filter keys processed,
 //                        useful in particular for facter or similar output
 //                        (only used in simple mode)
@@ -53,6 +58,7 @@ type YamlMetrics struct {
 	baseCollector
 	metricPrefix     string
 	yamlSource       string
+	yamlSourceMethod string
 	yamlFormat       string
 	yamlKeyWhitelist []string
 }
@@ -71,6 +77,7 @@ func NewYamlMetrics(channel chan metric.Metric, initialInterval int, log *l.Entr
 
 	c.name = defaultYamlCollectorName
 	c.yamlSource = defaultYamlSource
+	c.yamlSourceMethod = defaultYamlSourceMethod
 	c.yamlFormat = defaultYamlFormat
 	c.metricPrefix = defaultYamlMetricPrefix
 	return c
@@ -80,6 +87,9 @@ func NewYamlMetrics(channel chan metric.Metric, initialInterval int, log *l.Entr
 func (c *YamlMetrics) Configure(configMap map[string]interface{}) {
 	if v, exists := configMap["yamlSource"]; exists {
 		c.yamlSource = v.(string)
+	}
+	if v, exists := configMap["yamlSourceMethod"]; exists {
+		c.yamlSourceMethod = v.(string)
 	}
 	if v, exists := configMap["yamlFormat"]; exists {
 		c.yamlFormat = v.(string)
@@ -206,18 +216,20 @@ func (c *YamlMetrics) GetMetrics(yamlData []byte) (metrics []metric.Metric) {
 
 // Collect Compares box IP against leader IP and if true, sends data.
 func (c *YamlMetrics) Collect() {
-	method, source := extractYamlSourceMethodAndSource(c.yamlSource)
 	var y []byte
 	var err error
-	if method == "file" {
-		y, err = c.getYamlFromFile(source)
-	} else if method == "shell" {
-		y, err = c.getYamlFromShell(source)
-	} else if method == "exec" {
-		y, err = c.getYamlFromExec(source)
+	switch c.yamlSourceMethod {
+	case "shell":
+		y, err = c.getYamlFromShell(c.yamlSource)
+	case "exec":
+		y, err = c.getYamlFromExec(c.yamlSource)
+	case "file":
+		y, err = c.getYamlFromFile(c.yamlSource)
+	default:
+		c.log.Errorf("Invalid yamlSourceMethod %s", c.yamlSourceMethod)
 	}
 	if err != nil {
-		c.log.Error("Could not get YAML from source: ", err.Error())
+		c.log.Errorf("Could not get YAML data from source %s:%s ", c.yamlSourceMethod, c.yamlSource)
 		return
 	}
 	go c.sendMetrics(c.GetMetrics(y))
@@ -236,19 +248,6 @@ func (c *YamlMetrics) getYamlFromExec(command string) ([]byte, error) {
 func (c *YamlMetrics) getYamlFromShell(pipeline string) ([]byte, error) {
 	y, err := exec.Command("sh", "-c", pipeline).Output()
 	return y, err
-}
-
-func extractYamlSourceMethodAndSource(s string) (string, string) {
-	if ok, _ := regexp.MatchString("^file:", s); ok {
-		return "file", s[len("file:"):len(s)]
-	}
-	if ok, _ := regexp.MatchString("^exec:", s); ok {
-		return "exec", s[len("exec:"):len(s)]
-	}
-	if ok, _ := regexp.MatchString("^shell:", s); ok {
-		return "shell", s[len("shell:"):len(s)]
-	}
-	return "file", s
 }
 
 // sendMetrics Send to baseCollector channel.

@@ -405,7 +405,8 @@ func TestYamlMetricsCollectNoShellExec(t *testing.T) {
 	config := make(map[string]interface{})
 	execFile := "/tmp/yaml_metrics_exec.yaml"
 	defer os.Remove(execFile)
-	config["yamlSource"] = fmt.Sprintf("exec:%s", execFile)
+	config["yamlSource"] = execFile
+	config["yamlSourceMethod"] = "exec"
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	config["yamlFormat"] = "simple"
 	y := []byte(heredoc.Doc(`#!/bin/sh
@@ -434,7 +435,8 @@ func TestYamlMetricsCollectNoShellExec(t *testing.T) {
 func TestYamlMetricsCollectShellExec(t *testing.T) {
 	config := make(map[string]interface{})
 	shellCommand := `echo 123 | sed 's/\(.*\)/{testshell: \1}/'`
-	config["yamlSource"] = fmt.Sprintf("shell:%s", shellCommand)
+	config["yamlSource"] = shellCommand
+	config["yamlSourceMethod"] = "shell"
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	config["yamlFormat"] = "simple"
 	testChannel := make(chan metric.Metric)
