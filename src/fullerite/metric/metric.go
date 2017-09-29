@@ -42,6 +42,9 @@ func Sentinel() Metric {
 
 // AddDimension adds a new dimension to the Metric.
 func (m *Metric) AddDimension(name, value string) {
+	if m.Dimensions == nil {
+		m.Dimensions = make(map[string]string)
+	}
 	m.Dimensions[name] = value
 }
 
