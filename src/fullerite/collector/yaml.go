@@ -10,31 +10,37 @@ import (
 	"regexp"
 	"strconv"
 
-	l "github.com/Sirupsen/logrus"
 	"github.com/ghodss/yaml"
+
+	l "github.com/Sirupsen/logrus"
 )
 
 const (
 	defaultYamlCollectorName = "YamlMetrics"
 	defaultYamlSource        = "/var/lib/fullerite/yaml_metrics.yaml"
+	defaultYamlFormat        = "fullerite"
 	defaultYamlMetricPrefix  = "YamlMetrics"
 )
 
 // YamlMetrics collector extracts metrics from YAML data files
 //
 // Supports two modes:
-//   - 'simple' (default):
-//     reads YAML and trys to extract float64 gauges from top level keys
+//   - 'fullerite' (default):
+//     Recommended, as it allows full control of metric type, value, and dimensions,
+//     and is compatible with the Adhoc collector.
+//     Enabled explicitly by config option yamlFormat: "fullerite"
+//     Reads YAML 'metrics' key as an array of metrics, and
+//     for each of those, convert to a metrics.Metric object if possible
+//     (via remarshalling to JSON and using standard JSON unmarshal into object)
+//   - 'simple':
+//     Enabled by config option yamlFormat: "simple"
+//     Useful for reading snippets of data from preexisting sources (eg simple APIs, or Facter),
+//     or for very simple tools
+//     Reads YAML and trys to extract float64 gauges from top level keys
 //       - keys with numeric values
 //       - keys with stringy numeric values (eg "123", "123.01")
 //       - booleans and stringy bools: converts to 1/0 for true/false
 //       - does not support adding dimensions
-//       - designed to read arbrary data, eg facter.yaml
-//   - 'fullerite':
-//     enabled by 'format: "fullerite"'
-//     reads YAML 'metrics' key as an array of metrics
-//     for each of those, convert to a metrics.Metric object if possible
-//     (via remarshalling to JSON and using standard JSON unmarshal into object)
 //
 //  Config:
 //     metricPrefix     - prefix to add to Metrics, default 'yamlMetrics'.
@@ -47,6 +53,7 @@ type YamlMetrics struct {
 	baseCollector
 	metricPrefix     string
 	yamlSource       string
+	yamlFormat       string
 	yamlKeyWhitelist []string
 }
 
@@ -64,14 +71,18 @@ func NewYamlMetrics(channel chan metric.Metric, initialInterval int, log *l.Entr
 
 	c.name = defaultYamlCollectorName
 	c.yamlSource = defaultYamlSource
+	c.yamlFormat = defaultYamlFormat
 	c.metricPrefix = defaultYamlMetricPrefix
 	return c
 }
 
 // Configure takes a dictionary of values with which the handler can configure itself
 func (c *YamlMetrics) Configure(configMap map[string]interface{}) {
-	if yamlSource, exists := configMap["yamlSource"]; exists {
-		c.yamlSource = yamlSource.(string)
+	if v, exists := configMap["yamlSource"]; exists {
+		c.yamlSource = v.(string)
+	}
+	if v, exists := configMap["yamlFormat"]; exists {
+		c.yamlFormat = v.(string)
 	}
 	if v, exists := configMap["yamlKeyWhitelist"]; exists {
 		c.yamlKeyWhitelist = config.GetAsSlice(v)
@@ -126,8 +137,13 @@ func (c *YamlMetrics) yamlKeyMatchesWhitelist(k string) bool {
 }
 
 // 'advanced' format - YAML representation of metric.Metric objects
-func (c *YamlMetrics) getFulleriteFormatMetrics(m []interface{}) (metrics []metric.Metric) {
+func (c *YamlMetrics) getFulleriteFormatMetrics(yamlData []byte) (metrics []metric.Metric) {
+	var m []interface{}
 	var metric metric.Metric
+	err := yaml.Unmarshal(yamlData, &m)
+	if err != nil {
+		c.log.Error("Invalid YAML for fullerite yamlFormat")
+	}
 	for _, v := range m {
 		j, err := json.Marshal(v)
 		if err != nil {
@@ -146,10 +162,15 @@ func (c *YamlMetrics) getFulleriteFormatMetrics(m []interface{}) (metrics []metr
 }
 
 // simple k/v format; only keep values that convert to float
-func (c *YamlMetrics) getSimpleFormatMetrics(m map[string]interface{}) (metrics []metric.Metric) {
+func (c *YamlMetrics) getSimpleFormatMetrics(yamlData []byte) (metrics []metric.Metric) {
 	if len(c.yamlKeyWhitelist) == 0 {
 		c.log.Error("Must specify yamlKeyWhitelist for simple format metrics")
 		return metrics
+	}
+	m := make(map[string]interface{})
+	err := yaml.Unmarshal(yamlData, &m)
+	if err != nil {
+		c.log.Error("Could not unmarshal YAML: ", err.Error())
 	}
 	for k, v := range m {
 		if !c.yamlKeyMatchesWhitelist(k) {
@@ -165,25 +186,22 @@ func (c *YamlMetrics) getSimpleFormatMetrics(m map[string]interface{}) (metrics 
 
 // GetMetrics Get metrics from the YAML supplied
 func (c *YamlMetrics) GetMetrics(yamlData []byte) (metrics []metric.Metric) {
-	m := make(map[string]interface{})
+	c.log.Debug("GetMetrics: entry")
 	if len(yamlData) == 0 {
+		c.log.Debug("GetMetrics: yamlData is empty")
 		return metrics
 	}
-	err := yaml.Unmarshal(yamlData, &m)
-	if err != nil {
-		c.log.Error("Could not unmarshal YAML: ", err.Error())
-		c.log.Debug(fmt.Sprintf("%s", yamlData))
+	switch format := c.yamlFormat; format {
+	case "simple":
+		c.log.Debugf("getSimpleFormatMetrics: %s", yamlData)
+		return c.getSimpleFormatMetrics(yamlData)
+	case "fullerite":
+		c.log.Debugf("getFulleriteFormatMetrics: %s", yamlData)
+		return c.getFulleriteFormatMetrics(yamlData)
+	default:
+		c.log.Errorf("%s is not a valid yamlFormat", format)
 		return metrics
 	}
-	if f, ok := m["format"]; ok && f.(string) == "fullerite" {
-		switch val := m["metrics"].(type) {
-		case []interface{}:
-			return c.getFulleriteFormatMetrics(val)
-		default:
-			return metrics
-		}
-	}
-	return c.getSimpleFormatMetrics(m)
 }
 
 // Collect Compares box IP against leader IP and if true, sends data.

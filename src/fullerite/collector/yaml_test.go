@@ -36,6 +36,21 @@ func TestYamlMetricsConfigure(t *testing.T) {
 	assert.Equal(t, "/tmp/yaml_metrics.yaml", c.yamlSource, "should be the new yaml file")
 }
 
+func compareShouldAndGot(t *testing.T, should []metric.Metric, got []metric.Metric) {
+	expectedNum := len(should)
+	count := 0
+	assert.Equal(t, len(should), len(got), fmt.Sprintf("we should have %d metrics", len(should)))
+	for _, v1 := range should {
+		for _, v2 := range got {
+			if v1.Name == v2.Name {
+				assert.Equal(t, v2.Value, v1.Value, fmt.Sprintf("%s value is correct", v2.Name))
+				count += 1
+			}
+		}
+	}
+	assert.Equal(t, expectedNum, count, "We got the expected number Name matches")
+}
+
 func getYamlMetricsDefaultWhitelist() []interface{} {
 	a := make([]interface{}, 3)
 	a[0] = "uptime"
@@ -51,6 +66,7 @@ func getMetricsSimpleFormatTestHarness(y []byte, log *l.Entry, config map[string
 	if len(config) == 0 {
 		config = make(map[string]interface{})
 		config["metricPrefix"] = "pre"
+		config["yamlFormat"] = "simple"
 		config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	}
 	c := NewYamlMetrics(nil, 12, log).(*YamlMetrics)
@@ -85,6 +101,7 @@ func TestYamlMetricsGetMetricSimpleNoWhitelist(t *testing.T) {
   `))
 	config := make(map[string]interface{})
 	config["metricPrefix"] = "pre"
+	config["yamlFormat"] = "simple"
 	should := []metric.Metric{}
 	testLog, hook := getTestableLogger()
 	metrics := getMetricsSimpleFormatTestHarness(y, testLog, config)
@@ -158,19 +175,31 @@ func TestYamlMetricsGetMetricWithNestedValues(t *testing.T) {
 
 func TestYamlMetricsGetMetricWithFulleriteFormatNoMetrics(t *testing.T) {
 	y := []byte(heredoc.Doc(`---
-		format: fullerite
-		metrics:
-		test3: 456
 	`))
-	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
+	metrics := getMetricsFulleriteFormatTestHarness(y, nil, nil)
 	assert.Equal(t, 0, len(metrics), "no metrics are returned")
+}
+
+func TestYamlMetricsGetMetricWithFulleriteFormatBogusYaml(t *testing.T) {
+	y := []byte(heredoc.Doc(`---
+		this_is: invalid_format
+		for_fullerite_format: so_we_should_error
+	`))
+	nullLog, hook := test.NewNullLogger()
+	testLog := test_utils.BuildLogger()
+	testLog.Logger = nullLog
+	metrics := getMetricsFulleriteFormatTestHarness(y, testLog, nil)
+	assert.Equal(t, 0, len(metrics), "no metrics are returned")
+	assert.Equal(t, 1, len(hook.Entries), "We got just one error message")
+	assert.Equal(t,
+		"Invalid YAML for fullerite yamlFormat",
+		hook.LastEntry().Message,
+		"The error message was correct",
+	)
 }
 
 func TestYamlMetricsGetMetricWithFulleriteFormat(t *testing.T) {
 	y := []byte(heredoc.Doc(`---
-		format: fullerite
-		test3: 456
-		metrics:
 		  - name: test1
 		    value: 123
 		    type: gauge
@@ -188,7 +217,7 @@ func TestYamlMetricsGetMetricWithFulleriteFormat(t *testing.T) {
 		{Name: "pre.test1", Value: 123, MetricType: "gauge"},
 		{Name: "pre.test2", Value: 789, MetricType: "gauge"},
 	}
-	metrics := getMetricsSimpleFormatTestHarness(y, nil, nil)
+	metrics := getMetricsFulleriteFormatTestHarness(y, nil, nil)
 	assert.Equal(t, 2, len(metrics), "two metrics are returned")
 	for i, v := range metrics {
 		s := should[i]
@@ -202,8 +231,6 @@ func TestYamlMetricsGetMetricWithFulleriteFormat(t *testing.T) {
 
 func TestYamlMetricsGetMetricWithFulleriteFormatBogusMetrics(t *testing.T) {
 	y := []byte(heredoc.Doc(`---
-		format: fullerite
-		metrics:
 		  - name: true_is_not_valid
 		    value: true
 		    type: gauge
@@ -213,7 +240,6 @@ func TestYamlMetricsGetMetricWithFulleriteFormatBogusMetrics(t *testing.T) {
 		  - name: string_is_not_valid
 		    value: "wibble"
 		    type: gauge
-		test3: 456
 	`))
 	nullLog, hook := test.NewNullLogger()
 	testLog := test_utils.BuildLogger()
@@ -225,8 +251,6 @@ func TestYamlMetricsGetMetricWithFulleriteFormatBogusMetrics(t *testing.T) {
 
 func TestYamlMetricsGetMetricWithFulleriteFormatNoDimensions(t *testing.T) {
 	y := []byte(heredoc.Doc(`---
-		format: fullerite
-		metrics:
 		  - name: test1
 		    value: 123
 		    type: gauge
@@ -240,21 +264,6 @@ func TestYamlMetricsGetMetricWithFulleriteFormatNoDimensions(t *testing.T) {
 	}
 	metrics := getMetricsFulleriteFormatTestHarness(y, nil, nil)
 	compareShouldAndGot(t, should, metrics)
-}
-
-func compareShouldAndGot(t *testing.T, should []metric.Metric, got []metric.Metric) {
-	expectedNum := len(should)
-	count := 0
-	assert.Equal(t, len(should), len(got), fmt.Sprintf("we should have %d metrics", len(should)))
-	for _, v1 := range should {
-		for _, v2 := range got {
-			if v1.Name == v2.Name {
-				assert.Equal(t, v2.Value, v1.Value, fmt.Sprintf("%s value is correct", v2.Name))
-				count += 1
-			}
-		}
-	}
-	assert.Equal(t, expectedNum, count, "We got the expected number Name matches")
 }
 
 func TestYamlMetricsGetMetricWithBooleanValues(t *testing.T) {
@@ -302,7 +311,8 @@ func TestYamlMetricsCollectOnceDefaultPrefix(t *testing.T) {
 	config["yamlSource"] = yamlFile
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	y := []byte(heredoc.Doc(`---
-		test1: 123
+	- name: test1
+	  value: 123
 	`))
 	err := ioutil.WriteFile(yamlFile, y, 0644)
 	if err != nil {
@@ -329,6 +339,7 @@ func TestYamlMetricsCollectOnceNoPrefix(t *testing.T) {
 	yamlFile := "/tmp/yaml_metrics.yaml"
 	defer os.Remove(yamlFile)
 	config["yamlSource"] = yamlFile
+	config["yamlFormat"] = "simple"
 	config["metricPrefix"] = ""
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
 	y := []byte(heredoc.Doc(`---
@@ -366,6 +377,7 @@ func TestYamlMetricsCollectOnceNewPrefix(t *testing.T) {
 	config["yamlSource"] = yamlFile
 	config["metricPrefix"] = "wibble"
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
+	config["yamlFormat"] = "simple"
 	y := []byte(heredoc.Doc(`---
 		test1: 123
 	`))
@@ -395,8 +407,9 @@ func TestYamlMetricsCollectNoShellExec(t *testing.T) {
 	defer os.Remove(execFile)
 	config["yamlSource"] = fmt.Sprintf("exec:%s", execFile)
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
+	config["yamlFormat"] = "simple"
 	y := []byte(heredoc.Doc(`#!/bin/sh
-		echo "{test1: 123, test2: 456}"
+		echo "{test1: 123}"
 	`))
 	err := ioutil.WriteFile(execFile, y, 0700)
 	if err != nil {
@@ -423,6 +436,7 @@ func TestYamlMetricsCollectShellExec(t *testing.T) {
 	shellCommand := `echo 123 | sed 's/\(.*\)/{testshell: \1}/'`
 	config["yamlSource"] = fmt.Sprintf("shell:%s", shellCommand)
 	config["yamlKeyWhitelist"] = getYamlMetricsDefaultWhitelist()
+	config["yamlFormat"] = "simple"
 	testChannel := make(chan metric.Metric)
 	testLog, hook := getTestableLogger()
 	c := NewYamlMetrics(testChannel, 123, testLog).(*YamlMetrics)
