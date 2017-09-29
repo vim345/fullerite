@@ -50,6 +50,7 @@ deps:
 	@go get github.com/Masterminds/glide
 	@cd src/github.com/Masterminds/glide && git checkout --quiet v0.12.3
 	@go build -o bin/glide github.com/Masterminds/glide/
+	@rm -rf $(GOPATH)/src/$(FULLERITE)/vendor/
 	@cd $(GOPATH)/src/$(FULLERITE) && $(GLIDE) install
 	@go build -o bin/golint fullerite/vendor/github.com/golang/lint/golint/
 	@go build -o bin/gocyclo fullerite/vendor/github.com/fzipp/gocyclo/
@@ -72,7 +73,13 @@ tests: deps diamond_core_test diamond_collector_test
 qbt:
 	@echo Fast testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
-		go test -v -cover $$pkg || exit 1;\
+		go test -v -cover $(GO_TEST_ARGS) $$pkg || exit 1;\
+	done
+
+qct:
+	@echo Fast testing fullerite collectors
+	@for pkg in $(FULLERITE)/collector; do \
+		go test -v -cover $$pkg $(GO_TEST_ARGS) || exit 1;\
 	done
 
 diamond_core_test:

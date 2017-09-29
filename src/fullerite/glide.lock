@@ -1,5 +1,5 @@
-hash: 1be30f98f0d5700480517e402bfc82755012592819fc4b4ea885c2cbb10fd305
-updated: 2017-06-06T07:15:06.415575466-07:00
+hash: f3417f9a8ceb48af4b474523936d4a7f2da6ea99d7e56ec14048c4ddd8bac00d
+updated: 2017-08-10T21:35:51.269239596+01:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -29,6 +29,8 @@ imports:
   - external/golang.org/x/sys/unix
 - name: github.com/fzipp/gocyclo
   version: 6acd4345c835499920e8426c7e4e8d7a34f1bb83
+- name: github.com/ghodss/yaml
+  version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/golang/lint
   version: 8f348af5e29faa4262efdc14302797f23774e477
   subpackages:
@@ -50,17 +52,23 @@ imports:
   - thrift
 - name: github.com/Sirupsen/logrus
   version: d26492970760ca5d33129d2d799e34be5c4782eb
+  subpackages:
+  - hooks/test
 - name: golang.org/x/sys
   version: b90f89a1e7a9c1f6b918820b3daa7f08488c8594
   subpackages:
   - unix
 - name: golang.org/x/tools
   version: 92d42b9ff15f625347a13b6aeafd04a33537ce91
+- name: gopkg.in/yaml.v2
+  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
 testImports:
 - name: github.com/davecgh/go-spew
   version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
   - spew
+- name: github.com/MakeNowJust/heredoc
+  version: bb23615498cded5e105af4ce27de75b089cbe851
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
