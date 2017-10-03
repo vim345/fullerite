@@ -93,6 +93,7 @@ func readFromCollector(collector collector.Collector,
 		var exists bool
 		c := collector.CanonicalName()
 		if _, exists = m.GetDimensionValue("collector"); !exists {
+			log.Debugf("readFromCollector: m = %+v", m)
 			m.AddDimension("collector", collector.Name())
 		}
 		// We allow external collectors to provide us their collector's CanonicalName

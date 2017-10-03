@@ -401,6 +401,36 @@ func TestYamlMetricsCollectOnceNewPrefix(t *testing.T) {
 	assert.Equal(t, 0, len(hook.Entries), "There were no errors logged")
 }
 
+func TestYamlMetricsCollectOnceNewPrefixFulleriteFormat(t *testing.T) {
+	config := make(map[string]interface{})
+	yamlFile := "/tmp/yaml_metrics_fullerite.yaml"
+	defer os.Remove(yamlFile)
+	config["yamlSource"] = yamlFile
+	config["metricPrefix"] = "wibble"
+	y := []byte(heredoc.Doc(`---
+	- name: test_fullerite_format
+	  value: 1234
+	`))
+	err := ioutil.WriteFile(yamlFile, y, 0644)
+	if err != nil {
+		t.Fatal("Could not write YAML file")
+	}
+	testChannel := make(chan metric.Metric)
+	testLog, hook := getTestableLogger()
+	c := NewYamlMetrics(testChannel, 123, testLog).(*YamlMetrics)
+	c.Configure(config)
+	go c.Collect()
+	select {
+	case m := <-c.Channel():
+		assert.Equal(t, "wibble.test_fullerite_format", m.Name)
+		assert.Equal(t, float64(1234), m.Value)
+		return
+	case <-time.After(4 * time.Second):
+		t.Fail()
+	}
+	assert.Equal(t, 0, len(hook.Entries), "There were no errors logged")
+}
+
 func TestYamlMetricsCollectNoShellExec(t *testing.T) {
 	config := make(map[string]interface{})
 	execFile := "/tmp/yaml_metrics_exec.yaml"

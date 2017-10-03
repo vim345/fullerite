@@ -1,6 +1,7 @@
 package metric_test
 
 import (
+	"encoding/json"
 	"fullerite/metric"
 
 	"testing"
@@ -20,6 +21,17 @@ func TestNewMetric(t *testing.T) {
 
 func TestAddDimension(t *testing.T) {
 	m := metric.New("TestMetric")
+	m.AddDimension("TestDimension", "test value")
+
+	assert := assert.New(t)
+	assert.Equal(len(m.Dimensions), 1, "should have 1 dimension")
+	assert.Equal(m.Dimensions["TestDimension"], "test value")
+}
+
+func TestAddDimensionToUnmarshalledMetric(t *testing.T) {
+	j := []byte(`{ "name": "test_add_dimension", "value": 123.45}`)
+	var m metric.Metric
+	_ = json.Unmarshal(j, &m)
 	m.AddDimension("TestDimension", "test value")
 
 	assert := assert.New(t)

@@ -149,12 +149,12 @@ func (c *YamlMetrics) yamlKeyMatchesWhitelist(k string) bool {
 // 'advanced' format - YAML representation of metric.Metric objects
 func (c *YamlMetrics) getFulleriteFormatMetrics(yamlData []byte) (metrics []metric.Metric) {
 	var m []interface{}
-	var metric metric.Metric
 	err := yaml.Unmarshal(yamlData, &m)
 	if err != nil {
 		c.log.Error("Invalid YAML for fullerite yamlFormat")
 	}
 	for _, v := range m {
+		var metric metric.Metric
 		j, err := json.Marshal(v)
 		if err != nil {
 			c.log.Error("getFulleriteFormatMetrics: Skipping, could not Marshal '%s': %s", v, err.Error())
@@ -232,7 +232,9 @@ func (c *YamlMetrics) Collect() {
 		c.log.Errorf("Could not get YAML data from source %s:%s ", c.yamlSourceMethod, c.yamlSource)
 		return
 	}
-	go c.sendMetrics(c.GetMetrics(y))
+	if metrics := c.GetMetrics(y); len(metrics) > 0 {
+		go c.sendMetrics(metrics)
+	}
 }
 
 func (c *YamlMetrics) getYamlFromFile(file string) ([]byte, error) {
