@@ -154,9 +154,9 @@ func (m *MesosStats) getMetrics(ip string) map[string]float64 {
 
     // Check if it the elected master or not.
     if snapshot["master.elected"] == 1 {
-        m.log.Warning("This is the elected leader!")
+        m.log.Debug("This is the elected leader!")
     } else {
-        m.log.Warning("This is not the leader!")
+        m.log.Debug("This is not the leader!")
         return make(map[string]float64)
     }
 
