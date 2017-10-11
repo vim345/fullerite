@@ -40,7 +40,8 @@ class ZookeeperCollector(diamond.collector.Collector):
             'hosts': "List of hosts, and ports to collect. Set an alias by "
             + " prefixing the host:port with alias@",
             'reset_stats': "Reset the server stats via 'srst' command after"
-            + "each collection."
+            + "each collection. Enable this to avoid the max_latency statistic from"
+            + "sticking to the high watermark since the process started."
         })
         return config_help
 
@@ -74,7 +75,7 @@ class ZookeeperCollector(diamond.collector.Collector):
         try:
             return _zk_request('srst', host, port)
         except:
-            self.log.info("Caught exception resetting zk stats", exc_info=True)
+            self.log.exception("Caught exception resetting zk stats")
 
     def _zk_request(self, host, port, command):
         """ Performs the given zk four letter command and returns the output """
@@ -164,5 +165,5 @@ class ZookeeperCollector(diamond.collector.Collector):
                                    "for a full list", stat)
 
             # reset the stats so we get an average and max latency _since the last collection_
-            if(reset_stats): 
+            if reset_stats: 
                 self._reset_zk_stats(host, port)
