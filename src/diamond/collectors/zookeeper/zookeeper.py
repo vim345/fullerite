@@ -68,16 +68,16 @@ class ZookeeperCollector(diamond.collector.Collector):
 
     def get_raw_stats(self, host, port):
         """ Returns the raw zk mntr output """
-        return _zk_request('mntr', host, port)
+        return self._zk_request('mntr', host, port)
 
     def _reset_zk_stats(self, host, port):
         """ Resets the zookeeper latency and byte stats """
         try:
-            return _zk_request('srst', host, port)
+            return self._zk_request('srst', host, port)
         except:
             self.log.exception("Caught exception resetting zk stats")
 
-    def _zk_request(self, host, port, command):
+    def _zk_request(self, command, host, port):
         """ Performs the given zk four letter command and returns the output """
         data = ''
         # connect
@@ -125,7 +125,7 @@ class ZookeeperCollector(diamond.collector.Collector):
                 stats['limit_maxconn'] = m.group(1)
             f.close()
         except:
-            self.log.debug("Cannot parse command line options for zookeeper")
+            self.log.exception("Cannot parse command line options for zookeeper")
 
         return stats
 
@@ -165,5 +165,5 @@ class ZookeeperCollector(diamond.collector.Collector):
                                    "for a full list", stat)
 
             # reset the stats so we get an average and max latency _since the last collection_
-            if reset_stats: 
-                self._reset_zk_stats(host, port)
+            if reset_stats:
+                self._reset_zk_stats(hostname, port)
