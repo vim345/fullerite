@@ -39,6 +39,9 @@ class ZookeeperCollector(diamond.collector.Collector):
             + " of possibilities. Leave unset to publish all.",
             'hosts': "List of hosts, and ports to collect. Set an alias by "
             + " prefixing the host:port with alias@",
+            'reset_stats': "Reset the server stats via 'srst' command after"
+            + "each collection. Enable this to avoid the max_latency statistic from"
+            + "sticking to the high watermark since the process started."
         })
         return config_help
 
@@ -57,11 +60,25 @@ class ZookeeperCollector(diamond.collector.Collector):
             # 'publish': ''
 
             # Connection settings
-            'hosts': ['localhost:2181']
+            'hosts': ['localhost:2181'],
+            # reset the zk server stats after each collection?
+            'reset_stats': False,
         })
         return config
 
     def get_raw_stats(self, host, port):
+        """ Returns the raw zk mntr output """
+        return _zk_request('mntr', host, port)
+
+    def _reset_zk_stats(self, host, port):
+        """ Resets the zookeeper latency and byte stats """
+        try:
+            return _zk_request('srst', host, port)
+        except:
+            self.log.exception("Caught exception resetting zk stats")
+
+    def _zk_request(self, host, port, command):
+        """ Performs the given zk four letter command and returns the output """
         data = ''
         # connect
         try:
@@ -72,12 +89,12 @@ class ZookeeperCollector(diamond.collector.Collector):
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((host, int(port)))
             # request stats
-            sock.send('mntr\n')
+            sock.send('%s\n' % command)
             # something big enough to get whatever is sent back
             data = sock.recv(4096)
         except socket.error:
-            self.log.exception('Failed to get stats from %s:%s',
-                               host, port)
+            self.log.exception('Failed to send %s command to %s:%s',
+                               command, host, port)
         return data
 
     def get_stats(self, host, port):
@@ -114,6 +131,7 @@ class ZookeeperCollector(diamond.collector.Collector):
 
     def collect(self):
         hosts = self.config.get('hosts')
+        reset_stats = self.config.get('reset_stats')
 
         # Convert a string config value to be an array
         if isinstance(hosts, basestring):
@@ -141,8 +159,11 @@ class ZookeeperCollector(diamond.collector.Collector):
                     }
                     self.publish(stat, stats[stat])
                 else:
-
-                    # we don't, must be somehting configured in publish so we
+                    # we don't, must be something configured in publish so we
                     # should log an error about it
                     self.log.error("No such key '%s' available, issue 'stats' "
                                    "for a full list", stat)
+
+            # reset the stats so we get an average and max latency _since the last collection_
+            if reset_stats: 
+                self._reset_zk_stats(host, port)
