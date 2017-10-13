@@ -21,7 +21,6 @@ var (
 	sendMetrics = (*MesosStats).sendMetrics
 	getMetrics  = (*MesosStats).getMetrics
 
-	newMLE        = func() util.MesosLeaderElectInterface { return new(util.MesosLeaderElect) }
 	getMetricsURL = func(ip string) string { return fmt.Sprintf("http://%s:5050/metrics/snapshot", ip) }
 )
 
@@ -74,7 +73,6 @@ type MesosStats struct {
 	baseCollector
 	IP         string
 	client     http.Client
-	mesosCache util.MesosLeaderElectInterface
 }
 
 func init() {
@@ -100,14 +98,13 @@ func newMesosStats(channel chan metric.Metric, intialInterval int, log *l.Entry)
 	return m
 }
 
-// Configure Override *baseCollector.Configure(). Will create the required MesosLeaderElect instance.
+// Configure Override *baseCollector.Configure().
 func (m *MesosStats) Configure(configMap map[string]interface{}) {
 	m.configureCommonParams(configMap)
 
 	c := config.GetAsMap(configMap)
 	if mesosNodes, exists := c["mesosNodes"]; exists && len(mesosNodes) > 0 {
-		m.mesosCache = newMLE()
-		m.mesosCache.Configure(mesosNodes, cacheTimeout)
+		m.log.Info("Successfully configured!")
 	} else {
 		m.log.Error("Require configuration not found: mesosNodes")
 		return
@@ -116,14 +113,6 @@ func (m *MesosStats) Configure(configMap map[string]interface{}) {
 
 // Collect Compares box IP against leader IP and if true, sends data.
 func (m *MesosStats) Collect() {
-	if m.mesosCache == nil {
-		m.log.Error("No mesosCache, Configure() probably failed.")
-		return
-	} else if m.mesosCache.Get() != m.IP {
-		m.log.Warn("Not the leader; skipping.")
-		return
-	}
-
 	go sendMetrics(m)
 }
 
@@ -162,6 +151,14 @@ func (m *MesosStats) getMetrics(ip string) map[string]float64 {
 		m.log.Error("Unable to decode mesos metrics JSON: ", decodeErr.Error())
 		return nil
 	}
+
+    // Check if it the elected master or not.
+    if snapshot["master.elected"] == 1 {
+        m.log.Debug("This is the elected leader!")
+    } else {
+        m.log.Debug("This is not the leader!")
+        return make(map[string]float64)
+    }
 
 	return snapshot
 }

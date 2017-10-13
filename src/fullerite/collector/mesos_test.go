@@ -5,28 +5,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"fullerite/metric"
-	"fullerite/util"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-// MockMLE Mock for MesosLeaderElectInterface that encapsulate functionality to check if the interface methods have been called/not. We embed the interface for the case of the test because this interface has unexported methods (set()). And since the interface comes from a different package, we cannot provide a concrete implementation for it.
-type MockMLE struct {
-	util.MesosLeaderElectInterface
-	ConfigureCalled bool
-}
-
-func (m *MockMLE) Configure(nodes string, ttl time.Duration) {
-	m.ConfigureCalled = true
-}
-
-func (m *MockMLE) Get() string {
-	return httptest.DefaultRemoteAddr
-}
 
 // mockExternalIP Injectable mock for externalIP, for test assertions.
 func mockExternalIP() (string, error) {
@@ -52,53 +37,14 @@ func TestMesosStatsNewMesosStats(t *testing.T) {
 	assert.Equal(t, http.Client{Timeout: getTimeout}, sut.client)
 }
 
-func TestMesosStatsConfigure(t *testing.T) {
-	oldNewMLE := newMLE
-	defer func() { newMLE = oldNewMLE }()
-
-	newMLE = func() util.MesosLeaderElectInterface { return &MockMLE{} }
-
-	tests := []struct {
-		config map[string]interface{}
-		isNil  bool
-		msg    string
-	}{
-		{map[string]interface{}{}, true, "Config does not contain mesosNodes, so Configure should fail."},
-		{map[string]interface{}{"mesosNodes": ""}, true, "Config contains empty mesosNodes, so Configure should fail."},
-		{map[string]interface{}{"mesosNodes": "ip1,ip2"}, false, "Config contains mesosNodes, so Configure should work."},
-	}
-
-	for _, test := range tests {
-		config := test.config
-		sut := newMesosStats(nil, 0, defaultLog).(*MesosStats)
-
-		assert.Nil(t, sut.mesosCache, "Before *baseCollector.Configure() is called, MesosStats.mesosCache should not be created.")
-
-		sut.Configure(config)
-
-		switch test.isNil {
-		case true:
-			assert.Nil(t, sut.mesosCache, test.msg)
-		case false:
-			assert.NotNil(t, sut.mesosCache, test.msg)
-			mock, _ := sut.mesosCache.(*MockMLE)
-			assert.True(t, mock.ConfigureCalled, "*MesosLeaderElect.Configure() should be called.")
-		}
-
-	}
-}
-
 func TestMesosStatsCollect(t *testing.T) {
 	oldExternalIP := externalIP
-	oldNewMLE := newMLE
 	oldSendMetrics := sendMetrics
 	defer func() {
 		externalIP = oldExternalIP
-		newMLE = oldNewMLE
 		sendMetrics = oldSendMetrics
 	}()
 
-	newMLE = func() util.MesosLeaderElectInterface { return &MockMLE{} }
 
 	sendMetricsCalled := false
 	c := make(chan bool)
@@ -113,8 +59,7 @@ func TestMesosStatsCollect(t *testing.T) {
 		isSendMetricsCalled bool
 		msg                 string
 	}{
-		{map[string]interface{}{"mesosNodes": ""}, httptest.DefaultRemoteAddr, false, "Invalid collector config, therefore no mesosCache is initialised."},
-		{map[string]interface{}{"mesosNodes": "ip1,ip2"}, "5.6.7.8", false, "Machine IP is not equal to leader IP, therefore we should skip collection."},
+		{map[string]interface{}{"mesosNodes": "ip1,ip2"}, "5.6.7.8", true, "Machine IP is not equal to leader IP, therefore we should skip collection."},
 		{map[string]interface{}{"mesosNodes": "ip1,ip2"}, httptest.DefaultRemoteAddr, true, "Current box is leader; therefore, we should be called sendMetrics."},
 	}
 
@@ -168,7 +113,8 @@ func TestMesosStatsGetMetrics(t *testing.T) {
 		expected    map[string]float64
 		msg         string
 	}{
-		{"{\"frameworks\\/chronos\\/messages_processed\":6784068}", map[string]float64{"frameworks.chronos.messages_processed": 6784068}, "Valid JSON should return valid metrics."},
+		{"{\"frameworks\\/chronos\\/messages_processed\":6784068, \"master\\/elected\": 1}", map[string]float64{"frameworks.chronos.messages_processed": 6784068, "master.elected": 1}, "Valid JSON should return valid metrics."},
+		{"{\"frameworks\\/chronos\\/messages_processed\":6784068, \"master\\/elected\": 0}", map[string]float64{}, "Only the elected master should return metrics."},
 		{"{\"frameworks\\/chronos\\/messages_processed6784068}", nil, "Invalid JSON should return nil."},
 	}
 
