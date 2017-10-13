@@ -100,32 +100,16 @@ class ZookeeperCollector(diamond.collector.Collector):
     def get_stats(self, host, port):
         # stuff that's always ignored, aren't 'stats'
         ignored = ('zk_version', 'zk_server_state')
-        pid = None
 
         stats = {}
         data = self.get_raw_stats(host, port)
 
         # parse stats
         for line in data.splitlines():
-
             pieces = line.split()
-
             if pieces[0] in ignored:
                 continue
             stats[pieces[0]] = pieces[1]
-
-        # get max connection limit
-        self.log.debug('pid %s', pid)
-        try:
-            cmdline = "/proc/%s/cmdline" % pid
-            f = open(cmdline, 'r')
-            m = re.search("-c\x00(\d+)", f.readline())
-            if m is not None:
-                self.log.debug('limit connections %s', m.group(1))
-                stats['limit_maxconn'] = m.group(1)
-            f.close()
-        except:
-            self.log.exception("Cannot parse command line options for zookeeper")
 
         return stats
 
