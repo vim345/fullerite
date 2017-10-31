@@ -147,6 +147,7 @@ func emitCollectorStats(data map[string]uint64,
 func reportCollector(collector collector.Collector) {
 	log.Warn(fmt.Sprintf("%s collector took too long to run, reporting incident!", collector.Name()))
 	metric := metric.New("fullerite.collection_time_exceeded")
+	metric.MetricType = "cumcounter"
 	metric.Value = 1
 	metric.AddDimension("interval", fmt.Sprintf("%d", collector.Interval()))
 	collector.Channel() <- metric
