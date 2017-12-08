@@ -48,7 +48,6 @@ func (hook *LogErrorHook) Levels() []logrus.Level {
 
 func (hook *LogErrorHook) reportErrors(entry *logrus.Entry) {
 	metric := metric.New("fullerite.collector_errors")
-	metric.MetricType = "cumcounter"
 	metric.Value = 1
 	if val, exists := entry.Data["collector"]; exists {
 		metric.AddDimension("collector", val.(string))

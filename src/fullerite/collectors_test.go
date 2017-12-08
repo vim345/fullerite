@@ -95,7 +95,6 @@ func TestStartCollectorTooLong(t *testing.T) {
 	case m := <-collector.Channel():
 		assert.Equal(t, 1.0, m.Value)
 		assert.Equal(t, "fullerite.collection_time_exceeded", m.Name)
-		assert.Equal(t, "cumcounter", m.MetricType)
 		assert.Equal(t, "1", m.Dimensions["interval"])
 		return
 	case <-time.After(5 * time.Second):

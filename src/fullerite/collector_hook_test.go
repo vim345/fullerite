@@ -34,7 +34,6 @@ func TestCollectorLogsErrors(t *testing.T) {
 	select {
 	case m := <-h.Channel():
 		assert.Equal(t, "fullerite.collector_errors", m.Name)
-		assert.Equal(t, "cumcounter", m.MetricType)
 		assert.Equal(t, 1.0, m.Value)
 		assert.Equal(t, "Test", m.Dimensions["collector"])
 		return
