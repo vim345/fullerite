@@ -1,0 +1,13 @@
+[Unit]
+Description=Fullerite
+After=network.target
+
+[Service]
+TimeoutStartSec=5
+ExecStart=/usr/bin/fullerite --config /etc/fullerite.conf --log_level info 2>&1 >> /var/log/fullerite/fullerite.log | tee --append /var/log/fullerite/fullerite.err
+PIDFile=/var/run/fullerite.pid
+User=fuller
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

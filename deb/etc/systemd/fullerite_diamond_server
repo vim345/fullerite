@@ -1,0 +1,12 @@
+[Unit]
+Description=Fullerite Diamond Collector
+After=network.target
+
+[Service]
+TimeoutStartSec=5
+ExecStart=/usr/bin/run-diamond-collectors.sh -c /etc/fullerite.conf -l INFO 2>&1 | tee --append /var/log/fullerite/diamond_server.log
+User=fuller
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
