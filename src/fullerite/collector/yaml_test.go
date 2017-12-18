@@ -44,7 +44,7 @@ func compareShouldAndGot(t *testing.T, should []metric.Metric, got []metric.Metr
 		for _, v2 := range got {
 			if v1.Name == v2.Name {
 				assert.Equal(t, v2.Value, v1.Value, fmt.Sprintf("%s value is correct", v2.Name))
-				count += 1
+				count++
 			}
 		}
 	}

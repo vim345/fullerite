@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 // mockExternalIP Injectable mock for externalIP, for test assertions.
 func mockExternalIP() (string, error) {
 	return httptest.DefaultRemoteAddr, nil
@@ -44,7 +43,6 @@ func TestMesosStatsCollect(t *testing.T) {
 		externalIP = oldExternalIP
 		sendMetrics = oldSendMetrics
 	}()
-
 
 	sendMetricsCalled := false
 	c := make(chan bool)
