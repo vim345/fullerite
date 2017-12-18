@@ -71,8 +71,8 @@ const (
 // MesosStats Collector for mesos leader stats.
 type MesosStats struct {
 	baseCollector
-	IP         string
-	client     http.Client
+	IP     string
+	client http.Client
 }
 
 func init() {
@@ -152,13 +152,13 @@ func (m *MesosStats) getMetrics(ip string) map[string]float64 {
 		return nil
 	}
 
-    // Check if it the elected master or not.
-    if snapshot["master.elected"] == 1 {
-        m.log.Debug("This is the elected leader!")
-    } else {
-        m.log.Debug("This is not the leader!")
-        return make(map[string]float64)
-    }
+	// Check if it the elected master or not.
+	if snapshot["master.elected"] == 1 {
+		m.log.Debug("This is the elected leader!")
+	} else {
+		m.log.Debug("This is not the leader!")
+		return make(map[string]float64)
+	}
 
 	return snapshot
 }

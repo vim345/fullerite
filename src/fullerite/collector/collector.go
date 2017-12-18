@@ -77,14 +77,14 @@ func New(name string) Collector {
 
 type baseCollector struct {
 	// fulfill most of the rote parts of the collector interface
-	channel              chan metric.Metric
-	name                 string
-	interval             int
-	collectorType        string
-	canonicalName        string
-	prefix               string
-	blacklist            []string
-	dimensions_blacklist map[string]string
+	channel             chan metric.Metric
+	name                string
+	interval            int
+	collectorType       string
+	canonicalName       string
+	prefix              string
+	blacklist           []string
+	dimensionsBlacklist map[string]string
 
 	// intentionally exported
 	log *l.Entry
@@ -106,7 +106,7 @@ func (col *baseCollector) configureCommonParams(configMap map[string]interface{}
 	}
 
 	if asInterface, exists := configMap["dimensions_blacklist"]; exists {
-		col.dimensions_blacklist = config.GetAsMap(asInterface)
+		col.dimensionsBlacklist = config.GetAsMap(asInterface)
 	}
 }
 
@@ -137,7 +137,7 @@ func (col *baseCollector) SetBlacklist(blacklist []string) {
 
 // SetDimensionsBlacklist : set collector optional dimensions blacklist
 func (col *baseCollector) SetDimensionsBlacklist(blacklist map[string]string) {
-	col.dimensions_blacklist = blacklist
+	col.dimensionsBlacklist = blacklist
 }
 
 // CanonicalName : collector canonical name
@@ -182,7 +182,7 @@ func (col *baseCollector) Blacklist() []string {
 
 // DimensionsBlacklist returns the list of dimensions to be blacklisted for this collector
 func (col *baseCollector) DimensionsBlacklist() map[string]string {
-	return col.dimensions_blacklist
+	return col.dimensionsBlacklist
 }
 
 // ContainsBlacklistedDimension returns the true if dimensions passed as argument
