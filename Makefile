@@ -136,6 +136,8 @@ ifeq ($(OS),Ubuntu)
 		--deb-default "deb/etc/fullerite" \
 		--deb-upstart "deb/etc/init/fullerite" \
 		--deb-upstart "deb/etc/init/fullerite_diamond_server" \
+		--deb-systemd "deb/etc/systemd/fullerite" \
+		--deb-systemd "deb/etc/systemd/fullerite_diamond_server" \
 		--before-install "deb/before_install.sh" \
 		--before-remove "deb/before_rm.sh" \
 		--after-remove "deb/post_rm.sh" \
