@@ -79,7 +79,7 @@ type BaseParser struct {
 // Parse can be called from collector code to parse results
 func Parse(raw []byte, schemaVer string, ccEnabled bool) ([]metric.Metric, error) {
 	var parser Parser
-	if schemaVer == "uwsgi.1.0" || schemaVer == "uwsg.1.1" {
+	if schemaVer == "uwsgi.1.0" || schemaVer == "uwsgi.1.1" {
 		parser = NewUWSGIMetric(raw, schemaVer, ccEnabled)
 	} else if schemaVer == "java-1.1" {
 		parser = NewJavaMetric(raw, schemaVer, ccEnabled)
