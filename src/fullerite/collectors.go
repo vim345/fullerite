@@ -146,10 +146,11 @@ func emitCollectorStats(data map[string]uint64,
 
 func reportCollector(collector collector.Collector) {
 	log.Warn(fmt.Sprintf("%s collector took too long to run, reporting incident!", collector.Name()))
-	metric := metric.New("fullerite.collection_time_exceeded")
-	metric.Value = 1
-	metric.AddDimension("interval", fmt.Sprintf("%d", collector.Interval()))
-	collector.Channel() <- metric
+	new_metric := metric.New("fullerite.collection_time_exceeded")
+	new_metric.MetricType = metric.Counter
+	new_metric.Value = 1
+	new_metric.AddDimension("interval", fmt.Sprintf("%d", collector.Interval()))
+	collector.Channel() <- new_metric
 }
 
 func stringInSlice(metricName string, list []string) bool {
