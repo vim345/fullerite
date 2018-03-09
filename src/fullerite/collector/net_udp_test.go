@@ -61,9 +61,16 @@ func TestProcNetUDPStatsConfigure(t *testing.T) {
 func TestParse(t *testing.T) {
 	out := `sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
  3152: FEFFFEA9:4ED6 00000000:0000 07 00000000:00000000 00:00000000 00000000 65534        0 3841266873 2 ffff88021734b480 0
-15747: FEFFFEA9:8009 FEFFFEA9:1FBD 01 00000000:00000000 00:00000000 00000000  4404        0 1989081677 2 ffff8806859712c0 0`
+15747: FEFFFEA9:8009 FEFFFEA9:1FBD 01 00000000:00000000 00:00000000 00000000  4404        0 1989081677 2 ffff8806859712c0 100`
 	fake_collector := &ProcNetUDPStats{}
 
 	lines := fake_collector.parseProcNetUDPLines(out)
 	assert.Equal(t, 2, len(lines))
+
+	assert.Equal(t, "FEFFFEA9:4ED6", lines[0].localAddress)
+	assert.Equal(t, "00000000:0000", lines[0].remoteAddress)
+	assert.Equal(t, "0", lines[0].drops)
+	assert.Equal(t, "FEFFFEA9:8009", lines[1].localAddress)
+	assert.Equal(t, "FEFFFEA9:1FBD", lines[1].remoteAddress)
+	assert.Equal(t, "100", lines[1].drops)
 }

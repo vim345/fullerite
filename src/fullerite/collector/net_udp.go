@@ -17,20 +17,26 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
-// Most of these fields are internal kernel values and we don't care about them
+// The full /proc/net/udp struct contains all the following fields,
+// however we only load the ones we care about for now
+//
+// sl            kernel hash slot for the socket
+// localAddress  local address and port number pair -- hex encoded
+// remoteAddress remote address and port number pair (if connected) -- hex encoded
+// st            internal status of the socket
+// queues        outgoing and incoming data queue in terms of kernel memory usage
+// trRexmits     not used by UDP
+// tmWhen        not used by UDP
+// uid           effective UID of the creator of the socket
+// timeout       socket timeout
+// inode         inode
+// ref           internal kernel field
+// pointer       internal kernel field
+// drops         packets dropped since the socket was created
+
 type procNetUpdLine struct {
-	sl            string
 	localAddress  string // hex encoded
 	remoteAddress string // hex encoded
-	st            string
-	queues        string // "tx_queue:rx_queue": outgoing and incoming data queue in terms of kernel memory usage
-	trRexmits     string // not used by UDP
-	tmWhen        string // not used by UDP
-	uid           string
-	timeout       string
-	inode         string
-	ref           string
-	pointer       string
 	drops         string
 }
 
@@ -152,18 +158,8 @@ func (s *ProcNetUDPStats) parseProcNetUDPLines(out string) []procNetUpdLine {
 		if idx > 0 {
 			parts := strings.Fields(line)
 			stats = append(stats, procNetUpdLine{
-				sl:            parts[0],
 				localAddress:  parts[1],
 				remoteAddress: parts[2],
-				st:            parts[3],
-				queues:        parts[4],
-				trRexmits:     parts[5],
-				tmWhen:        parts[6],
-				uid:           parts[7],
-				timeout:       parts[8],
-				inode:         parts[9],
-				ref:           parts[10],
-				pointer:       parts[11],
 				drops:         parts[12],
 			})
 		}
