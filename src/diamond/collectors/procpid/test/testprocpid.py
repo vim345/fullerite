@@ -31,6 +31,12 @@ class TestProcPidCollector(CollectorTestCase):
     def test_import(self):
         self.assertTrue(ProcPidCollector)
 
+    def _verify_calls(self, actual, expected):
+        assert len(actual) == len(expected)
+        for call in actual:
+            assert call[0] in expected
+            expected.remove(call[0])
+
     def test_get_config_help(self):
         self.collector.get_default_config_help()
 
@@ -81,7 +87,9 @@ class TestProcPidCollector(CollectorTestCase):
         mock_get_fds.assert_has_calls([call('/proc/1'),
                                        call('/proc/2')],
                                       any_order=True)
-        self.assertPublished(mock_publish, 'proc_pid_stats.fds', [5, 3])
+
+        calls = mock_publish.call_args_list
+        self._verify_calls(calls, [('proc_pid_stats.fds', 5), ('proc_pid_stats.fds', 3)])
 
 
 
