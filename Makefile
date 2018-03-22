@@ -66,7 +66,9 @@ $(BEATIT): $(BEATIT_SOURCES)
 	@go build -o bin/$(BEATIT) fullerite/beatit
 
 test: tests
-tests: deps diamond_test
+tests: deps diamond_test fullerite-tests
+
+fullerite-tests:
 	@echo Testing $(FULLERITE)
 	@for pkg in $(PKGS); do \
 		go test -race -cover $$pkg || exit 1;\
