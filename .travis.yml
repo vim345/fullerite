@@ -1,7 +1,7 @@
 language: go
 
 install:
-  - "pip install tox"
+  - "pip install --user tox"
   - bash scripts/gitcookie.sh
 go:
   - 1.9
