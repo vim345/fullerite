@@ -1,7 +1,6 @@
 # coding=utf-8
 
 import diamond.collector
-from diamond.collector import str_to_bool
 import re
 import time
 
@@ -49,11 +48,6 @@ class ProxySQLCollector(diamond.collector.Collector):
         'mysql_backend_buffers_bytes',
         'mysql_frontend_buffers_bytes',
         'mysql_session_internal_bytes',
-    ]
-
-    MYSQL_STATS_COMMANDS_COUNTERS = [
-        'command_total_time_us',
-        'command_total_count',
     ]
 
     def __init__(self, *args, **kwargs):
@@ -120,20 +114,6 @@ class ProxySQLCollector(diamond.collector.Collector):
                 pass
         return stats
 
-    def get_db_commands_counters(self):
-        stats = {'commands_counters': {}}
-        rows = self.get_db_stats('SELECT * FROM stats_mysql_commands_counters;')
-        for row in rows:
-            try:
-                cmd = row['Command']
-                stats['commands_counters'][cmd] = {
-                    'command_total_time_us': float(row['Total_Time_us']),
-                    'command_total_count': float(row['Total_cnt'])
-                }
-            except:
-                pass
-        return stats
-
     def get_stats(self, params):
         metrics = {}
 
@@ -141,10 +121,8 @@ class ProxySQLCollector(diamond.collector.Collector):
             return metrics
 
         global_stats = self.get_db_global_status()
-        cmd_stats = self.get_db_commands_counters()
 
         metrics.update(global_stats)
-        metrics.update(cmd_stats)
 
         self.disconnect()
 
@@ -152,7 +130,6 @@ class ProxySQLCollector(diamond.collector.Collector):
 
     def _publish_stats(self, nickname, metrics):
        self._publish_status_metrics(nickname, metrics)
-       self._publish_commands_counters_metrics(nickname, metrics)
 
     def _publish_status_metrics(self, nickname, metrics):
         key = 'status'
@@ -172,29 +149,11 @@ class ProxySQLCollector(diamond.collector.Collector):
                  metric_name in self.config['publish'])):
                 self.publish(nickname + metric_name, metric_value)
 
-    def _publish_commands_counters_metrics(self, nickname, metrics):
-        key = 'commands_counters'
-        if key not in metrics:
-            return
-
-        for cmd_name in metrics[key]:
-            self.dimensions = {'command': cmd_name}
-            cmd_nickname = nickname + cmd_name + '.'
-            for metric_name in metrics[key][cmd_name]:
-                metric_value = metrics[key][cmd_name][metric_name]
-
-                if type(metric_value) is not float:
-                    continue
-
-                if metric_name not in self.MYSQL_STATS_COMMANDS_COUNTERS:
-                    metric_value = self.derivative(cmd_nickname + metric_name,
-                                                   metric_value)
-                if (('publish' not in self.config or
-                     metric_name in self.config['publish'])):
-                    self.publish(cmd_nickname + metric_name, metric_value)
-        self.dimensions = {}
-
     def collect(self):
+        if MySQLdb is None:
+            self.log.error('Unable to import MySQLdb')
+            return False
+
         for host in self.config['hosts']:
             matches = re.search(
                 '^([^:]*):([^@]*)@([^:]*):?([^/]*)/([^/]*)/?(.*)', host)

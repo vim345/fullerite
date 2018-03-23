@@ -49,28 +49,6 @@ class TestProxySQLCollector(CollectorTestCase):
             expected = [('Active_transactions', 0.0), ('Client_Connections_connected', 1.0)]
             self._verify_calls(calls, expected)
 
-    @patch.object(ProxySQLCollector, 'connect', Mock(return_value=True))
-    @patch.object(ProxySQLCollector, 'disconnect', Mock(return_value=True))
-    @patch.object(Collector, 'publish')
-    def test_commands_counters(self, publish_mock):
-        with patch.object(
-            ProxySQLCollector,
-            'get_db_stats',
-            Mock(return_value=[
-                {'Command': 'BEGIN', 'Total_Time_us': 500, 'Total_cnt': 1000},
-                {'Command': 'SELECT', 'Total_Time_us': 25, 'Total_cnt': 50}
-            ])
-        ):
-            self.collector.collect()
-            calls = publish_mock.call_args_list
-            expected = [
-                ('BEGIN.command_total_count', 1000.0),
-                ('BEGIN.command_total_time_us', 500.0),
-                ('SELECT.command_total_count', 50.0),
-                ('SELECT.command_total_time_us', 25.0),
-            ]
-            self._verify_calls(calls, expected)
-
 
 ################################################################################
 if __name__ == "__main__":
