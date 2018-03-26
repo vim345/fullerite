@@ -42,6 +42,8 @@ clean:
 	@rm -f $(BEATIT) bin/$(BEATIT)
 	@rm -rf pkg/*/$(FULLERITE)
 	@rm -rf build fullerite*.deb fullerite*.rpm
+	@-find . -name '*.py[co]' -delete
+	@rm -rf .tox
 # Let's keep the generated file in the repo for ease of development.
 #	@rm -f $(GEN_PROTO_SFX)
 
@@ -64,7 +66,7 @@ $(BEATIT): $(BEATIT_SOURCES)
 	@go build -o bin/$(BEATIT) fullerite/beatit
 
 test: tests
-tests: deps diamond_core_test diamond_collector_test fullerite-tests
+tests: deps diamond_test fullerite-tests
 
 fullerite-tests:
 	@echo Testing $(FULLERITE)
@@ -84,11 +86,8 @@ qct:
 		go test -v -cover $$pkg $(GO_TEST_ARGS) || exit 1;\
 	done
 
-diamond_core_test:
-	@python src/diamond/test.py -d
-
-diamond_collector_test:
-	@python src/diamond/test.py
+diamond_test:
+	@tox
 
 coverage_report: deps
 	@echo Creating a coverage rport for $(FULLERITE)

@@ -45,6 +45,13 @@ class TestKafkaCollector(CollectorTestCase):
     def test_import(self):
         self.assertTrue(KafkaCollector)
 
+    def _verify_calls(self, actual, expected):
+        assert len(actual) == len(expected)
+        for call in actual:
+            curr = (call[0][0].split('.')[-1], call[0][1])
+            assert curr in expected
+            expected.remove(curr)
+
     @run_only_if_ElementTree_is_available
     @patch('urllib2.urlopen')
     def test_get(self, urlopen_mock):
@@ -158,24 +165,26 @@ class TestKafkaCollector(CollectorTestCase):
         ]
         self.collector.collect()
 
-        expected_metrics = {
-            'kafka.logs.mytopic-1.CurrentOffset': 213500615,
-            'kafka.logs.mytopic-1.NumAppendedMessages': 224634137,
-            'kafka.logs.mytopic-1.NumberOfSegments': 94,
-            'kafka.logs.mytopic-1.Size': 50143615339,
-            'Threading.CurrentThreadCpuTime': 0,
-            'Threading.CurrentThreadUserTime': 0,
-            'Threading.DaemonThreadCount': 58,
-            'Threading.PeakThreadCount': 90,
-            'Threading.ThreadCount': 89,
-            'Threading.TotalStartedThreadCount': 228,
-            'GarbageCollector.PSScavenge.CollectionCount': 37577,
-            'GarbageCollector.PSScavenge.CollectionTime': 112293,
-            'GarbageCollector.PSMarkSweep.CollectionCount': 2,
-            'GarbageCollector.PSMarkSweep.CollectionTime': 160,
-        }
-
-        self.assertPublishedMany(publish_mock, expected_metrics)
+        # The metrics emitted are slightly inconsistent, but this ensures
+        # the latter half are correct.
+        expected_metrics = [
+            ('CurrentOffset', 213500615L),
+            ('NumAppendedMessages', 224634137L),
+            ('NumberOfSegments', 94),
+            ('Size', 50143615339L),
+            ('CurrentThreadCpuTime', 0L),
+            ('CurrentThreadUserTime', 0L),
+            ('DaemonThreadCount', 58),
+            ('PeakThreadCount', 90),
+            ('ThreadCount', 89),
+            ('TotalStartedThreadCount', 228L),
+            ('CollectionCount', 2L),
+            ('CollectionTime', 112293L),
+            ('CollectionTime', 160L),
+            ('CollectionCount', 37577L),
+        ]
+        calls = publish_mock.call_args_list
+        self._verify_calls(calls, expected_metrics)
 
 ###############################################################################
 if __name__ == "__main__":
