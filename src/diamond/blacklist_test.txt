@@ -15,7 +15,6 @@ TestSoftInterruptCollector
 TestHAProxyCollector
 TestTCPCollector
 TestSquidCollector
-TestMemcachedCollector
 TestAmavisCollector
 TestMonitCollector
 TestMountStatsCollector
