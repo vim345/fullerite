@@ -3,6 +3,8 @@
 """
 Collect memcached detailed stats
 
+Detailed memcache stats can only be collected if memcached detailed stats
+are turned on.
 
 #### Dependencies
 
@@ -36,6 +38,8 @@ STATS_PATTERN = ' get (?P<get>[0-9]+) hit (?P<hit>[0-9]+) set (?P<set>[0-9]+) de
 HOST_REGEX = re.compile('((?P<alias>.+)\@)?(?P<hostname>[^:]+)(:(?P<port>\d+))?')
 LINE_REGEX = re.compile(PREFIX_PATTERN + STATS_PATTERN)
 
+Stat = namedtuple('Stat', ['cache_name', 'detailed_get', 'detailed_hit', 'detailed_set', 'detailed_del'])
+stat_fields = set(['detailed_get', 'detailed_hit', 'detailed_set', 'detailed_del'])
 
 class MemcachedDetailedCollector(diamond.collector.Collector):
 
@@ -69,7 +73,7 @@ class MemcachedDetailedCollector(diamond.collector.Collector):
             else:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((host, int(port)))
-            # request stats
+            # request stats, if detailed stats not turned on data will be empty
             sock.send('stats detail dump\n')
             # something big enough to get whatever is sent back
             data = sock.recv(4096)
@@ -80,12 +84,6 @@ class MemcachedDetailedCollector(diamond.collector.Collector):
 
     def get_stats(self, host, port):
         stats = set()
-        Stat = namedtuple('Stat', [
-                            'cache_name',
-                            'detailed_get',
-                            'detailed_hit',
-                            'detailed_set',
-                            'detailed_del'])
 
         data = self.get_raw_stats(host, port)
 
@@ -102,8 +100,6 @@ class MemcachedDetailedCollector(diamond.collector.Collector):
         return stats
 
     def collect(self):
-        stat_fields = set(['detailed_get', 'detailed_hit', 'detailed_set', 'detailed_del'])
-
         hosts = self.config.get('hosts')
 
         # Convert a string config value to be an array

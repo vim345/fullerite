@@ -59,13 +59,13 @@ class TestMemcachedDetailedCollector(CollectorTestCase):
 
 
         metrics = {
-            'memcache.detailed_get': [10, 192, 12, 100],
+            'memcache.detailed_get': [10, 12, 100],
             'memcache.detailed_set': [14, 1, 86],
-            'memcache.detailed_hit': [0, 150],
+            'memcache.detailed_hit': [0, 50],
             'memcache.detailed_del': [5, 9, 1],
         }
 
-        self.assertPublishedManyMultiple(publish_mock, metrics, 7)
+        self.assertPublishedManyMultiple(publish_mock, metrics, 5)
 
 ################################################################################
 if __name__ == "__main__":
