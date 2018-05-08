@@ -1,0 +1,6 @@
+PREFIX cache-20110612 get 10 hit 50 set 14 del 1
+PREFIX second_best_cache get 11 hit 0 set 439 del 0
+PREFIX the.best.cache get 12 hit 0 set 1 del 0
+PREFIX business_cache get 100 hit 16 set 86 del 9
+PREFIX basic_commands_cache get 50 hit 0 set 2 del 5
+END
