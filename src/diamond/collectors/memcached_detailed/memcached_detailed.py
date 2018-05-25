@@ -32,7 +32,7 @@ import re
 
 from collections import namedtuple
 
-PREFIX_PATTERN = 'PREFIX (?P<cache_name>[\w\-\.]+)'
+PREFIX_PATTERN = 'PREFIX (?P<cache_name>\S+)'
 STATS_PATTERN = ' get (?P<get>[0-9]+) hit (?P<hit>[0-9]+) set (?P<set>[0-9]+) del (?P<del>[0-9]+)$'
 
 HOST_REGEX = re.compile('((?P<alias>.+)\@)?(?P<hostname>[^:]+)(:(?P<port>\d+))?')
@@ -76,7 +76,7 @@ class MemcachedDetailedCollector(diamond.collector.Collector):
             # request stats, if detailed stats not turned on data will be empty
             sock.send('stats detail dump\n')
             # something big enough to get whatever is sent back
-            data = sock.recv(4096)
+            data = sock.recv(65536)
         except socket.error:
             self.log.error('Failed to get detailed stats from %s:%s',
                                host, port)
