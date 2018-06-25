@@ -100,7 +100,7 @@ class PostgresqlCollector(diamond.collector.Collector):
                 continue
 
             for dbase in dbs:
-                conn = self._connect(database=dbase)
+                conn = self._pg_connect(database=dbase)
                 try:
                     klass = metrics_registry[metric_name]
                     stat = klass(dbase, conn,
@@ -130,7 +130,7 @@ class PostgresqlCollector(diamond.collector.Collector):
             WHERE datallowconn AND NOT datistemplate
             AND NOT datname='postgres' AND NOT datname='rdsadmin' ORDER BY 1
         """
-        conn = self._connect(self.config['dbname'])
+        conn = self._pg_connect(self.config['dbname'])
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute(query)
         datnames = [d['datname'] for d in cursor.fetchall()]
@@ -143,7 +143,7 @@ class PostgresqlCollector(diamond.collector.Collector):
 
         return datnames
 
-    def _connect(self, database=None):
+    def _pg_connect(self, database=None):
         """
         Connect to given database
         """
