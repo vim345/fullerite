@@ -1,8 +1,8 @@
 # coding=utf-8
-
 import diamond.collector
 import re
 import time
+from collections import namedtuple
 
 try:
     import MySQLdb
@@ -10,6 +10,9 @@ try:
 except ImportError:
     MySQLdb = None
     MySQLError = ValueError
+
+
+Metric = namedtuple('Metric', ['name', 'value', 'dimensions'])
 
 
 class ProxySQLCollector(diamond.collector.Collector):
@@ -64,8 +67,7 @@ class ProxySQLCollector(diamond.collector.Collector):
             'publish':
                 "Which metrics you would like to publish. Leave unset to publish all",
             'hosts': 'List of hosts to collect from. Format is ' +
-            'yourusername:yourpassword@host:port/db[/nickname]' +
-            'use db "None" to avoid connecting to a particular db'
+            'yourusername:yourpassword@host:port/db'
         })
         return config_help
 
@@ -114,6 +116,17 @@ class ProxySQLCollector(diamond.collector.Collector):
                 pass
         return stats
 
+    def get_mysql_connection_pool_stats(self):
+        rows = self.get_db_stats(
+            'SELECT hostgroup, srv_host, ConnUsed, ConnFree, Latency_us FROM stats.stats_connection_pool'
+        )
+        for row in rows:
+            try:
+                stats['status'][row['Variable_name']] = float(row['Value'])
+            except:
+                pass
+        return stats
+
     def get_stats(self, params):
         metrics = {}
 
@@ -128,26 +141,19 @@ class ProxySQLCollector(diamond.collector.Collector):
 
         return metrics
 
-    def _publish_stats(self, nickname, metrics):
-       self._publish_status_metrics(nickname, metrics)
+    def _publish_stats(self, metrics):
+       self._publish_status_metrics(metrics['status'])
 
-    def _publish_status_metrics(self, nickname, metrics):
-        key = 'status'
-        if key not in metrics:
-            return
-
-        for metric_name in metrics[key]:
-            metric_value = metrics[key][metric_name]
-
+    def _publish_status_metrics(self, metrics):
+        for metric_name, metric_value in metrics.items():
             if type(metric_value) is not float:
                 continue
 
             if metric_name not in self.MYSQL_STATS_GLOBAL:
-                metric_value = self.derivative(nickname + metric_name,
-                                                   metric_value)
+                metric_value = self.derivative(metric_name, metric_value)
             if (('publish' not in self.config or
                  metric_name in self.config['publish'])):
-                self.publish(nickname + metric_name, metric_value)
+                self.publish(metric_name, metric_value)
 
     def collect(self):
         if MySQLdb is None:
@@ -155,41 +161,14 @@ class ProxySQLCollector(diamond.collector.Collector):
             return False
 
         for host in self.config['hosts']:
-            matches = re.search(
-                '^([^:]*):([^@]*)@([^:]*):?([^/]*)/([^/]*)/?(.*)', host)
-
-            if not matches:
-                self.log.error(
-                    'Connection string not in required format, skipping: %s',
-                    host)
-                continue
-
-            params = {}
-
-            params['host'] = matches.group(3)
             try:
-                params['port'] = int(matches.group(4))
-            except ValueError:
-                params['port'] = 3306
-            params['db'] = matches.group(5)
-            params['user'] = matches.group(1)
-            params['passwd'] = matches.group(2)
-
-            nickname = matches.group(6)
-            if len(nickname):
-                nickname += '.'
-
-            if params['db'] == 'None':
-                del params['db']
-
-            try:
-                metrics = self.get_stats(params=params)
+                metrics = self.get_stats(params=self.parse_host_config(host))
             except Exception, e:
                 try:
                     self.disconnect()
                 except MySQLdb.ProgrammingError:
                     pass
-                self.log.error('Collection failed for %s %s', nickname, e)
+                self.log.error('Collection failed for %s %s', e)
                 continue
 
             # Warn if publish contains an unknown variable
@@ -199,4 +178,25 @@ class ProxySQLCollector(diamond.collector.Collector):
                         self.log.error("No such key '%s' available, issue " +
                                        "'show global status' for a full " +
                                        "list", k)
-            self._publish_stats(nickname, metrics)
+            self._publish_stats(metrics)
+
+    def parse_host_config(self, host):
+        """Parses the host config to get the database connection string.
+
+        Format is 'yourusername:yourpassword@host:port/db'"""
+        matches = re.search('^([^:]*):([^@]*)@([^:]*):?([^/]*)/([^/]*)', host)
+
+        if not matches:
+            raise ValueError('Connection string {} is not in the required format'.format(host))
+
+        params = {}
+
+        params['user'] = matches.group(1)
+        params['passwd'] = matches.group(2)
+        params['host'] = matches.group(3)
+        try:
+            params['port'] = int(matches.group(4))
+        except ValueError:
+            params['port'] = 3306
+        params['db'] = matches.group(5)
+        return params

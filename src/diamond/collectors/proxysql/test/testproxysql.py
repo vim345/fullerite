@@ -49,6 +49,33 @@ class TestProxySQLCollector(CollectorTestCase):
             expected = [('Active_transactions', 0.0), ('Client_Connections_connected', 1.0)]
             self._verify_calls(calls, expected)
 
+    def test_host_parsing_with_port(self):
+        assert self.collector.parse_host_config('admin:admin@127.0.0.1:6032/') == {
+            'user': 'admin',
+            'passwd': 'admin',
+            'host': '127.0.0.1',
+            'port': 6032,
+            'db': '',
+        }
+
+    def test_host_parsing_without_port(self):
+        assert self.collector.parse_host_config('admin:admin@127.0.0.1:/') == {
+            'user': 'admin',
+            'passwd': 'admin',
+            'host': '127.0.0.1',
+            'port': 3306,
+            'db': '',
+        }
+
+    def test_parsing_invalid_host(self):
+        threw_error = False
+        try:
+            self.collector.parse_host_config('not_a_valid_host')
+        except ValueError:
+            threw_error = True
+
+        assert threw_error is True
+
 
 ################################################################################
 if __name__ == "__main__":
