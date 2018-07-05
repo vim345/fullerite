@@ -64,8 +64,6 @@ class ProxySQLCollector(diamond.collector.Collector):
     def get_default_config_help(self):
         config_help = super(ProxySQLCollector, self).get_default_config_help()
         config_help.update({
-            'publish':
-                "Which metrics you would like to publish. Leave unset to publish all",
             'hosts': 'List of hosts to collect from. Format is ' +
             'yourusername:yourpassword@host:port/db'
         })
@@ -151,9 +149,8 @@ class ProxySQLCollector(diamond.collector.Collector):
 
             if metric_name not in self.MYSQL_STATS_GLOBAL:
                 metric_value = self.derivative(metric_name, metric_value)
-            if (('publish' not in self.config or
-                 metric_name in self.config['publish'])):
-                self.publish(metric_name, metric_value)
+
+            self.publish(metric_name, metric_value)
 
     def collect(self):
         if MySQLdb is None:
@@ -171,13 +168,6 @@ class ProxySQLCollector(diamond.collector.Collector):
                 self.log.error('Collection failed for %s %s', e)
                 continue
 
-            # Warn if publish contains an unknown variable
-            if 'publish' in self.config and metrics['status']:
-                for k in self.config['publish'].split():
-                    if k not in metrics['status']:
-                        self.log.error("No such key '%s' available, issue " +
-                                       "'show global status' for a full " +
-                                       "list", k)
             self._publish_stats(metrics)
 
     def parse_host_config(self, host):
