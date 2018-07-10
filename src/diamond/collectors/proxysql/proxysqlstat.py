@@ -1,4 +1,7 @@
 # coding=utf-8
+"""This code is a fork of
+https://github.com/sysown/proxysql/blob/9dab0eba12a717b738264d6928599034ea3ebe81/diamond/proxysqlstat.py
+"""
 import diamond.collector
 import re
 import time
@@ -104,25 +107,46 @@ class ProxySQLCollector(diamond.collector.Collector):
     def disconnect(self):
         self.db.close()
 
+    def _execute_mysql_status_query(self):
+        return self.get_db_stats('SHOW MYSQL STATUS')
+
+    def _execute_connection_pool_stats_query(self):
+        rows = self.get_db_stats(
+            'SELECT hostgroup, srv_host, ConnUsed, ConnFree, Latency_us FROM stats_mysql_connection_pool'
+        )
+        return rows
+
     def get_db_global_status(self):
-        stats = {'status': {}}
-        rows = self.get_db_stats('SHOW MYSQL STATUS')
+        stats = []
+        rows = self._execute_mysql_status_query()
         for row in rows:
             try:
-                stats['status'][row['Variable_name']] = float(row['Value'])
-            except:
+                stats.append(Metric(name=row['Variable_name'], value=float(row['Value']), dimensions=None))
+            except (KeyError, ValueError):
                 pass
+
         return stats
 
     def get_mysql_connection_pool_stats(self):
-        rows = self.get_db_stats(
-            'SELECT hostgroup, srv_host, ConnUsed, ConnFree, Latency_us FROM stats.stats_connection_pool'
-        )
+        rows = self._execute_connection_pool_stats_query()
+
+        metric_names = ('ConnUsed', 'ConnFree', 'Latency_us')
+        metric_dimensions = ('hostgroup', 'srv_host')
+
+        stats = []
         for row in rows:
-            try:
-                stats['status'][row['Variable_name']] = float(row['Value'])
-            except:
-                pass
+            for metric_name in metric_names:
+                stats.append(
+                    Metric(
+                        name=metric_name,
+                        value=row[metric_name],
+                        dimensions={
+                            dimension: row[dimension]
+                            for dimension in metric_dimensions
+                        },
+                    )
+                )
+
         return stats
 
     def get_stats(self, params):
@@ -131,9 +155,8 @@ class ProxySQLCollector(diamond.collector.Collector):
         if not self.connect(params):
             return metrics
 
-        global_stats = self.get_db_global_status()
-
-        metrics.update(global_stats)
+        metrics['status'] = self.get_db_global_status()
+        metrics['stats_connection_pool'] = self.get_mysql_connection_pool_stats()
 
         self.disconnect()
 
@@ -141,16 +164,20 @@ class ProxySQLCollector(diamond.collector.Collector):
 
     def _publish_stats(self, metrics):
        self._publish_status_metrics(metrics['status'])
+       for metric in metrics['stats_connection_pool']:
+           self._publish_proxysql_metric(metric)
 
     def _publish_status_metrics(self, metrics):
-        for metric_name, metric_value in metrics.items():
-            if type(metric_value) is not float:
-                continue
+        for metric in metrics:
+            if metric.name not in self.MYSQL_STATS_GLOBAL:
+                metric = metric._replace(value=self.derivative(metric.name, metric.value))
 
-            if metric_name not in self.MYSQL_STATS_GLOBAL:
-                metric_value = self.derivative(metric_name, metric_value)
+            self._publish_proxysql_metric(metric)
 
-            self.publish(metric_name, metric_value)
+    def _publish_proxysql_metric(self, metric):
+        """Converts from our Metric datastructure into the call format of self.publish"""
+        self.dimensions = metric.dimensions
+        self.publish(metric.name, metric.value)
 
     def collect(self):
         if MySQLdb is None:
@@ -160,7 +187,7 @@ class ProxySQLCollector(diamond.collector.Collector):
         for host in self.config['hosts']:
             try:
                 metrics = self.get_stats(params=self.parse_host_config(host))
-            except Exception, e:
+            except Exception as e:
                 try:
                     self.disconnect()
                 except MySQLdb.ProgrammingError:
