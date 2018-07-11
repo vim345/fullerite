@@ -67,8 +67,10 @@ class ProxySQLCollector(diamond.collector.Collector):
     def get_default_config_help(self):
         config_help = super(ProxySQLCollector, self).get_default_config_help()
         config_help.update({
-            'hosts': 'List of hosts to collect from. Format is ' +
-            'yourusername:yourpassword@host:port/db'
+            'publish': 'Which metrics you would like to publish. Leave unset to publish all',
+            'hosts': 'List of hosts to collect from. Format is yourusername:yourpassword@host:port/db',
+            'mysql_connection_pool_metric_names': 'A list of columns in the stats_mysql_connection_pool '
+                'proxysql table that you would like to track. Example: ["ConnUsed"]',
         })
         return config_help
 
@@ -78,10 +80,10 @@ class ProxySQLCollector(diamond.collector.Collector):
         """
         config = super(ProxySQLCollector, self).get_default_config()
         config.update({
-            'path':     'proxysql',
-            # Connection settings
-            'hosts':    [],
-
+            'path': 'proxysql',
+            'publish': [],
+            'hosts': [],
+            'mysql_connection_pool_metric_names': [],
         })
         return config
 
@@ -112,40 +114,43 @@ class ProxySQLCollector(diamond.collector.Collector):
 
     def _execute_connection_pool_stats_query(self):
         rows = self.get_db_stats(
-            'SELECT hostgroup, srv_host, ConnUsed, ConnFree, Latency_us FROM stats_mysql_connection_pool'
+            'SELECT * FROM stats_mysql_connection_pool'
         )
         return rows
+
+    def _is_number(self, number):
+        try:
+            float(number)
+            return True
+        except ValueError:
+            return False
 
     def get_db_global_status(self):
         stats = []
         rows = self._execute_mysql_status_query()
         for row in rows:
-            try:
+            if self._is_number(row['Value']):
                 stats.append(Metric(name=row['Variable_name'], value=float(row['Value']), dimensions=None))
-            except (KeyError, ValueError):
-                pass
 
         return stats
 
     def get_mysql_connection_pool_stats(self):
         rows = self._execute_connection_pool_stats_query()
 
-        metric_names = ('ConnUsed', 'ConnFree', 'Latency_us')
-        metric_dimensions = ('hostgroup', 'srv_host')
-
         stats = []
         for row in rows:
-            for metric_name in metric_names:
-                stats.append(
-                    Metric(
-                        name=metric_name,
-                        value=row[metric_name],
-                        dimensions={
-                            dimension: row[dimension]
-                            for dimension in metric_dimensions
-                        },
+            for metric_name, value in row.items():
+                if self._is_number(value):
+                    stats.append(
+                        Metric(
+                            name=metric_name,
+                            value=value,
+                            dimensions={
+                                'hostgroup': row['hostgroup'],
+                                'srv_host': row['srv_host'],
+                            },
+                        )
                     )
-                )
 
         return stats
 
@@ -164,8 +169,12 @@ class ProxySQLCollector(diamond.collector.Collector):
 
     def _publish_stats(self, metrics):
        self._publish_status_metrics(metrics['status'])
-       for metric in metrics['stats_connection_pool']:
-           self._publish_proxysql_metric(metric)
+       self._publish_connection_pool_metrics(metrics['stats_connection_pool'])
+
+    def _publish_connection_pool_metrics(self, metrics):
+        for metric in metrics:
+            if metric.name in self.config['mysql_connection_pool_metric_names']:
+                self._publish_proxysql_metric(metric)
 
     def _publish_status_metrics(self, metrics):
         for metric in metrics:
@@ -176,6 +185,12 @@ class ProxySQLCollector(diamond.collector.Collector):
 
     def _publish_proxysql_metric(self, metric):
         """Converts from our Metric datastructure into the call format of self.publish"""
+        if (
+            self.config['publish'] and
+            metric.name not in self.config['publish']
+        ):
+            return
+
         self.dimensions = metric.dimensions
         self.publish(metric.name, metric.value)
 
@@ -192,7 +207,7 @@ class ProxySQLCollector(diamond.collector.Collector):
                     self.disconnect()
                 except MySQLdb.ProgrammingError:
                     pass
-                self.log.error('Collection failed for %s %s', e)
+                self.log.error('Collection failed for {}'.format(e))
                 continue
 
             self._publish_stats(metrics)

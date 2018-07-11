@@ -22,6 +22,7 @@ class TestProxySQLCollector(CollectorTestCase):
 
         self.collector = ProxySQLCollector(config, None)
         self.collector.config['hosts'] = ['admin:admin@127.0.0.1:6032/']
+        self.collector.config['mysql_connection_pool_metric_names'] = ['ConnUsed', 'ConnFree']
 
     def test_import(self):
         self.assertTrue(ProxySQLCollector)
@@ -34,39 +35,71 @@ class TestProxySQLCollector(CollectorTestCase):
 
     @mock.patch.object(ProxySQLCollector, 'connect', Mock(return_value=True))
     @mock.patch.object(ProxySQLCollector, 'disconnect', Mock(return_value=True))
+    @mock.patch.object(ProxySQLCollector, '_execute_connection_pool_stats_query', Mock(return_value=[]))
     @mock.patch.object(Collector, 'publish')
     def test_global_status(self, publish_mock):
         with mock.patch.object(
             ProxySQLCollector,
             '_execute_mysql_status_query',
-            Mock(return_value=[
+            return_value=[
                 {'Value': '0', 'Variable_name': 'Active_transactions'},
                 {'Value': '1', 'Variable_name': 'Client_Connections_connected'}
-            ])
+            ]
         ):
-            with mock.patch.object(
-                ProxySQLCollector,
-                '_execute_connection_pool_stats_query',
-                Mock(return_value=[
-                    {
-                        'hostgroup': 'host',
-                        'srv_host': '127.0.0.1',
-                        'ConnUsed': 5,
-                        'ConnFree': 6,
-                        'Latency_us': 3000,
-                    }
-                ])
-            ):
-                self.collector.collect()
-                calls = publish_mock.call_args_list
-                expected = [
-                    ('Active_transactions', 0.0),
-                    ('Client_Connections_connected', 1.0),
-                    ('ConnUsed', 5),
-                    ('ConnFree', 6),
-                    ('Latency_us', 3000),
-                ]
-                self._verify_calls(calls, expected)
+            self.collector.collect()
+            calls = publish_mock.call_args_list
+            expected = [
+                ('Active_transactions', 0.0),
+                ('Client_Connections_connected', 1.0),
+            ]
+            self._verify_calls(calls, expected)
+
+    @mock.patch.object(ProxySQLCollector, 'connect', Mock(return_value=True))
+    @mock.patch.object(ProxySQLCollector, 'disconnect', Mock(return_value=True))
+    @mock.patch.object(ProxySQLCollector, '_execute_mysql_status_query', Mock(return_value=[]))
+    @mock.patch.object(Collector, 'publish')
+    def test_connection_pool_stats(self, publish_mock):
+        with mock.patch.object(
+            ProxySQLCollector,
+            '_execute_connection_pool_stats_query',
+            return_value=[
+                {
+                    'hostgroup': 'host',
+                    'srv_host': '127.0.0.1',
+                    'ConnUsed': 5,
+                    'ConnFree': 6,
+                    'Latency_us': 3000,
+                }
+            ]
+        ):
+            self.collector.collect()
+            calls = publish_mock.call_args_list
+            expected = [
+                ('ConnUsed', 5),
+                ('ConnFree', 6),
+            ]
+            self._verify_calls(calls, expected)
+
+    @mock.patch.object(ProxySQLCollector, 'connect', Mock(return_value=True))
+    @mock.patch.object(ProxySQLCollector, 'disconnect', Mock(return_value=True))
+    @mock.patch.object(ProxySQLCollector, '_execute_connection_pool_stats_query', Mock(return_value=[]))
+    @mock.patch.object(Collector, 'publish')
+    def test_publish_whitelist_of_global_stats(self, publish_mock):
+        with mock.patch.object(
+            ProxySQLCollector,
+            '_execute_mysql_status_query',
+            return_value=[
+                {'Value': '0', 'Variable_name': 'Active_transactions'},
+                {'Value': '1', 'Variable_name': 'Client_Connections_connected'}
+            ]
+        ):
+            self.collector.config['publish'] = ['Active_transactions']
+            self.collector.collect()
+            calls = publish_mock.call_args_list
+            expected = [
+                ('Active_transactions', 0.0),
+            ]
+            self._verify_calls(calls, expected)
 
     def test_host_parsing_with_port(self):
         assert self.collector.parse_host_config('admin:admin@127.0.0.1:6032/') == {
