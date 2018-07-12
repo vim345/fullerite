@@ -84,7 +84,7 @@ class TestProxySQLCollector(CollectorTestCase):
     @mock.patch.object(ProxySQLCollector, 'disconnect', Mock(return_value=True))
     @mock.patch.object(ProxySQLCollector, '_execute_connection_pool_stats_query', Mock(return_value=[]))
     @mock.patch.object(Collector, 'publish')
-    def test_publish_whitelist_of_global_stats(self, publish_mock):
+    def test_publish_with_blacklist(self, publish_mock):
         with mock.patch.object(
             ProxySQLCollector,
             '_execute_mysql_status_query',
@@ -93,7 +93,7 @@ class TestProxySQLCollector(CollectorTestCase):
                 {'Value': '1', 'Variable_name': 'Client_Connections_connected'}
             ]
         ):
-            self.collector.config['publish'] = ['Active_transactions']
+            self.collector.config['metrics_blacklist'] = ['Client_Connections_connected']
             self.collector.collect()
             calls = publish_mock.call_args_list
             expected = [

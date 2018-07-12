@@ -67,7 +67,7 @@ class ProxySQLCollector(diamond.collector.Collector):
     def get_default_config_help(self):
         config_help = super(ProxySQLCollector, self).get_default_config_help()
         config_help.update({
-            'publish': 'Which metrics you would like to publish. Leave unset to publish all',
+            'metrics_blacklist': "Which metrics you would don't want to publish.",
             'hosts': 'List of hosts to collect from. Format is yourusername:yourpassword@host:port/db',
             'mysql_connection_pool_metric_names': 'A list of columns in the stats_mysql_connection_pool '
                 'proxysql table that you would like to track. Example: ["ConnUsed"]',
@@ -81,7 +81,7 @@ class ProxySQLCollector(diamond.collector.Collector):
         config = super(ProxySQLCollector, self).get_default_config()
         config.update({
             'path': 'proxysql',
-            'publish': [],
+            'metrics_blacklist': [],
             'hosts': [],
             'mysql_connection_pool_metric_names': [],
         })
@@ -185,10 +185,7 @@ class ProxySQLCollector(diamond.collector.Collector):
 
     def _publish_proxysql_metric(self, metric):
         """Converts from our Metric datastructure into the call format of self.publish"""
-        if (
-            self.config['publish'] and
-            metric.name not in self.config['publish']
-        ):
+        if (metric.name in self.config['metrics_blacklist']):
             return
 
         self.dimensions = metric.dimensions
