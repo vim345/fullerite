@@ -22,7 +22,6 @@ class TestProxySQLCollector(CollectorTestCase):
 
         self.collector = ProxySQLCollector(config, None)
         self.collector.config['hosts'] = ['admin:admin@127.0.0.1:6032/']
-        self.collector.config['mysql_connection_pool_metric_names'] = ['ConnUsed', 'ConnFree']
 
     def test_import(self):
         self.assertTrue(ProxySQLCollector)
@@ -72,6 +71,7 @@ class TestProxySQLCollector(CollectorTestCase):
                 }
             ]
         ):
+            self.collector.config['metrics_blacklist'] = ['Latency_us']
             self.collector.collect()
             calls = publish_mock.call_args_list
             expected = [
