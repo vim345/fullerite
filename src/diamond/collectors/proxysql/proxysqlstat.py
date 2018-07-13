@@ -1,8 +1,11 @@
 # coding=utf-8
-
+"""This code is a fork of
+https://github.com/sysown/proxysql/blob/9dab0eba12a717b738264d6928599034ea3ebe81/diamond/proxysqlstat.py
+"""
 import diamond.collector
 import re
 import time
+from collections import namedtuple
 
 try:
     import MySQLdb
@@ -10,6 +13,9 @@ try:
 except ImportError:
     MySQLdb = None
     MySQLError = ValueError
+
+
+Metric = namedtuple('Metric', ['name', 'value', 'dimensions'])
 
 
 class ProxySQLCollector(diamond.collector.Collector):
@@ -61,11 +67,8 @@ class ProxySQLCollector(diamond.collector.Collector):
     def get_default_config_help(self):
         config_help = super(ProxySQLCollector, self).get_default_config_help()
         config_help.update({
-            'publish':
-                "Which metrics you would like to publish. Leave unset to publish all",
-            'hosts': 'List of hosts to collect from. Format is ' +
-            'yourusername:yourpassword@host:port/db[/nickname]' +
-            'use db "None" to avoid connecting to a particular db'
+            'metrics_blacklist': "Which metrics you would don't want to publish.",
+            'hosts': 'List of hosts to collect from. Format is yourusername:yourpassword@host:port/db',
         })
         return config_help
 
@@ -75,10 +78,9 @@ class ProxySQLCollector(diamond.collector.Collector):
         """
         config = super(ProxySQLCollector, self).get_default_config()
         config.update({
-            'path':     'proxysql',
-            # Connection settings
-            'hosts':    [],
-
+            'path': 'proxysql',
+            'metrics_blacklist': [],
+            'hosts': [],
         })
         return config
 
@@ -104,14 +106,49 @@ class ProxySQLCollector(diamond.collector.Collector):
     def disconnect(self):
         self.db.close()
 
+    def _execute_mysql_status_query(self):
+        return self.get_db_stats('SHOW MYSQL STATUS')
+
+    def _execute_connection_pool_stats_query(self):
+        rows = self.get_db_stats(
+            'SELECT * FROM stats_mysql_connection_pool'
+        )
+        return rows
+
+    def _is_number(self, number):
+        try:
+            float(number)
+            return True
+        except ValueError:
+            return False
+
     def get_db_global_status(self):
-        stats = {'status': {}}
-        rows = self.get_db_stats('SHOW MYSQL STATUS')
+        stats = []
+        rows = self._execute_mysql_status_query()
         for row in rows:
-            try:
-                stats['status'][row['Variable_name']] = float(row['Value'])
-            except:
-                pass
+            if self._is_number(row['Value']):
+                stats.append(Metric(name=row['Variable_name'], value=float(row['Value']), dimensions=None))
+
+        return stats
+
+    def get_mysql_connection_pool_stats(self):
+        rows = self._execute_connection_pool_stats_query()
+
+        stats = []
+        for row in rows:
+            for metric_name, value in row.items():
+                if self._is_number(value):
+                    stats.append(
+                        Metric(
+                            name=metric_name,
+                            value=value,
+                            dimensions={
+                                'hostgroup': row['hostgroup'],
+                                'srv_host': row['srv_host'],
+                            },
+                        )
+                    )
+
         return stats
 
     def get_stats(self, params):
@@ -120,34 +157,35 @@ class ProxySQLCollector(diamond.collector.Collector):
         if not self.connect(params):
             return metrics
 
-        global_stats = self.get_db_global_status()
-
-        metrics.update(global_stats)
+        metrics['status'] = self.get_db_global_status()
+        metrics['stats_connection_pool'] = self.get_mysql_connection_pool_stats()
 
         self.disconnect()
 
         return metrics
 
-    def _publish_stats(self, nickname, metrics):
-       self._publish_status_metrics(nickname, metrics)
+    def _publish_stats(self, metrics):
+       self._publish_status_metrics(metrics['status'])
+       self._publish_connection_pool_metrics(metrics['stats_connection_pool'])
 
-    def _publish_status_metrics(self, nickname, metrics):
-        key = 'status'
-        if key not in metrics:
+    def _publish_connection_pool_metrics(self, metrics):
+        for metric in metrics:
+            self._publish_proxysql_metric(metric)
+
+    def _publish_status_metrics(self, metrics):
+        for metric in metrics:
+            if metric.name not in self.MYSQL_STATS_GLOBAL:
+                metric = metric._replace(value=self.derivative(metric.name, metric.value))
+
+            self._publish_proxysql_metric(metric)
+
+    def _publish_proxysql_metric(self, metric):
+        """Converts from our Metric datastructure into the call format of self.publish"""
+        if (metric.name in self.config['metrics_blacklist']):
             return
 
-        for metric_name in metrics[key]:
-            metric_value = metrics[key][metric_name]
-
-            if type(metric_value) is not float:
-                continue
-
-            if metric_name not in self.MYSQL_STATS_GLOBAL:
-                metric_value = self.derivative(nickname + metric_name,
-                                                   metric_value)
-            if (('publish' not in self.config or
-                 metric_name in self.config['publish'])):
-                self.publish(nickname + metric_name, metric_value)
+        self.dimensions = metric.dimensions
+        self.publish(metric.name, metric.value)
 
     def collect(self):
         if MySQLdb is None:
@@ -155,48 +193,35 @@ class ProxySQLCollector(diamond.collector.Collector):
             return False
 
         for host in self.config['hosts']:
-            matches = re.search(
-                '^([^:]*):([^@]*)@([^:]*):?([^/]*)/([^/]*)/?(.*)', host)
-
-            if not matches:
-                self.log.error(
-                    'Connection string not in required format, skipping: %s',
-                    host)
-                continue
-
-            params = {}
-
-            params['host'] = matches.group(3)
             try:
-                params['port'] = int(matches.group(4))
-            except ValueError:
-                params['port'] = 3306
-            params['db'] = matches.group(5)
-            params['user'] = matches.group(1)
-            params['passwd'] = matches.group(2)
-
-            nickname = matches.group(6)
-            if len(nickname):
-                nickname += '.'
-
-            if params['db'] == 'None':
-                del params['db']
-
-            try:
-                metrics = self.get_stats(params=params)
-            except Exception, e:
+                metrics = self.get_stats(params=self.parse_host_config(host))
+            except Exception as e:
                 try:
                     self.disconnect()
                 except MySQLdb.ProgrammingError:
                     pass
-                self.log.error('Collection failed for %s %s', nickname, e)
+                self.log.error('Collection failed for {}'.format(e))
                 continue
 
-            # Warn if publish contains an unknown variable
-            if 'publish' in self.config and metrics['status']:
-                for k in self.config['publish'].split():
-                    if k not in metrics['status']:
-                        self.log.error("No such key '%s' available, issue " +
-                                       "'show global status' for a full " +
-                                       "list", k)
-            self._publish_stats(nickname, metrics)
+            self._publish_stats(metrics)
+
+    def parse_host_config(self, host):
+        """Parses the host config to get the database connection string.
+
+        Format is 'yourusername:yourpassword@host:port/db'"""
+        matches = re.search('^([^:]*):([^@]*)@([^:]*):?([^/]*)/([^/]*)', host)
+
+        if not matches:
+            raise ValueError('Connection string {} is not in the required format'.format(host))
+
+        params = {}
+
+        params['user'] = matches.group(1)
+        params['passwd'] = matches.group(2)
+        params['host'] = matches.group(3)
+        try:
+            params['port'] = int(matches.group(4))
+        except ValueError:
+            params['port'] = 3306
+        params['db'] = matches.group(5)
+        return params
