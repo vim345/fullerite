@@ -17,7 +17,7 @@ import (
 
 const (
 	name    = "fullerite"
-	version = "0.6.24"
+	version = "0.6.25"
 	desc    = "Diamond compatible metrics collector"
 )
 
