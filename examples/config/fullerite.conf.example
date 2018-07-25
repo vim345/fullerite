@@ -78,6 +78,16 @@
                 "ecosystem": "devc"
             }
         }
+	"Wavefront": {
+            "apiKey": "secret_key",
+            "endpoint": "https://yelp.wavefront.com/report?f=graphite_v2",
+            "proxyServer": "dns-name.elb.amazonaws.com"
+            "port": 2878
+            "proxyFlag": "true"
+            "interval": 5,
+            "max_buffer_size": 300,
+            "timeout": 2
+        }
     }
 }
 
