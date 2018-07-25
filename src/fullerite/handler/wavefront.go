@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fullerite/metric"
-        "fullerite/util"
+	"fullerite/util"
 
 	"bytes"
 	"fmt"
@@ -22,11 +22,11 @@ func init() {
 // Wavefront handler
 type Wavefront struct {
 	BaseHandler
-	endpoint string
-	apiKey   string
-        proxyServer string
-        port string
-        proxyFlag bool
+	endpoint    string
+	apiKey      string
+	proxyServer string
+	port        string
+	proxyFlag   bool
 }
 
 type wavefrontPayload struct {
@@ -47,11 +47,11 @@ var sourceLength = 1023
 
 // newWavefront returns a new Wavefront handler
 func newWavefront(
-        channel chan metric.Metric,
-        initialInterval int,
-        initialBufferSize int,
-        initialTimeout time.Duration,
-        log *l.Entry) Handler {
+	channel chan metric.Metric,
+	initialInterval int,
+	initialBufferSize int,
+	initialTimeout time.Duration,
+	log *l.Entry) Handler {
 
 	inst := new(Wavefront)
 	inst.name = "Wavefront"
@@ -62,61 +62,60 @@ func newWavefront(
 	return inst
 }
 
-
 func (w Wavefront) wavefrontValueSanitize(value string) string {
-        value = strings.Trim(value, "_")
-        return util.StrSanitize(value, true, allowedValuePuncts)
+	value = strings.Trim(value, "_")
+	return util.StrSanitize(value, true, allowedValuePuncts)
 }
 
 func (w Wavefront) wavefrontKeySanitize(key string) string {
-        return util.StrSanitize(key, false, allowedKeyPuncts)
+	return util.StrSanitize(key, false, allowedKeyPuncts)
 }
 
 func (w Wavefront) wavefrontPointTagSanitize(pointTag string) string {
 	if len(pointTag) > pointTagLength {
 		runes := []rune(pointTag)
-		w.log.Warn("Truncating point tag: \""+pointTag+"\". The maximum allowed length for a combination of a point tag key and value is 255 characters including =")
+		w.log.Warn("Truncating point tag: \"" + pointTag + "\". The maximum allowed length for a combination of a point tag key and value is 255 characters including =")
 		truncatedPointTag := string(runes[:pointTagLength])
-		
+
 		//check if last last character is \
 		if strings.HasSuffix(truncatedPointTag, "\\") {
 			cleanTruncatedPointTag := strings.Trim(truncatedPointTag, "\\")
 			return cleanTruncatedPointTag
-		} 
+		}
 
-                return truncatedPointTag
+		return truncatedPointTag
 	}
-        return pointTag
+	return pointTag
 }
 
 func (w Wavefront) wavefrontMetricNameSanitize(metricName string) string {
-        return util.StrSanitize(metricName, false, allowedKeyPuncts)
+	return util.StrSanitize(metricName, false, allowedKeyPuncts)
 }
 
 func (w Wavefront) wavefrontSourceSanitize(source string) string {
-	sanitizedSource :=  util.StrSanitize(source, false, allowedKeyPuncts)
-        if len(sanitizedSource) > sourceLength {
-        	runes := []rune(sanitizedSource)
-		truncatedSource := string(runes[:sourceLength]) 
-		w.log.Warn("Truncating source field. The length of the source field should be less than 1024 characters")	
+	sanitizedSource := util.StrSanitize(source, false, allowedKeyPuncts)
+	if len(sanitizedSource) > sourceLength {
+		runes := []rune(sanitizedSource)
+		truncatedSource := string(runes[:sourceLength])
+		w.log.Warn("Truncating source field. The length of the source field should be less than 1024 characters")
 		return truncatedSource
-	}	
-        return sanitizedSource
+	}
+	return sanitizedSource
 }
 
 // Configure the Wavefront handler
 func (w *Wavefront) Configure(configMap map[string]interface{}) {
-        if proxyFlag, exists := configMap["proxyFlag"]; exists {
-                proxyFlag, err := strconv.ParseBool(proxyFlag.(string))
-                if err != nil {
-                	w.log.Error("proxyFlag should be true or false for the Wavefront handler, there won't be any emissions")
-                } else if proxyFlag {
-                        w.proxyFlag = proxyFlag
-                	w.configureForProxyIngestion(configMap)
-                } else {
-                        w.configureForDirectIngestion(configMap)
+	if proxyFlag, exists := configMap["proxyFlag"]; exists {
+		proxyFlag, err := strconv.ParseBool(proxyFlag.(string))
+		if err != nil {
+			w.log.Error("proxyFlag should be true or false for the Wavefront handler, there won't be any emissions")
+		} else if proxyFlag {
+			w.proxyFlag = proxyFlag
+			w.configureForProxyIngestion(configMap)
+		} else {
+			w.configureForDirectIngestion(configMap)
 		}
-        } else {
+	} else {
 		w.log.Error("There was no proxyFlag specified for the Wavefront handler, there won't be any emissions")
 	}
 
@@ -124,34 +123,34 @@ func (w *Wavefront) Configure(configMap map[string]interface{}) {
 }
 
 // Configure the Wavefront Handler for Direct Ingestion
-func (w *Wavefront) configureForDirectIngestion(configMap map[string]interface{}){
+func (w *Wavefront) configureForDirectIngestion(configMap map[string]interface{}) {
 	if apiKey, exists := configMap["apiKey"]; exists {
-                w.apiKey = apiKey.(string)
-        } else {
-                w.log.Error("There was no API key specified for the Wavefront handler, there won't be any emissions")
-        }
+		w.apiKey = apiKey.(string)
+	} else {
+		w.log.Error("There was no API key specified for the Wavefront handler, there won't be any emissions")
+	}
 
-        if endpoint, exists := configMap["endpoint"]; exists {
-                w.endpoint = endpoint.(string)
-        } else {
-                w.log.Error("There was no endpoint specified for the Wavefront Handler, there won't be any emissions")
-        }
+	if endpoint, exists := configMap["endpoint"]; exists {
+		w.endpoint = endpoint.(string)
+	} else {
+		w.log.Error("There was no endpoint specified for the Wavefront Handler, there won't be any emissions")
+	}
 
 }
 
 // Configure the Wavefront Handler for ingestion through Proxy
-func (w *Wavefront) configureForProxyIngestion(configMap map[string]interface{}){
-        if proxyServer, exists := configMap["proxyServer"]; exists {
-                w.proxyServer = proxyServer.(string)
-        } else {
-                w.log.Error("There was no Proxy server address specified for the Wavefront handler, there won't be any emissions")
-        }
+func (w *Wavefront) configureForProxyIngestion(configMap map[string]interface{}) {
+	if proxyServer, exists := configMap["proxyServer"]; exists {
+		w.proxyServer = proxyServer.(string)
+	} else {
+		w.log.Error("There was no Proxy server address specified for the Wavefront handler, there won't be any emissions")
+	}
 
-        if port, exists := configMap["port"]; exists {
-                w.port = port.(string)
-        } else {
-                w.log.Error("There was no Port number specified for the Wavefront handler, there won't be any emissions")
-        }
+	if port, exists := configMap["port"]; exists {
+		w.port = port.(string)
+	} else {
+		w.log.Error("There was no Port number specified for the Wavefront handler, there won't be any emissions")
+	}
 }
 
 // Endpoint returns the Wavefront API endpoint
@@ -163,8 +162,6 @@ func (w Wavefront) Endpoint() string {
 func (w *Wavefront) Run() {
 	w.run(w.emitMetrics)
 }
-
-
 
 func (w *Wavefront) convertToWavefront(incomingMetric metric.Metric) (datapoint wavefrontMetric) {
 	wfm := new(wavefrontMetric)
@@ -196,24 +193,24 @@ func (w *Wavefront) emitMetrics(metrics []metric.Metric) bool {
 	if w.proxyFlag {
 		return w.emitMetricsToProxy(metrics, pStr, len(series))
 	}
-        return w.emitMetricsForDirectIngestion(metrics, pStr, len(series))
+	return w.emitMetricsForDirectIngestion(metrics, pStr, len(series))
 }
 
 func (w Wavefront) emitMetricsToProxy(metrics []metric.Metric, pStr string, nDataPoints int) bool {
-        addr := fmt.Sprintf("%s:%s", w.proxyServer, w.port)
-        conn, err := w.dialTimeout("tcp", addr)
-        if err != nil {
-            w.log.Error("Failed to connect ", addr)
-            return false
-        }
-        conn.Write([]byte(pStr))
-        w.log.Info("Successfully sent ", nDataPoints, " datapoints to Wavefront")
-        return true
+	addr := fmt.Sprintf("%s:%s", w.proxyServer, w.port)
+	conn, err := w.dialTimeout("tcp", addr)
+	if err != nil {
+		w.log.Error("Failed to connect ", addr)
+		return false
+	}
+	conn.Write([]byte(pStr))
+	w.log.Info("Successfully sent ", nDataPoints, " datapoints to Wavefront")
+	return true
 }
 
 func (w Wavefront) emitMetricsForDirectIngestion(metrics []metric.Metric, pStr string, nDataPoints int) bool {
 	apiURL := fmt.Sprintf("%s", w.endpoint)
-        req, err := http.NewRequest("POST", apiURL, bytes.NewBufferString(pStr))
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBufferString(pStr))
 	if err != nil {
 		w.log.Error("Failed to create a request to endpoint ", w.endpoint)
 		return false
@@ -254,18 +251,18 @@ func (w Wavefront) dialTimeout(network, addr string) (net.Conn, error) {
 
 func (w Wavefront) getSanitizedDimensions(m metric.Metric) (dimensions []string) {
 	for name, value := range m.GetDimensions(w.DefaultDimensions()) {
-                if name == "host" {
-                	continue
+		if name == "host" {
+			continue
 		}
-                if name == "source" {
+		if name == "source" {
 			dimensions = append(dimensions, name+"="+w.wavefrontSourceSanitize(value))
 		} else {
-                        sanitizedName := w.wavefrontKeySanitize(name)
-                        sanitizedValue := w.wavefrontValueSanitize(value)
-                        pointTags := sanitizedName+"=\""+sanitizedValue+"\""
+			sanitizedName := w.wavefrontKeySanitize(name)
+			sanitizedValue := w.wavefrontValueSanitize(value)
+			pointTags := sanitizedName + "=\"" + sanitizedValue + "\""
 			sanitizedPointTags := w.wavefrontPointTagSanitize(pointTags)
 			dimensions = append(dimensions, sanitizedPointTags)
-        	}
+		}
 	}
 	return dimensions
 }
