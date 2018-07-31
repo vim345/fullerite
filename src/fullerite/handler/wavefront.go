@@ -40,7 +40,6 @@ type wavefrontMetric struct {
 	PointTags []string
 }
 
-var allowedValuePuncts = []rune{}
 var allowedKeyPuncts = []rune{'-', '_', '.'}
 var pointTagLength = 255
 var sourceLength = 1023
@@ -64,9 +63,24 @@ func newWavefront(
 	return inst
 }
 
+func (w Wavefront) escapeQuotes(value string) string {
+	var escapedValue = "" 
+	for _, c := range value {
+        	if c == '"' {
+        		escapedValue += "\""
+        	} else {
+            		escapedValue += string(c) 
+        	}
+    	}
+        return escapedValue
+}
+
 func (w Wavefront) wavefrontValueSanitize(value string) string {
 	value = strings.Trim(value, "_")
-	return util.StrSanitize(value, true, allowedValuePuncts)
+        if strings.Contains(value, "\"") {
+		return w.escapeQuotes(value)
+	}
+        return value
 }
 
 func (w Wavefront) wavefrontKeySanitize(key string) string {
@@ -199,7 +213,8 @@ func (w *Wavefront) emitMetrics(metrics []metric.Metric) bool {
 }
 
 func (w Wavefront) emitMetricsToProxy(metrics []metric.Metric, pStr string, nDataPoints int) bool {
-	addr := fmt.Sprintf("%s:%s", w.proxyServer, w.port)
+	w.log.Debug("Starting emission via Proxy")
+        addr := fmt.Sprintf("%s:%s", w.proxyServer, w.port)
 	conn, err := w.dialTimeout("tcp", addr)
 	if err != nil {
 		w.log.Error("Failed to connect ", addr)
@@ -211,7 +226,8 @@ func (w Wavefront) emitMetricsToProxy(metrics []metric.Metric, pStr string, nDat
 }
 
 func (w Wavefront) emitMetricsForDirectIngestion(metrics []metric.Metric, pStr string, nDataPoints int) bool {
-	apiURL := fmt.Sprintf("%s", w.endpoint)
+        w.log.Debug("Starting to emit metrics for Direct Ingestion")	
+        apiURL := fmt.Sprintf("%s", w.endpoint)
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBufferString(pStr))
 	if err != nil {
 		w.log.Error("Failed to create a request to endpoint ", w.endpoint)
@@ -261,9 +277,9 @@ func (w Wavefront) getSanitizedDimensions(m metric.Metric) (dimensions []string)
 		} else {
 			sanitizedName := w.wavefrontKeySanitize(name)
 			sanitizedValue := w.wavefrontValueSanitize(value)
-			pointTags := sanitizedName + "=\"" + sanitizedValue + "\""
-			sanitizedPointTags := w.wavefrontPointTagSanitize(pointTags)
-			dimensions = append(dimensions, sanitizedPointTags)
+			pointTag := sanitizedName + "=\"" + sanitizedValue + "\""
+			sanitizedPointTag := w.wavefrontPointTagSanitize(pointTag)
+			dimensions = append(dimensions, sanitizedPointTag)
 		}
 	}
 	return dimensions
