@@ -54,12 +54,12 @@ func newWavefront(
 
 	inst := new(Wavefront)
 	inst.name = "Wavefront"
-
-        inst.interval = initialInterval
-        inst.maxBufferSize = initialBufferSize
 	inst.timeout = initialTimeout
 	inst.log = log
+	inst.maxBufferSize = initialBufferSize
+	inst.interval = initialInterval
 	inst.channel = channel
+	
 	return inst
 }
 
