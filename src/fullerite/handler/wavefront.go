@@ -27,9 +27,9 @@ type Wavefront struct {
 	proxyServer string
 	port        string
 	proxyFlag   bool
-        // If the following dimension exists,
-        // then batch and emit it separately to Sfx
-        batchByDimension string
+	// If the following dimension exists,
+	// then batch and emit it separately to Sfx
+	batchByDimension string
 }
 
 type wavefrontPayload struct {
@@ -81,10 +81,10 @@ func (w Wavefront) escapeQuotes(value string) string {
 func (w Wavefront) wavefrontValueSanitize(value string) string {
 	value = strings.Trim(value, "_")
 	value = strings.Trim(value, "\"")
-        if strings.Contains(value, "\"") {
+	if strings.Contains(value, "\"") {
 		return w.escapeQuotes(value)
 	}
-        return value
+	return value
 }
 
 func (w Wavefront) wavefrontKeySanitize(key string) string {
@@ -135,14 +135,13 @@ func (w *Wavefront) Configure(configMap map[string]interface{}) {
 		w.log.Error("There was no proxyFlag specified for the Wavefront handler, there won't be any emissions")
 	}
 
-        if batchByDimension, exists := configMap["batchByDimension"]; exists {
-                w.batchByDimension = batchByDimension.(string)
-                w.log.Info("Batching metrics by dimension: ", w.batchByDimension)
-
-                // Use custom emission time reporting when
-                // employing any fancy batching mechanism
-                w.OverrideBaseEmissionMetricsReporter()
-        }
+	if batchByDimension, exists := configMap["batchByDimension"]; exists {
+		w.batchByDimension = batchByDimension.(string)
+		w.log.Info("Batching metrics by dimension: ", w.batchByDimension)
+		// Use custom emission time reporting when
+		// employing any fancy batching mechanism
+		w.OverrideBaseEmissionMetricsReporter()
+	}
 
 	w.configureCommonParams(configMap)
 }
@@ -220,54 +219,53 @@ func (w *Wavefront) emitMetrics(metrics []metric.Metric) bool {
 		w.log.Warn("Skipping send because of an empty payload")
 		return false
 	}
-        if w.batchByDimension == "" {
-                // If batchByDimension key is NOT defined,
-                // then emit all metrics in a single batch
-                return w.emitAndTime(metrics)
-        }
+	if w.batchByDimension == "" {
+		// If batchByDimension key is NOT defined,
+		// then emit all metrics in a single batch
+		return w.emitAndTime(metrics)
+	}
 
-        // If batchByDimension key is defined,
-        // then divide the list of metrics into batches,
-        // emit them concurrently (or parallely, if GOMAXPROCS is > 1)
-        for _, metricBatch := range w.makeBatches(metrics) {
-                go w.emitAndTime(metricBatch)
-        }
-        return true
+	// If batchByDimension key is defined,
+	// then divide the list of metrics into batches,
+	// emit them concurrently (or parallely, if GOMAXPROCS is > 1)
+	for _, metricBatch := range w.makeBatches(metrics) {
+		go w.emitAndTime(metricBatch)
+	}
+	return true
 }
 
 func (w *Wavefront) emitAndTime(metrics []metric.Metric) bool {
-        start := time.Now()
-        emissionResult := w.emitBatch(metrics)
-        elapsed := time.Since(start)
+	start := time.Now()
+	emissionResult := w.emitBatch(metrics)
+	elapsed := time.Since(start)
+	// Report emission metrics if emission tracker is disabled in base handler
+	if w.UseCustomEmissionMetricsReporter() {
+		timing := emissionTimingB {
+			timestamp:   time.Now(),
+			duration:    elapsed,
+			metricsSent: len(metrics),
+		}
+		w.reportEmissionMetrics(emissionResult, timing)
+	}
 
-        // Report emission metrics if emission tracker is disabled in base handler
-        if w.UseCustomEmissionMetricsReporter() {
-                timing := emissionTiming{
-                        timestamp:   time.Now(),
-                        duration:    elapsed,
-                        metricsSent: len(metrics),
-                }
-                w.reportEmissionMetrics(emissionResult, timing)
-        }
-
-        return emissionResult
+	return emissionResult
 }
 
 func (w *Wavefront) emitBatch(metrics []metric.Metric) bool {
-        w.log.Info("Starting to emit ", len(metrics), " metrics to Wavefront")
+	w.log.Info("Starting to emit ", len(metrics), " metrics to Wavefront")
 
-        series := make([]wavefrontMetric, 0, len(metrics))
-        for _, m := range metrics {
-                series = append(series, w.convertToWavefront(m))
-        }
+	series := make([]wavefrontMetric, 0, len(metrics))
+	for _, m := range metrics {
+		series = append(series, w.convertToWavefront(m))
+	}
 
-        p := wavefrontPayload{Series: series}
-        pStr := w.wavefrontPayloadToString(p)
+	p := wavefrontPayload{Series: series}
+	pStr := w.wavefrontPayloadToString(p)
 
-        if w.proxyFlag {
-                return w.emitMetricsToProxy(metrics, pStr, len(series))
-        }
-        return w.emitMetricsForDirectIngestion(metrics, pStr, len(series))
+	if w.proxyFlag {
+		return w.emitMetricsToProxy(metrics, pStr, len(series))
+	}
+	return w.emitMetricsForDirectIngestion(metrics, pStr, len(series))
 }
 
 
@@ -281,7 +279,7 @@ func (w Wavefront) emitMetricsToProxy(metrics []metric.Metric, pStr string, nDat
 	}
 	conn.Write([]byte(pStr))
 	w.log.Info("Successfully sent ", nDataPoints, " datapoints to Wavefront")
-        conn.Close()
+	conn.Close()
 	return true
 }
 

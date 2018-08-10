@@ -15,8 +15,8 @@ func getTestWavefrontHandler(interval, buffsize, timeoutsec int) *Wavefront {
         testLog := l.WithField("testing", "wavefront_handler")
         timeout := time.Duration(timeoutsec) * time.Second
         w :=  newWavefront(testChannel, interval, buffsize, timeout, testLog).(*Wavefront)
-	w.proxyFlag = false
-	return w
+        w.proxyFlag = false
+        return w
 }
 
 func TestWavefrontConfigureEmptyConfig(t *testing.T) {
@@ -35,9 +35,9 @@ func TestWavefrontConfigure(t *testing.T) {
                 "timeout":         "10",
                 "max_buffer_size": "100",
                 "endpoint":        "wavefront.server",
-		"proxyFlag":       "true",
+                "proxyFlag":       "true",
                 "port":            "2878",
-		"proxyServer":	   "wavefront.proxy",	 
+                "proxyServer":	   "wavefront.proxy",
         }
 
         w := getTestWavefrontHandler(40, 50, 60)
@@ -45,9 +45,9 @@ func TestWavefrontConfigure(t *testing.T) {
 
         assert.Equal(t, 10, w.Interval())
         assert.Equal(t, 100, w.MaxBufferSize())
-	assert.Equal(t, true, w.proxyFlag)
-	assert.Equal(t, "wavefront.proxy", w.proxyServer)
-	assert.Equal(t, "2878", w.port)
+        assert.Equal(t, true, w.proxyFlag)
+        assert.Equal(t, "wavefront.proxy", w.proxyServer)
+        assert.Equal(t, "2878", w.port)
 }
 
 func TestWavefrontSanitation(t *testing.T) {
