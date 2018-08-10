@@ -240,7 +240,7 @@ func (w *Wavefront) emitAndTime(metrics []metric.Metric) bool {
 	elapsed := time.Since(start)
 	// Report emission metrics if emission tracker is disabled in base handler
 	if w.UseCustomEmissionMetricsReporter() {
-		timing := emissionTimingB {
+		timing := emissionTiming {
 			timestamp:   time.Now(),
 			duration:    elapsed,
 			metricsSent: len(metrics),
