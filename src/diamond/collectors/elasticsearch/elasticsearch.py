@@ -207,8 +207,14 @@ class ElasticSearchCollector(diamond.collector.Collector):
 
     def collect_instance_index_stats(self, host, port, metrics):
         result = self._get(host, port,
-                           '_stats?clear=true&docs=true&store=true&'
-                           + 'indexing=true&get=true&search=true', '_all')
+                           '_stats/docs,store,indexing,get,search,'
+                           + 'merge,flush,refresh', '_all')
+        if not result: 
+            # elasticsearch < 0.90RC2
+            result = self._get(host, port,
+                               '_stats?clear=true&docs=true&store=true&'
+                               + 'indexing=true&get=true&search=true', '_all')
+
         if not result:
             return
 
