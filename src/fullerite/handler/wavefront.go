@@ -126,7 +126,7 @@ func (w Wavefront) wavefrontSourceSanitize(source string) string {
 // Configure the Wavefront handler
 func (w *Wavefront) Configure(configMap map[string]interface{}) {
 	// Get Metadata Tags from fullerite.conf
-	if defaultPointTags, exists := configMap["defaultPointTags"]; exists {
+	if defaultPointTags, exists := configMap["default_point_tags"]; exists {
 	        w.defaultPointTags = config.GetAsMap(defaultPointTags)
 	}
 
