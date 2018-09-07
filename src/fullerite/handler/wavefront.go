@@ -29,7 +29,7 @@ type Wavefront struct {
 	port        string
 	proxyFlag   bool
 	// If the following dimension exists,
-	// then batch and emit it separately to Sfx
+	// then batch and emit it separately to Wavefront
 	batchByDimension string
 	defaultPointTags map[string]string
 }
@@ -45,8 +45,6 @@ type wavefrontMetric struct {
 	PointTags []string
 }
 
-
-var defaultTags map[string]string
 
 var allowedKeyPuncts = []rune{'-', '_', '.'}
 var pointTagLength = 255
