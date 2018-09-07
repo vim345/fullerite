@@ -337,7 +337,7 @@ func (w Wavefront) dialTimeout(network, addr string) (net.Conn, error) {
 
 func (w Wavefront) getSanitizedDimensions(dimensions map[string](string)) (sanitizedDmensions []string) {
 	for name, value := range dimensions {
-		if name == "host" {
+		if name == "host" || value == "none" {
 			continue
 		}
 		if name == "source" {
