@@ -46,7 +46,6 @@ type wavefrontMetric struct {
 }
 
 
-var metadataTags map[string]string
 var defaultTags map[string]string
 
 var allowedKeyPuncts = []rune{'-', '_', '.'}
@@ -129,16 +128,10 @@ func (w Wavefront) wavefrontSourceSanitize(source string) string {
 // Configure the Wavefront handler
 func (w *Wavefront) Configure(configMap map[string]interface{}) {
 	// Get Metadata Tags from fullerite.conf
-	metadataTags = make(map[string]string)
 	if defaultPointTags, exists := configMap["defaultPointTags"]; exists {
 	        w.defaultPointTags = config.GetAsMap(defaultPointTags)
 	}
 
-        for key, value := range w.defaultPointTags {
-		if value != "none" {
-			metadataTags[key] = value
-		}
-	}
 	if proxyFlag, exists := configMap["proxyFlag"]; exists {
 		proxyFlag, err := strconv.ParseBool(proxyFlag.(string))
 		if err != nil {
@@ -358,13 +351,6 @@ func (w Wavefront) getSanitizedDimensions(dimensions map[string](string)) (sanit
 		}
 	}
 	return sanitizedDmensions
-}
-
-func appendMetadataTags(defaultDimensions map[string](string)) (defaultTags map[string](string)) {
-	for k, v := range defaultDimensions {
-		defaultTags[k] = v
-	}
-	return defaultTags
 }
 
 func (w Wavefront) wavefrontPayloadToString(p wavefrontPayload) string {
