@@ -3,6 +3,7 @@ package handler
 import (
 	"fullerite/metric"
 	"fullerite/util"
+	"fullerite/config"
 
 	"bytes"
 	"fmt"
@@ -30,6 +31,7 @@ type Wavefront struct {
 	// If the following dimension exists,
 	// then batch and emit it separately to Sfx
 	batchByDimension string
+	defaultPointTags map[string]string
 }
 
 type wavefrontPayload struct {
@@ -43,9 +45,14 @@ type wavefrontMetric struct {
 	PointTags []string
 }
 
+
+var metadataTags map[string]string
+var defaultTags map[string]string
+
 var allowedKeyPuncts = []rune{'-', '_', '.'}
 var pointTagLength = 255
 var sourceLength = 1023
+
 
 // newWavefront returns a new Wavefront handler
 func newWavefront(
@@ -121,6 +128,17 @@ func (w Wavefront) wavefrontSourceSanitize(source string) string {
 
 // Configure the Wavefront handler
 func (w *Wavefront) Configure(configMap map[string]interface{}) {
+	// Get Metadata Tags from fullerite.conf
+	metadataTags = make(map[string]string)
+	if defaultPointTags, exists := configMap["defaultPointTags"]; exists {
+	        w.defaultPointTags = config.GetAsMap(defaultPointTags)
+	}
+
+        for key, value := range w.defaultPointTags {
+		if value != "none" {
+			metadataTags[key] = value
+		}
+	}
 	if proxyFlag, exists := configMap["proxyFlag"]; exists {
 		proxyFlag, err := strconv.ParseBool(proxyFlag.(string))
 		if err != nil {
@@ -192,8 +210,8 @@ func (w *Wavefront) convertToWavefront(incomingMetric metric.Metric) (datapoint 
 	wfm.Name = "\"" + w.Prefix() + w.wavefrontKeySanitize(incomingMetric.Name) + "\""
 	wfm.Value = incomingMetric.Value
 	wfm.Source = w.DefaultDimensions()["host"]
-	wfm.PointTags = w.getSanitizedDimensions(incomingMetric)
-
+	wfm.PointTags = w.getSanitizedDimensions(incomingMetric.GetDimensions(w.DefaultDimensions()))
+	wfm.PointTags = w.getSanitizedDimensions(w.defaultPointTags)
 	return *wfm
 }
 
@@ -224,7 +242,6 @@ func (w *Wavefront) emitMetrics(metrics []metric.Metric) bool {
 		// then emit all metrics in a single batch
 		return w.emitAndTime(metrics)
 	}
-
 	// If batchByDimension key is defined,
 	// then divide the list of metrics into batches,
 	// emit them concurrently (or parallely, if GOMAXPROCS is > 1)
@@ -325,22 +342,29 @@ func (w Wavefront) dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, w.timeout)
 }
 
-func (w Wavefront) getSanitizedDimensions(m metric.Metric) (dimensions []string) {
-	for name, value := range m.GetDimensions(w.DefaultDimensions()) {
+func (w Wavefront) getSanitizedDimensions(dimensions map[string](string)) (sanitizedDmensions []string) {
+	for name, value := range dimensions {
 		if name == "host" {
 			continue
 		}
 		if name == "source" {
-			dimensions = append(dimensions, name+"="+w.wavefrontSourceSanitize(value))
+			sanitizedDmensions = append(sanitizedDmensions, name+"="+w.wavefrontSourceSanitize(value))
 		} else {
 			sanitizedName := w.wavefrontKeySanitize(name)
 			sanitizedValue := w.wavefrontValueSanitize(value)
 			pointTag := sanitizedName + "=\"" + sanitizedValue + "\""
 			sanitizedPointTag := w.wavefrontPointTagSanitize(pointTag)
-			dimensions = append(dimensions, sanitizedPointTag)
+			sanitizedDmensions = append(sanitizedDmensions, sanitizedPointTag)
 		}
 	}
-	return dimensions
+	return sanitizedDmensions
+}
+
+func appendMetadataTags(defaultDimensions map[string](string)) (defaultTags map[string](string)) {
+	for k, v := range defaultDimensions {
+		defaultTags[k] = v
+	}
+	return defaultTags
 }
 
 func (w Wavefront) wavefrontPayloadToString(p wavefrontPayload) string {
@@ -356,3 +380,4 @@ func (w Wavefront) wavefrontPayloadToString(p wavefrontPayload) string {
 	}
 	return payloadBuffer.String()
 }
+
