@@ -1,7 +1,9 @@
 description "Fullerite Core processing service"
-author "perf-metrics@yelp.com"
+author "darwin@yelp.dog"
 start on runlevel [2345] and net-device-up IFACE!=lo
 stop on runlevel [!2345]
+
+respawn
 
 script
 USER="fuller"
