@@ -14,7 +14,7 @@ import (
 
 func TestNginxStatsNewNginxStats(t *testing.T) {
 	channel := make(chan metric.Metric)
-	log := defaultLog.WithFields(l.Fields{"collector": "Mesos"})
+	log := defaultLog.WithFields(l.Fields{"collector": "Nginx"})
 	stats := newNginxStats(channel, 10, log).(*NginxStats)
 
 	assert.Equal(t, channel, stats.channel)
@@ -25,17 +25,17 @@ func TestNginxStatsNewNginxStats(t *testing.T) {
 
 func TestNginxStatsConfigureDefaults(t *testing.T) {
 	channel := make(chan metric.Metric)
-	log := defaultLog.WithFields(l.Fields{"collector": "Mesos"})
+	log := defaultLog.WithFields(l.Fields{"collector": "Nginx"})
 	stats := newNginxStats(channel, 10, log).(*NginxStats)
 
 	configMap := map[string]interface{}{}
 	stats.Configure(configMap)
-	assert.Equal(t, stats.statsUrl, "http://localhost:8080/nginx_status")
+	assert.Equal(t, stats.statsURL, "http://localhost:8080/nginx_status")
 }
 
 func TestNginxStatsConfigureCustomStatsLocation(t *testing.T) {
 	channel := make(chan metric.Metric)
-	log := defaultLog.WithFields(l.Fields{"collector": "Mesos"})
+	log := defaultLog.WithFields(l.Fields{"collector": "Nginx"})
 	stats := newNginxStats(channel, 10, log).(*NginxStats)
 
 	configMap := map[string]interface{}{
@@ -44,12 +44,12 @@ func TestNginxStatsConfigureCustomStatsLocation(t *testing.T) {
 		"reqPath": "/my-cool-status",
 	}
 	stats.Configure(configMap)
-	assert.Equal(t, stats.statsUrl, "http://yelp.com:1234/my-cool-status")
+	assert.Equal(t, stats.statsURL, "http://yelp.com:1234/my-cool-status")
 }
 
 func TestNginxStatsQueryNginxStatsSuccess(t *testing.T) {
 	channel := make(chan metric.Metric)
-	log := defaultLog.WithFields(l.Fields{"collector": "Mesos"})
+	log := defaultLog.WithFields(l.Fields{"collector": "Nginx"})
 	stats := newNginxStats(channel, 10, log).(*NginxStats)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,19 +57,19 @@ func TestNginxStatsQueryNginxStatsSuccess(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	stats.statsUrl = ts.URL
-	contents, err := stats.queryNginxStats()
+	stats.statsURL = ts.URL
+	contents, err := queryNginxStats(stats.client, stats.statsURL)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, contents, "some response here\n")
 }
 
 func TestNginxStatsQueryNginxStatsFailure(t *testing.T) {
 	channel := make(chan metric.Metric)
-	log := defaultLog.WithFields(l.Fields{"collector": "Mesos"})
+	log := defaultLog.WithFields(l.Fields{"collector": "Nginx"})
 	stats := newNginxStats(channel, 10, log).(*NginxStats)
 
-	stats.statsUrl = "invalid-url"
-	contents, err := stats.queryNginxStats()
+	stats.statsURL = "invalid-url"
+	contents, err := queryNginxStats(stats.client, stats.statsURL)
 	assert.NotEqual(t, err, nil)
 	assert.Equal(t, contents, "")
 }
@@ -82,7 +82,7 @@ func TestBuildNginxMetric(t *testing.T) {
 
 func TestGetNginxMetrics(t *testing.T) {
 	channel := make(chan metric.Metric)
-	log := defaultLog.WithFields(l.Fields{"collector": "Mesos"})
+	log := defaultLog.WithFields(l.Fields{"collector": "Nginx"})
 	stats := newNginxStats(channel, 10, log).(*NginxStats)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -94,8 +94,8 @@ func TestGetNginxMetrics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	stats.statsUrl = ts.URL
-	metrics := stats.getNginxMetrics()
+	stats.statsURL = ts.URL
+	metrics := getNginxMetrics(stats.client, stats.statsURL, stats.log)
 	assert.Equal(t, metrics, []metric.Metric{
 		buildNginxMetric("nginx.active_connections", metric.Gauge, 2),
 		buildNginxMetric("nginx.conn_accepted", metric.CumulativeCounter, 82130),
