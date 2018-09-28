@@ -18,7 +18,7 @@ import (
 type NginxStats struct {
 	baseCollector
 	client   http.Client
-	statsUrl string
+	statsURL string
 }
 
 const (
@@ -73,17 +73,17 @@ func (m *NginxStats) Configure(configMap map[string]interface{}) {
 		path = val
 	}
 
-	m.statsUrl = fmt.Sprintf("http://%s:%s%s", host, port, path)
+	m.statsURL = fmt.Sprintf("http://%s:%s%s", host, port, path)
 }
 
 func (m *NginxStats) Collect() {
-	for _, metric := range m.getNginxMetrics() {
+	for _, metric := range getNginxMetrics(m.client, m.statsURL, m.log) {
 		m.Channel() <- metric
 	}
 }
 
-func (m *NginxStats) queryNginxStats() (string, error) {
-	rsp, err := m.client.Get(m.statsUrl)
+func queryNginxStats(client http.Client, statsURL string) (string, error) {
+	rsp, err := client.Get(statsURL)
 
 	if rsp != nil {
 		defer func() {
@@ -97,7 +97,7 @@ func (m *NginxStats) queryNginxStats() (string, error) {
 	}
 
 	if rsp != nil && rsp.StatusCode != 200 {
-		err := fmt.Errorf("%s returned %d error code", m.statsUrl, rsp.StatusCode)
+		err := fmt.Errorf("%s returned %d error code", statsURL, rsp.StatusCode)
 		return "", err
 	}
 
@@ -116,10 +116,10 @@ func buildNginxMetric(name string, metricType string, value float64) (m metric.M
 	return m
 }
 
-func (m *NginxStats) getNginxMetrics() []metric.Metric {
-	contents, err := m.queryNginxStats()
+func getNginxMetrics(client http.Client, statsURL string, log *l.Entry) []metric.Metric {
+	contents, err := queryNginxStats(client, statsURL)
 	if err != nil {
-		m.log.Error("Could not load stats from nginx: ", err.Error())
+		log.Error("Could not load stats from nginx: ", err.Error())
 		return nil
 	}
 
