@@ -124,7 +124,11 @@ func (m *MesosSlaveStats) getSlaveMetrics(ip string) map[string]float64 {
 	}
 
 	contents, _ := ioutil.ReadAll(r.Body)
+
+	// PAASTA-15051: Mesos 1.4.1 returns metric names like "slave\/cpus_total" whereas 1.7.0 uses "slave/cpus_total"
+	// once we are fully migrated this can be simplified
 	raw := strings.Replace(string(contents), "\\/", ".", -1)
+	raw = strings.Replace(raw, "/", ".", -1)
 
 	var snapshot map[string]float64
 	decodeErr := json.Unmarshal([]byte(raw), &snapshot)
