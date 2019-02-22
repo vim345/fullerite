@@ -74,7 +74,7 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 	stats := new(docker.Stats)
 	stats.Networks = make(map[string]docker.NetworkStats)
 	stats.Networks["eth0"] = docker.NetworkStats{RxBytes: 10, TxBytes: 20}
-	stats.MemoryStats.Usage = 50
+    stats.MemoryStats.Stats.Rss = 50
 	stats.MemoryStats.Limit = 70
 	stats.CPUStats.ThrottlingData.ThrottledPeriods = 123
 	stats.CPUStats.ThrottlingData.ThrottledTime = 456
@@ -147,7 +147,8 @@ func TestDockerStatsBuildwithEmitImageName(t *testing.T) {
 	stats := new(docker.Stats)
 	stats.Networks = make(map[string]docker.NetworkStats)
 	stats.Networks["eth0"] = docker.NetworkStats{RxBytes: 10, TxBytes: 20}
-	stats.MemoryStats.Usage = 50
+	stats.MemoryStats.Stats.Rss = 50
+	stats.MemoryStats.Stats.Swap = 10
 	stats.MemoryStats.Limit = 70
 	stats.CPUStats.ThrottlingData.ThrottledPeriods = 123
 	stats.CPUStats.ThrottlingData.ThrottledTime = 456
@@ -184,7 +185,7 @@ func TestDockerStatsBuildwithEmitImageName(t *testing.T) {
 		"instance_name": "main",
 	}
 	expectedMetrics := []metric.Metric{
-		metric.Metric{"DockerMemoryUsed", "gauge", 50, baseDims},
+		metric.Metric{"DockerMemoryUsed", "gauge", 60, baseDims},
 		metric.Metric{"DockerMemoryLimit", "gauge", 70, baseDims},
 		metric.Metric{"DockerCpuPercentage", "gauge", 0.5, baseDims},
 		metric.Metric{"DockerCpuThrottledPeriods", "cumcounter", 123, baseDims},
@@ -216,7 +217,7 @@ func TestDockerStatsBuildMetricsWithNameAsEnvVariable(t *testing.T) {
 	config["generatedDimensions"] = val
 
 	stats := new(docker.Stats)
-	stats.MemoryStats.Usage = 50
+	stats.MemoryStats.Stats.Rss = 50
 	stats.MemoryStats.Limit = 70
 	stats.CPUStats.ThrottlingData.ThrottledPeriods = 123
 	stats.CPUStats.ThrottlingData.ThrottledTime = 456
