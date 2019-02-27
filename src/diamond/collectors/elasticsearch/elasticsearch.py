@@ -346,6 +346,7 @@ class ElasticSearchCollector(diamond.collector.Collector):
         # jvm
         if 'jvm' in self.config['stats']:
             jvm = data['jvm']
+            metrics['jvm.uptime_in_days'] = jvm['uptime_in_millis'] / 1000.0 / 60 / 60 / 24
             mem = jvm['mem']
             for k in ('heap_used', 'heap_committed', 'non_heap_used',
                       'non_heap_committed'):
