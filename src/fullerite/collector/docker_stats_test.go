@@ -74,7 +74,7 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 	stats := new(docker.Stats)
 	stats.Networks = make(map[string]docker.NetworkStats)
 	stats.Networks["eth0"] = docker.NetworkStats{RxBytes: 10, TxBytes: 20}
-    stats.MemoryStats.Stats.Rss = 50
+	stats.MemoryStats.Stats.Rss = 50
 	stats.MemoryStats.Limit = 70
 	stats.CPUStats.ThrottlingData.ThrottledPeriods = 123
 	stats.CPUStats.ThrottlingData.ThrottledTime = 456
