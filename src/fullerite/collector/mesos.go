@@ -142,7 +142,12 @@ func (m *MesosStats) getMetrics(ip string) map[string]float64 {
 	}
 
 	contents, _ := ioutil.ReadAll(r.Body)
+
+	// PAASTA-15285: Mesos 1.4.1 returns metric names like "master\/elected"
+	// whereas 1.7.x returns "master/elected". Once all clusters are on the
+	// newest version this can be simplified.
 	raw := strings.Replace(string(contents), "\\/", ".", -1)
+	raw = strings.Replace(raw, "/", ".", -1)
 
 	var snapshot map[string]float64
 	decodeErr := json.Unmarshal([]byte(raw), &snapshot)
