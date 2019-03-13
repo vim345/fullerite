@@ -30,7 +30,7 @@ class TestHAProxyCollector(CollectorTestCase):
     def test_should_work_with_real_data(self, publish_mock):
         self.collector.config['ignore_servers'] = False
 
-        patch_urlopen = patch('urllib2.urlopen',
+        patch_urlopen = patch('OpenerDirector.open',
                               Mock(return_value=self.getFixture('stats.csv')))
 
         patch_urlopen.start()
@@ -48,7 +48,7 @@ class TestHAProxyCollector(CollectorTestCase):
     def test_should_work_with_real_data_and_ignore_servers(self, publish_mock):
         self.collector.config['ignore_servers'] = True
 
-        patch_urlopen = patch('urllib2.urlopen',
+        patch_urlopen = patch('OpenerDirector.open',
                               Mock(return_value=self.getFixture('stats.csv')))
 
         patch_urlopen.start()
