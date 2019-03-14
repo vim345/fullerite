@@ -209,13 +209,13 @@ func TestGetCmdLineDimensions(t *testing.T) {
 		msg                   string
 	}{
 		{
-			pid: 0,
+			pid:                   0,
 			dimensionsFromCmdLine: map[string]string{},
 			expectedDimensions:    map[string]string{},
 			msg:                   "PID is 0; so no dimensions should be reported",
 		},
 		{
-			pid: 1234,
+			pid:                   1234,
 			dimensionsFromCmdLine: map[string]string{},
 			expectedDimensions:    map[string]string{},
 			msg:                   "Although PID is not 0, the dimensionsFromEnv is empty; so no dimensions should be reported",

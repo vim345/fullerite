@@ -44,6 +44,7 @@ func (parser *JavaMetric) parseMapOfMap(
 		values = strings.Split(metricName, ",")
 		for rollup, value := range metricData {
 			mName := values[0]
+			mNameOrig := mName
 			mType := metricType
 			matched, _ := regexp.MatchString("m[0-9]+_rate", rollup)
 
@@ -62,6 +63,7 @@ func (parser *JavaMetric) parseMapOfMap(
 			tmpMetric, ok := parser.createMetricFromDatam(rollup, value, mName, mType)
 			if ok {
 				addDimensionsFromName(&tmpMetric, values)
+				tmpMetric.AddDimension("metric_name", mNameOrig)
 				results = append(results, tmpMetric)
 			}
 		}

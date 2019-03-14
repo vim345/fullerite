@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"fullerite/config"
 	"fullerite/metric"
 	"fullerite/util"
-	"fullerite/config"
 
 	"bytes"
 	"fmt"
@@ -45,11 +45,9 @@ type wavefrontMetric struct {
 	PointTags []string
 }
 
-
 var allowedKeyPuncts = []rune{'-', '_', '.'}
 var pointTagLength = 255
 var sourceLength = 1023
-
 
 // newWavefront returns a new Wavefront handler
 func newWavefront(
@@ -66,20 +64,20 @@ func newWavefront(
 	inst.maxBufferSize = initialBufferSize
 	inst.interval = initialInterval
 	inst.channel = channel
-	
+
 	return inst
 }
 
 func (w Wavefront) escapeQuotes(value string) string {
-	var escapedValue = "" 
+	var escapedValue = ""
 	for _, c := range value {
-        	if c == '"' {
-        		escapedValue += "\""
-        	} else {
-            		escapedValue += string(c) 
-        	}
-    	}
-        return escapedValue
+		if c == '"' {
+			escapedValue += "\""
+		} else {
+			escapedValue += string(c)
+		}
+	}
+	return escapedValue
 }
 
 func (w Wavefront) wavefrontValueSanitize(value string) string {
@@ -127,7 +125,7 @@ func (w Wavefront) wavefrontSourceSanitize(source string) string {
 func (w *Wavefront) Configure(configMap map[string]interface{}) {
 	// Get Metadata Tags from fullerite.conf
 	if defaultPointTags, exists := configMap["default_point_tags"]; exists {
-	        w.defaultPointTags = config.GetAsMap(defaultPointTags)
+		w.defaultPointTags = config.GetAsMap(defaultPointTags)
 	}
 
 	if proxyFlag, exists := configMap["proxyFlag"]; exists {
@@ -197,7 +195,7 @@ func (w *Wavefront) Run() {
 }
 
 func (w *Wavefront) convertToWavefront(incomingMetric metric.Metric) (datapoint wavefrontMetric) {
-	wfm := new(wavefrontMetric) 
+	wfm := new(wavefrontMetric)
 	wfm.Name = "\"" + w.Prefix() + w.wavefrontKeySanitize(incomingMetric.Name) + "\""
 	wfm.Value = incomingMetric.Value
 	wfm.Source = w.DefaultDimensions()["host"]
@@ -207,20 +205,20 @@ func (w *Wavefront) convertToWavefront(incomingMetric metric.Metric) (datapoint 
 }
 
 func (w *Wavefront) makeBatches(metrics []metric.Metric) map[string][]metric.Metric {
-        m := make(map[string][]metric.Metric)
+	m := make(map[string][]metric.Metric)
 
-        // If batchByDimension key is not defined,
-        // do not examine each metric
-        if w.batchByDimension == "" {
-                m[""] = metrics
-                return m
-        }
+	// If batchByDimension key is not defined,
+	// do not examine each metric
+	if w.batchByDimension == "" {
+		m[""] = metrics
+		return m
+	}
 
-        for _, metric := range metrics {
-                dimValue := metric.Dimensions[w.batchByDimension]
-                m[dimValue] = append(m[dimValue], metric)
-        }
-        return m
+	for _, metric := range metrics {
+		dimValue := metric.Dimensions[w.batchByDimension]
+		m[dimValue] = append(m[dimValue], metric)
+	}
+	return m
 }
 
 func (w *Wavefront) emitMetrics(metrics []metric.Metric) bool {
@@ -248,7 +246,7 @@ func (w *Wavefront) emitAndTime(metrics []metric.Metric) bool {
 	elapsed := time.Since(start)
 	// Report emission metrics if emission tracker is disabled in base handler
 	if w.UseCustomEmissionMetricsReporter() {
-		timing := emissionTiming {
+		timing := emissionTiming{
 			timestamp:   time.Now(),
 			duration:    elapsed,
 			metricsSent: len(metrics),
@@ -276,10 +274,9 @@ func (w *Wavefront) emitBatch(metrics []metric.Metric) bool {
 	return w.emitMetricsForDirectIngestion(metrics, pStr, len(series))
 }
 
-
 func (w Wavefront) emitMetricsToProxy(metrics []metric.Metric, pStr string, nDataPoints int) bool {
 	w.log.Debug("Starting emission via Proxy")
-        addr := fmt.Sprintf("%s:%s", w.proxyServer, w.port)
+	addr := fmt.Sprintf("%s:%s", w.proxyServer, w.port)
 	conn, err := w.dialTimeout("tcp", addr)
 	if err != nil {
 		w.log.Error("Failed to connect ", addr)
@@ -292,8 +289,8 @@ func (w Wavefront) emitMetricsToProxy(metrics []metric.Metric, pStr string, nDat
 }
 
 func (w Wavefront) emitMetricsForDirectIngestion(metrics []metric.Metric, pStr string, nDataPoints int) bool {
-        w.log.Debug("Starting to emit metrics for Direct Ingestion")	
-        apiURL := fmt.Sprintf("%s", w.endpoint)
+	w.log.Debug("Starting to emit metrics for Direct Ingestion")
+	apiURL := fmt.Sprintf("%s", w.endpoint)
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBufferString(pStr))
 	if err != nil {
 		w.log.Error("Failed to create a request to endpoint ", w.endpoint)
@@ -364,4 +361,3 @@ func (w Wavefront) wavefrontPayloadToString(p wavefrontPayload) string {
 	}
 	return payloadBuffer.String()
 }
-
