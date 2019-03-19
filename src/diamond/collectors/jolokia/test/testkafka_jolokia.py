@@ -17,7 +17,7 @@ def find_metric(metric_list, metric_name):
 def find_by_dimension(metric_list, key, val):
     return filter(lambda metric:metric["dimensions"][key] == val, metric_list)[0]
 
-def list_request():
+def list_request(host, port):
     return {'value': {'kafka.server':'bla'}, 'status':200}
 
 class TestKafkaJolokiaCollector(CollectorTestCase):

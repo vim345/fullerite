@@ -72,12 +72,28 @@ class CassandraJolokiaCollector(JolokiaCollector):
             elif isinstance(v, list) and str_to_bool(self.config['nested']):
                 self.interpret_bean_with_list("%s.%s" % (prefix, k), v)
 
+    # override to only return the hosts whose identifiers begin with cassandra_
+    def patch_host_list(self, hosts):
+        res = {}
+        for service_name, value in hosts.iteritems():
+            matched = re.match('^(cassandra_[\\w_-]+)', service_name)
+            if matched:
+                cassandra_cluster = matched.group(1)
+                res[cassandra_cluster] = {
+                    'host': value.get('host'),
+                    'port': self.config['port']
+                }
+        return res
+
     def patch_dimensions(self, bean, dims):
         metric_name = dims.pop("name", None)
         metric_type = dims.pop("type", None)
         scope_type = dims.pop("scope", None)
         if scope_type:
             dims["type"] = scope_type
+
+        if self.config["multiple_hosts_mode"] and self.current_host_identifier:
+            dims["cassandra_cluster"] = self.current_host_identifier
 
         return metric_name, metric_type, dims
 
