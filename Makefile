@@ -65,6 +65,15 @@ $(BEATIT): $(BEATIT_SOURCES)
 	@echo Building $(BEATIT)...
 	@go build -o bin/$(BEATIT) fullerite/beatit
 
+go:
+	curl -s https://dl.google.com/go/go1.9.linux-amd64.tar.gz | tar xz
+	@echo "Please type: eval \`make goenv\`"
+
+goenv: go
+	@echo export GOROOT=`readlink -f go/`
+	@echo export GOPATH=`readlink -f go/bin`
+	@echo export PATH=`readlink -f go/bin`:\$$PATH
+
 test: tests
 tests: deps diamond_test fullerite-tests
 

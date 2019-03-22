@@ -13,3 +13,4 @@ src/github.com/
 src/fullerite/collector/collector.test
 *.pprof
 .tox
+go
