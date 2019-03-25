@@ -7,11 +7,13 @@ from test import get_collector_config
 from test import unittest
 from mock import Mock
 from mock import patch
+from mock import mock_open
 
 from diamond.collector import Collector
 
 from cassandra_jolokia import CassandraJolokiaCollector
 import re
+import json
 
 ################################################################################
 
@@ -21,8 +23,14 @@ def find_metric(metric_list, metric_name):
 def find_by_dimension(metric_list, key, val):
     return filter(lambda metric:metric["dimensions"][key] == val, metric_list)[0]
 
-def list_request():
+def list_request(host, port):
     return {'value': {'com.yelp':'bla'}, 'status':200}
+
+def read_host_list():
+    return {
+        'cass_1': { 'host': '10.0.0.1', 'port': 8999 },
+        'cass_2': { 'host': '10.0.0.2', 'port': 8999 }
+    }
 
 class TestCassandraJolokiaCollector(CollectorTestCase):
     def setUp(self):
@@ -54,6 +62,45 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
         pending_task = find_metric(self.collector.payload,
                                    "org.apache.cassandra.metrics.CommitLog4.2.PendingTasks")
         self.assertNotEqual(len(pending_task), 0)
+
+    def test_patch_host_list_should_filter_out_non_cassandra_hosts(self):
+        data = {
+            "services": {
+                "service1": { "host": "10.0.0.1" },
+                "cassandra_1.dc": { "host": "10.0.0.2"}
+            }
+        }
+        with patch("__builtin__.open", mock_open(read_data=json.dumps(data))):
+            hosts = self.collector.read_host_list()
+        self.assertEqual(
+            hosts,
+            {
+                'cassandra_1': { 'host': '10.0.0.2', 'port': self.collector.config['port'] }
+            }
+        )
+
+    @patch.object(Collector, 'flush')
+    def test_should_have_cassandra_cluster_dimension_in_multi_hosts_mode(self, publish_mock):
+        self.collector.list_request = list_request
+        self.collector.config['multiple_hosts_mode'] = True
+        self.collector.read_host_list = read_host_list
+
+        def se(url):
+            return self.getFixture("metrics.json")
+
+        patch_urlopen = patch('urllib2.urlopen', Mock(side_effect=se))
+
+        with patch_urlopen:
+            self.collector.collect()
+        self.collector.config['multiple_hosts_mode'] = False
+        self.assertEquals(len(self.collector.payload), 3827 * 2)
+
+        metrics = find_metric(self.collector.payload, "org.apache.cassandra.metrics.ColumnFamily.LiveSSTableCount")
+        self.assertNotEqual(len(metrics), 0)
+        metric = find_by_dimension(metrics, "cassandra_cluster", "cass_1")
+        self.assertEquals(metric["type"], "GAUGE")
+        metric = find_by_dimension(metrics, "cassandra_cluster", "cass_2")
+        self.assertEquals(metric["type"], "GAUGE")
 
     @patch.object(Collector, 'flush')
     def test_should_create_type(self, publish_mock):

@@ -14,6 +14,11 @@ from jolokia import JolokiaCollector
 
 ################################################################################
 
+def read_host_list():
+    return {
+        'host1': { 'host': '10.0.0.1', 'port': 8999 },
+        'host2': { 'host': '10.0.0.2', 'port': 8999 }
+    }
 
 class TestJolokiaCollector(CollectorTestCase):
     def setUp(self):
@@ -42,6 +47,38 @@ class TestJolokiaCollector(CollectorTestCase):
                            metrics=metrics,
                            defaultpath=self.collector.config['url_path'])
         self.assertPublishedMany(publish_mock, metrics)
+
+    @patch.object(Collector, 'publish')
+    def test_should_work_in_mutiple_hosts_mode(self, publish_mock):
+        self.collector.read_host_list = read_host_list
+        self.collector.config['multiple_hosts_mode'] = True
+        requested_list_urls = []
+        def se(url):
+            list_urls = [
+                'http://%s:%s/jolokia/list' % (h.get('host'), h.get('port'))
+                for h in read_host_list().values()
+            ]
+            if any(_url in url for _url in list_urls):
+                requested_list_urls.append(url)
+                return self.getFixture('listing')
+            else:
+                return self.getFixture('stats')
+        patch_urlopen = patch('urllib2.urlopen', Mock(side_effect=se))
+
+        with patch_urlopen:
+            self.collector.collect()
+        self.collector.config['mutiple_hosts_mode'] = False
+
+        self.assertTrue(all(
+            "%s:%s" % (h.get('host'), h.get('port')) in requested_list_urls[i]
+            for i, h in enumerate(read_host_list().values())
+        ))
+
+        metrics = self.get_metrics()
+        self.setDocExample(collector=self.collector.__class__.__name__,
+                           metrics=metrics,
+                           defaultpath=self.collector.config['url_path'])
+        self.assertPublishedMany(publish_mock, metrics, 2)
 
     @patch.object(Collector, 'publish')
     def test_real_data_with_rewrite(self, publish_mock):
