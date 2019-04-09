@@ -267,7 +267,8 @@ class JolokiaCollector(diamond.collector.Collector):
                                          url_path)
             response = urllib2.urlopen(url)
             return self.read_json(response)
-        except (urllib2.HTTPError, ValueError):
+        except Exception as e:
+            self.log.error(e)
             self.log.error('Unable to read JSON response from %s:%s' % (host, port))
             return {}
 
@@ -285,7 +286,8 @@ class JolokiaCollector(diamond.collector.Collector):
                                          url_path)
             response = urllib2.urlopen(url)
             return self.read_json(response)
-        except (urllib2.HTTPError, ValueError):
+        except Exception as e:
+            self.log.error(e)
             self.log.error('Unable to read JSON response from %s:%s' % (host, port))
             return {}
 
