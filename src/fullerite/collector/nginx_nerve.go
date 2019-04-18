@@ -13,7 +13,7 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
-type NginxNerveStats struct {
+type nginxNerveStats struct {
 	baseCollector
 	client            http.Client
 	nerveConfigPath   string
@@ -29,7 +29,7 @@ func init() {
 }
 
 func newNginxNerveStats(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
-	m := new(NginxNerveStats)
+	m := new(nginxNerveStats)
 
 	m.log = log
 	m.channel = channel
@@ -41,7 +41,7 @@ func newNginxNerveStats(channel chan metric.Metric, initialInterval int, log *l.
 	return m
 }
 
-func (m *NginxNerveStats) Configure(configMap map[string]interface{}) {
+func (m *nginxNerveStats) Configure(configMap map[string]interface{}) {
 	m.configureCommonParams(configMap)
 	c := config.GetAsMap(configMap)
 
@@ -55,7 +55,7 @@ func (m *NginxNerveStats) Configure(configMap map[string]interface{}) {
 	}
 }
 
-func (m *NginxNerveStats) Collect() {
+func (m *nginxNerveStats) Collect() {
 	rawFileContents, err := ioutil.ReadFile(m.nerveConfigPath)
 	if err != nil {
 		m.log.Warn("Failed to read the contents of file ", m.nerveConfigPath, " because ", err)
@@ -75,7 +75,7 @@ func (m *NginxNerveStats) Collect() {
 	}
 }
 
-func (m *NginxNerveStats) collectMetricsForService(service util.NerveService, path string) {
+func (m *nginxNerveStats) collectMetricsForService(service util.NerveService, path string) {
 	serviceLog := m.log.WithField("service", service.Name)
 	statsURL := fmt.Sprintf("http://localhost:%d%s", service.Port, path)
 

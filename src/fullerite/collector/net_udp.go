@@ -40,8 +40,7 @@ type procNetUpdLine struct {
 	drops         string
 }
 
-// ProcNetUDPStats Collector to record udp stats
-type ProcNetUDPStats struct {
+type procNetUDPStats struct {
 	baseCollector
 	localAddressWhitelist  *regexp.Regexp
 	remoteAddressWhitelist *regexp.Regexp
@@ -52,7 +51,7 @@ func init() {
 }
 
 func newProcNetUDPStats(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
-	s := new(ProcNetUDPStats)
+	s := new(procNetUDPStats)
 	s.log = log
 	s.channel = channel
 	s.interval = initialInterval
@@ -62,7 +61,7 @@ func newProcNetUDPStats(channel chan metric.Metric, initialInterval int, log *l.
 }
 
 // Configure Override *baseCollector.Configure()
-func (s *ProcNetUDPStats) Configure(configMap map[string]interface{}) {
+func (s *procNetUDPStats) Configure(configMap map[string]interface{}) {
 	s.configureCommonParams(configMap)
 
 	if whitelist, exists := configMap["localAddressWhitelist"]; exists {
@@ -88,7 +87,7 @@ func (s *ProcNetUDPStats) Configure(configMap map[string]interface{}) {
 	}
 }
 
-func (s *ProcNetUDPStats) Collect() {
+func (s *procNetUDPStats) Collect() {
 	if s.localAddressWhitelist == nil && s.remoteAddressWhitelist == nil {
 		return
 	}
@@ -111,7 +110,7 @@ func (s *ProcNetUDPStats) Collect() {
 	}
 }
 
-func (s *ProcNetUDPStats) createMetric(name string, value float64, dims map[string]string) metric.Metric {
+func (s *procNetUDPStats) createMetric(name string, value float64, dims map[string]string) metric.Metric {
 	m := metric.New("udp.drops")
 	m.Value = value
 	m.MetricType = metric.CumulativeCounter
@@ -119,7 +118,7 @@ func (s *ProcNetUDPStats) createMetric(name string, value float64, dims map[stri
 	return m
 }
 
-func (s *ProcNetUDPStats) getProcNetUDPStats() []procNetUpdLine {
+func (s *procNetUDPStats) getProcNetUDPStats() []procNetUpdLine {
 	cmdLine := []string{
 		"cat",
 		"/proc/net/udp",
@@ -134,7 +133,7 @@ func (s *ProcNetUDPStats) getProcNetUDPStats() []procNetUpdLine {
 	return s.parseProcNetUDPLines(string(out))
 }
 
-func (s *ProcNetUDPStats) runCommand(cmdLine []string) []byte {
+func (s *procNetUDPStats) runCommand(cmdLine []string) []byte {
 	var out []byte
 	var err error
 
@@ -148,7 +147,7 @@ func (s *ProcNetUDPStats) runCommand(cmdLine []string) []byte {
 	return out
 }
 
-func (s *ProcNetUDPStats) parseProcNetUDPLines(out string) []procNetUpdLine {
+func (s *procNetUDPStats) parseProcNetUDPLines(out string) []procNetUpdLine {
 	raw := strings.Trim(out, "\n")
 	lines := strings.Split(raw, "\n")
 	stats := []procNetUpdLine{}

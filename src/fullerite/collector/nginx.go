@@ -15,7 +15,7 @@ import (
 	l "github.com/Sirupsen/logrus"
 )
 
-type NginxStats struct {
+type nginxStats struct {
 	baseCollector
 	client   http.Client
 	statsURL string
@@ -43,7 +43,7 @@ func init() {
 }
 
 func newNginxStats(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
-	m := new(NginxStats)
+	m := new(nginxStats)
 
 	m.log = log
 	m.channel = channel
@@ -54,7 +54,7 @@ func newNginxStats(channel chan metric.Metric, initialInterval int, log *l.Entry
 	return m
 }
 
-func (m *NginxStats) Configure(configMap map[string]interface{}) {
+func (m *nginxStats) Configure(configMap map[string]interface{}) {
 	m.configureCommonParams(configMap)
 
 	c := config.GetAsMap(configMap)
@@ -76,7 +76,7 @@ func (m *NginxStats) Configure(configMap map[string]interface{}) {
 	m.statsURL = fmt.Sprintf("http://%s:%s%s", host, port, path)
 }
 
-func (m *NginxStats) Collect() {
+func (m *nginxStats) Collect() {
 	for _, metric := range getNginxMetrics(m.client, m.statsURL, m.log) {
 		m.Channel() <- metric
 	}
@@ -136,14 +136,14 @@ func getNginxMetrics(client http.Client, statsURL string, log *l.Entry) []metric
 			conn, _ := strconv.ParseFloat(match[1], 64)
 			acc, _ := strconv.ParseFloat(match[2], 64)
 			req, _ := strconv.ParseFloat(match[3], 64)
-			req_per_conn := req / acc
+			reqPerConn := req / acc
 
 			metrics = append(
 				metrics,
 				buildNginxMetric("nginx.conn_accepted", metric.CumulativeCounter, conn),
 				buildNginxMetric("nginx.conn_handled", metric.CumulativeCounter, acc),
 				buildNginxMetric("nginx.req_handled", metric.CumulativeCounter, req),
-				buildNginxMetric("nginx.req_per_conn", metric.Gauge, req_per_conn),
+				buildNginxMetric("nginx.req_per_conn", metric.Gauge, reqPerConn),
 			)
 		} else if match := connectionStatusRE.FindStringSubmatch(line); match != nil {
 			reading, _ := strconv.ParseFloat(match[1], 64)

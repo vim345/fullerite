@@ -57,7 +57,7 @@ func (parser *JavaMetric) parseMapOfMap(
 			}
 
 			if parser.ccEnabled && rollup != "value" {
-			// For legacy reasons we append the rollup to the metric name
+				// For legacy reasons we append the rollup to the metric name
 				mNameWithSuffix = mName + "." + rollup
 				if rollup == "count" {
 					mType = metric.CumulativeCounter
