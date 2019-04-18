@@ -188,6 +188,41 @@ func TestUWSGIMetricConversionNewDataFormat(t *testing.T) {
 	}
 }
 
+func TestServiceDims(t *testing.T) {
+	var jsonBlob = []byte(`{
+		"version": "3.0.0",
+		"format": 2,
+		"gauges": [],
+		"histograms": [],
+		"meters": [],
+		"timers": [],
+        "service_dims": {
+              "git_sha": "aabbcc"
+        },
+		"counters": [
+			{
+				"name": "tests.my_counter",
+				"count": 17.0,
+				"dimensions": {
+					"test": "counter",
+					"two": "four"
+				}
+			}
+		]
+	}`)
+
+	parser := NewUWSGIMetric(jsonBlob, "uwsgi.1.0", false)
+
+	actual, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Failed to parse input json: %s", err)
+	}
+
+	for _, m := range actual {
+		assert.True(t, m.Dimensions["git_sha"] == "aabbcc")
+	}
+}
+
 func TestUWSGIMetricConversionCumulativeCountersEnabled(t *testing.T) {
 	testMeters := make(map[string]map[string]interface{})
 	testMeters["pyramid_uwsgi_metrics.tweens.5xx-responses"] = map[string]interface{}{

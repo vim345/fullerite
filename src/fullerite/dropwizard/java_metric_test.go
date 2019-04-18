@@ -32,3 +32,57 @@ func TestJavaMetric(t *testing.T) {
 		}
 	}
 }
+
+func TestNoServiceDimsWithJavaMetrics(t *testing.T) {
+	var jsonBlob = []byte(`{
+  "version": "4.0.0",
+  "gauges": {
+    "jvm.attribute.uptime": {
+      "value": 252892259
+    }
+  }
+}`)
+
+	parser := NewJavaMetric(jsonBlob, "4.0.0", false)
+
+	actual, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Failed to parse input json: %s", err)
+	}
+
+	for _, m := range actual {
+		assert.Equal(t, "gauge", m.MetricType)
+		assert.Equal(t, 3, len(m.Dimensions))
+		assert.Equal(t, "jvm.attribute.uptime", m.Name)
+	}
+}
+
+func TestServiceDimsWithJavaMetrics(t *testing.T) {
+	var jsonBlob = []byte(`{
+  "version": "4.0.0",
+  "service_dims": {
+    "git_sha": "aabbcc",
+    "deploy_group": "canary"
+  },
+  "gauges": {
+    "jvm.attribute.uptime": {
+      "value": 252892259
+    }
+  }
+}`)
+
+	parser := NewJavaMetric(jsonBlob, "4.0.0", false)
+
+	actual, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Failed to parse input json: %s", err)
+	}
+
+	for _, m := range actual {
+		assert.Equal(t, "gauge", m.MetricType)
+		assert.Equal(t, 5, len(m.Dimensions))
+		assert.Equal(t, "jvm.attribute.uptime", m.Name)
+		assert.Equal(t, m.Dimensions["git_sha"], "aabbcc")
+		assert.Equal(t, m.Dimensions["deploy_group"], "canary")
+	}
+}
