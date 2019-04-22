@@ -20,7 +20,7 @@ import (
 func TestNginxNerveStatsNewNginxNerveStats(t *testing.T) {
 	channel := make(chan metric.Metric)
 	log := defaultLog.WithFields(l.Fields{"collector": "NginxNerveStats"})
-	stats := newNginxNerveStats(channel, 10, log).(*NginxNerveStats)
+	stats := newNginxNerveStats(channel, 10, log).(*nginxNerveStats)
 
 	assert.Equal(t, channel, stats.channel)
 	assert.Equal(t, 10, stats.interval)
@@ -31,7 +31,7 @@ func TestNginxNerveStatsNewNginxNerveStats(t *testing.T) {
 func TestNginxNerveStatsConfigureDefaults(t *testing.T) {
 	channel := make(chan metric.Metric)
 	log := defaultLog.WithFields(l.Fields{"collector": "NginxNerveStats"})
-	stats := newNginxNerveStats(channel, 10, log).(*NginxNerveStats)
+	stats := newNginxNerveStats(channel, 10, log).(*nginxNerveStats)
 
 	configMap := map[string]interface{}{}
 	stats.Configure(configMap)
@@ -40,7 +40,7 @@ func TestNginxNerveStatsConfigureDefaults(t *testing.T) {
 func TestNginxNerveStatsConfigure(t *testing.T) {
 	channel := make(chan metric.Metric)
 	log := defaultLog.WithFields(l.Fields{"collector": "NginxNerveStats"})
-	stats := newNginxNerveStats(channel, 10, log).(*NginxNerveStats)
+	stats := newNginxNerveStats(channel, 10, log).(*nginxNerveStats)
 
 	configMap := map[string]interface{}{
 		"servicePath.routing": "/_routing/nginx-status",
@@ -80,7 +80,7 @@ func TestNginxNerveStatsCollect(t *testing.T) {
 
 	channel := make(chan metric.Metric)
 	log := defaultLog.WithFields(l.Fields{"collector": "NginxNerveStats"})
-	inst := newNginxNerveStats(channel, 10, log).(*NginxNerveStats)
+	inst := newNginxNerveStats(channel, 10, log).(*nginxNerveStats)
 	inst.nerveConfigPath = tmpFile.Name()
 	inst.Configure(cfg)
 

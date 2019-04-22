@@ -24,6 +24,7 @@ func NewJavaMetric(data []byte, schemaVer string, ccEnabled bool) *JavaMetric {
 // Parse returns dimensionalized parsed metrics
 func (parser *JavaMetric) Parse() ([]metric.Metric, error) {
 	parsed := new(Format)
+	parsed.ServiceDims = map[string]interface{}{}
 	err := json.Unmarshal(parser.data, parsed)
 
 	if err != nil {
@@ -31,6 +32,9 @@ func (parser *JavaMetric) Parse() ([]metric.Metric, error) {
 	}
 
 	results := extractParsedMetric(parser, parsed)
+	for k, v := range parsed.ServiceDims {
+		metric.AddToAll(&results, map[string]string{k: v.(string)})
+	}
 	return results, nil
 }
 
@@ -57,7 +61,7 @@ func (parser *JavaMetric) parseMapOfMap(
 			}
 
 			if parser.ccEnabled && rollup != "value" {
-			// For legacy reasons we append the rollup to the metric name
+				// For legacy reasons we append the rollup to the metric name
 				mNameWithSuffix = mName + "." + rollup
 				if rollup == "count" {
 					mType = metric.CumulativeCounter
