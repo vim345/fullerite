@@ -72,11 +72,11 @@ class NginxCollector(diamond.collector.Collector):
                         int(activeConnectionsRE.match(l).group('conn')))
                 elif totalConnectionsRE.match(l):
                     m = totalConnectionsRE.match(l)
-                    reqPerConn = float(m.group('req')) / float(m.group('acc'))
+                    req_per_conn = float(m.group('req')) / float(m.group('acc'))
                     self.publish_cumulative_counter('nginx.conn_accepted', int(m.group('conn')))
                     self.publish_cumulative_counter('nginx.conn_handled', int(m.group('acc')))
                     self.publish_cumulative_counter('nginx.req_handled', int(m.group('req')))
-                    self.publish_gauge('nginx.req_per_conn', float(reqPerConn))
+                    self.publish_gauge('nginx.req_per_conn', float(req_per_conn))
                 elif connectionStatusRE.match(l):
                     m = connectionStatusRE.match(l)
                     self.publish_gauge('nginx.act_reads', int(m.group('reading')))
