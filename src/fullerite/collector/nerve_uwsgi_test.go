@@ -138,6 +138,16 @@ func getTestJavaResponse() string {
 	`
 }
 
+func getArtificialSimpleUWSGIWorkerStatsResponse() string {
+	return `{
+        "workers":[
+		{"status":"busy"},
+		{"status":"idle"},
+		{"status":"busy"}
+	]
+	}`
+}
+
 func getTestSchemaUWSGIResponse() string {
 	return `{
     "service_dims": {
@@ -169,32 +179,39 @@ func getTestSchemaUWSGIResponse() string {
 	`
 }
 
-func validateUWSGIResults(t *testing.T, actual []metric.Metric) {
-	assert.Equal(t, 5, len(actual))
+func validateUWSGIResults(t *testing.T, actual []metric.Metric, length int) {
+	assert.Equal(t, length, len(actual))
 
 	for _, m := range actual {
-		metricTypeDim, exists := m.GetDimensionValue("type")
-		assert.True(t, exists)
-		rollup, exists := m.GetDimensionValue("rollup")
-		assert.True(t, exists)
-
 		switch m.Name {
 		case "some_random_metric":
+			metricTypeDim, exists := m.GetDimensionValue("type")
+			rollup, exists := m.GetDimensionValue("rollup")
+			assert.True(t, exists)
 			assert.Equal(t, "rollup1", rollup)
 			assert.Equal(t, "gauge", metricTypeDim)
 			assert.Equal(t, 12.0, m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "othertimer":
+			metricTypeDim, exists := m.GetDimensionValue("type")
+			rollup, exists := m.GetDimensionValue("rollup")
+			assert.True(t, exists)
 			assert.Equal(t, "mean", rollup)
 			assert.Equal(t, "timer", metricTypeDim)
 			assert.Equal(t, 345.0, m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "some_timer":
+			metricTypeDim, exists := m.GetDimensionValue("type")
+			rollup, exists := m.GetDimensionValue("rollup")
+			assert.True(t, exists)
 			assert.Equal(t, "average", rollup)
 			assert.Equal(t, "timer", metricTypeDim)
 			assert.Equal(t, 123.0, m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
-		case "ACounter":
+		case "Acounter":
+			metricTypeDim, exists := m.GetDimensionValue("type")
+			rollup, exists := m.GetDimensionValue("rollup")
+			assert.True(t, exists)
 			assert.Equal(t, metric.Counter, m.MetricType)
 			val, exists := map[string]float64{
 				"firstrollup":  134,
@@ -203,7 +220,16 @@ func validateUWSGIResults(t *testing.T, actual []metric.Metric) {
 			assert.Equal(t, "counter", metricTypeDim)
 			assert.True(t, exists)
 			assert.Equal(t, val, m.Value)
+		case "IdleWorkers":
+			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "BusyWorkers":
+			assert.Equal(t, 2.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		default:
+			t.Fatal("Unexpected metric name: " + m.Name)
 		}
+
 	}
 }
 
@@ -243,12 +269,12 @@ func validateJavaResults(t *testing.T, actual []metric.Metric, serviceName strin
 			assert.True(t, exists)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 			assert.Equal(t, val, m.Value)
-		case "ACounter":
+		case "Acounter":
 			assert.Equal(t, metric.Counter, m.MetricType)
 			val, exists := map[string]float64{
 				"firstrollup":  134,
 				"secondrollup": 89,
-				"counter":      100,
+				"count":        100,
 			}[rollup]
 			assert.Equal(t, "counter", metricTypeDim)
 			assert.True(t, exists)
@@ -262,6 +288,8 @@ func validateJavaResults(t *testing.T, actual []metric.Metric, serviceName strin
 			dim, exists = m.GetDimensionValue("dim3")
 			assert.True(t, exists)
 			assert.Equal(t, "val3", dim)
+		default:
+			t.Fatal("Unexpected metric name: " + m.Name)
 		}
 
 		dim, exists := m.GetDimensionValue("service")
@@ -327,6 +355,7 @@ func parseURL(url string) (string, string) {
 }
 
 func getTestNerveUWSGI() *nerveUWSGICollector {
+	l.SetLevel(l.DebugLevel)
 	return newNerveUWSGI(make(chan metric.Metric), 12, l.WithField("testing", "nerveuwsgi")).(*nerveUWSGICollector)
 }
 
@@ -338,6 +367,7 @@ func TestDefaultConfigNerveUWSGI(t *testing.T) {
 	assert.Equal(t, 2, inst.timeout)
 	assert.Equal(t, "/etc/nerve/nerve.conf.json", inst.configFilePath)
 	assert.Equal(t, "status/metrics", inst.queryPath)
+	assert.Equal(t, "status/uwsgi", inst.workersStatsQueryPath)
 }
 
 func TestConfigNerveUWSGI(t *testing.T) {
@@ -412,21 +442,19 @@ func TestNerveUWSGICollect(t *testing.T) {
 
 	go inst.Collect()
 
+	length := 5
 	actual := []metric.Metric{}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < length; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
 
-	validateUWSGIResults(t, actual)
+	validateUWSGIResults(t, actual, length)
 	validateFullDimensions(t, actual, "test_service", port)
 	validateEmptyChannel(t, inst.Channel())
 }
 
 func TestNerveUWSGICollectWithSchema(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		w.Header().Set("Metrics-Schema", "uwsgi.1.1")
-		fmt.Fprint(w, getTestSchemaUWSGIResponse())
-	}))
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
 	defer server.Close()
 
 	// assume format is http://ipaddr:port
@@ -448,7 +476,6 @@ func TestNerveUWSGICollectWithSchema(t *testing.T) {
 
 	cfg := map[string]interface{}{
 		"configFilePath": tmpFile.Name(),
-		"queryPath":      "",
 	}
 
 	inst := getTestNerveUWSGI()
@@ -457,12 +484,241 @@ func TestNerveUWSGICollectWithSchema(t *testing.T) {
 	go inst.Collect()
 
 	actual := []metric.Metric{}
-	for i := 0; i < 5; i++ {
+	length := 5
+	for i := 0; i < length; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
 
-	validateUWSGIResults(t, actual)
+	validateUWSGIResults(t, actual, length)
 	validateFullSchemaDimensions(t, actual, "test_service", port)
+	validateEmptyChannel(t, inst.Channel())
+}
+
+func UWSGITestHTTPHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/status/metrics":
+		w.Header().Set("Metrics-Schema", "uwsgi.1.1")
+		fmt.Fprint(w, getTestSchemaUWSGIResponse())
+	case "/status/javametrics":
+		w.Header().Set("Metrics-Schema", "java-1.1")
+		fmt.Fprint(w, getTestJavaResponse())
+	case "/status/uwsgi":
+		fmt.Fprint(w, getArtificialSimpleUWSGIWorkerStatsResponse())
+	case "/status/slowuwsgi":
+		time.Sleep(3000 * time.Millisecond)
+		fmt.Fprint(w, getArtificialSimpleUWSGIWorkerStatsResponse())
+	default:
+		w.WriteHeader(404)
+		fmt.Fprint(w, "NOTHING to see here")
+	}
+}
+
+func TestNerveUWSGICollectWithSchemaAndWorkers(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":      tmpFile.Name(),
+		"workersStatsEnabled": true,
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	length := 7
+	for i := 0; i < length; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, length)
+	validateEmptyChannel(t, inst.Channel())
+}
+
+func TestNerveUWSGICollectWithSchemaAndWorkersBlacklisted(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":        tmpFile.Name(),
+		"workersStatsEnabled":   true,
+		"workersStatsBlacklist": []string{"test_service"},
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	length := 5
+	for i := 0; i < length; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, length)
+	validateEmptyChannel(t, inst.Channel())
+}
+
+func TestNerveUWSGICollectWithSchemaAndWorkersWrongEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":        tmpFile.Name(),
+		"queryPath":             "status/metrics",
+		"workersStatsEnabled":   true,
+		"workersStatsQueryPath": "status/uwsgy",
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	length := 5
+	for i := 0; i < length; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, length)
+	validateEmptyChannel(t, inst.Channel())
+}
+func TestNerveUWSGICollectWithSchemaAndWorkersTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":        tmpFile.Name(),
+		"workersStatsEnabled":   true,
+		"workersStatsQueryPath": "status/slowuwsgi",
+		"http_timeout":          2,
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	length := 5
+	for i := 0; i < length; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, length)
+	validateEmptyChannel(t, inst.Channel())
+}
+
+func TestUWSGICollectorNoopOnJavaCollectWithSchema(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":      tmpFile.Name(),
+		"queryPath":           "status/javametrics",
+		"workersStatsEnabled": true, // Adding this here make sure this is a noop
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	for i := 0; i < 8; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateJavaResults(t, actual, "test_service", port)
 	validateEmptyChannel(t, inst.Channel())
 }
 
@@ -618,12 +874,13 @@ func TestNonConflictingServiceQueries(t *testing.T) {
 
 	go inst.Collect()
 
+	length := 5
 	actual := []metric.Metric{}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < length; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
 
-	validateUWSGIResults(t, actual)
+	validateUWSGIResults(t, actual, length)
 	validateFullDimensions(t, actual, "test_service", goodPort)
 	validateEmptyChannel(t, inst.Channel())
 }
@@ -634,7 +891,7 @@ func TestUWSGIResponseConversion(t *testing.T) {
 	actual, err := dropwizard.Parse(uwsgiRsp, "", false)
 
 	assert.Nil(t, err)
-	validateUWSGIResults(t, actual)
+	validateUWSGIResults(t, actual, 5)
 	for _, m := range actual {
 		assert.Equal(t, 2, len(m.Dimensions))
 	}
@@ -688,7 +945,7 @@ func TestNerveUWSGICollectWithBlacklist(t *testing.T) {
 			"service": "test_service",
 			"port":    port}}
 	actual = append(actual, dropped)
-	validateUWSGIResults(t, actual)
+	validateUWSGIResults(t, actual, 5)
 	validateFullDimensions(t, actual, "test_service", port)
 	validateEmptyChannel(t, inst.Channel())
 }
