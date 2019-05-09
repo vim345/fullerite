@@ -127,7 +127,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	// We still maintain a blacklist (with wildcard support) just in case
 	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
 		serviceLog.Debug("Trying to fetch workers stats")
-		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, "/status/uwsgi")
+		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, "status/uwsgi")
 		uwsgiWorkerStatsMetrics := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
 		if uwsgiWorkerStatsMetrics != nil {
 			// Add the metrics to our existing ones so we get the post process for free.
