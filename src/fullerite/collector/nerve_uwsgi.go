@@ -235,11 +235,14 @@ func parseUWSGIWorkersStats(raw []byte) ([]metric.Metric, error) {
 	}
 	registry := make(map[string]int)
 	registry["IdleWorkers"] = 0
-	registry["BusyWorkers"] = 0
-	registry["SigWorkers"] = 0
-	registry["PauseWorkers"] = 0
-	registry["CheapWorkers"] = 0
-	registry["UnknownStateWorkers"] = 0
+	// Initialize this one to 1 because the collector uses one worker
+	registry["BusyWorkers"] = 1
+
+	// Let's not initialize these are they are mostly 0
+	// registry["SigWorkers"] = 0
+	// registry["PauseWorkers"] = 0
+	// registry["CheapWorkers"] = 0
+	// registry["UnknownStateWorkers"] = 0
 	workers, ok := result["workers"].([]interface{})
 	if !ok {
 		return results, fmt.Errorf("\"workers\" field not found or not an array")
@@ -259,7 +262,7 @@ func parseUWSGIWorkersStats(raw []byte) ([]metric.Metric, error) {
 		metricName := strings.Title(status) + "Workers"
 		_, exists := registry[metricName]
 		if !exists {
-			metricName = "UnknownStateWorkers"
+			registry[metricName] = 0
 		}
 		registry[metricName]++
 	}
