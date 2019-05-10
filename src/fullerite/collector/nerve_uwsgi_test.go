@@ -171,230 +171,41 @@ func getTestSchemaUWSGIResponse() string {
 
 func getArtificialNonRealisticUWSGIWorkerStatsResponse() string {
 	return `{
-        "workers":[
-		{"status":"idle"},
-		{"status":"busy"},
-		{"status":"pause"},
-		{"status":"cheap"},
-		{"status":"sig255"},
-		{"status":"invalid"},
-		{"status":"idle"},
-		{"status":"cheap255"}
-	]
-	}`
-}
-
-func getArtificialRealisticUWSGIWorkerStatsResponse() string {
-	return `{
-        "workers":[
-		{"status":"idle"},
-		{"status":"busy"},
-		{"status":"idle"},
-		{"status":"busy"},
-		{"status":"idle"},
-		{"status":"busy"},
-		{"status":"idle"},
-		{"status":"idle"},
-	]
-	}`
-}
-
-func getFullUWSGIWorkerStatsResponse() string {
-	return `{
-	"version":"XXXXXXXXXXXX",
-	"listen_queue":0,
-	"listen_queue_errors":0,
-	"signal_queue":0,
-	"load":0,
-	"pid":104912,
-	"uid":33,
-	"gid":33,
-	"cwd":"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-	"locks":[
-	{
-		"user 0":0
-	},
-	{
-		"signal":0
-	},
-	{
-		"filemon":0
-	},
-	{
-		"timer":0
-	},
-	{
-		"rbtimer":0
-	},
-	{
-		"cron":0
-	},
-	{
-		"rpc":0
-	},
-	{
-		"snmp":0
-	},
-	{
-		"cache_healthcheck":0
-	}
-	],
-	"caches":[
-	{
-		"name":"healthcheck",
-		"hash":"djb33x",
-		"hashsize":65536,
-		"keysize":2048,
-		"max_items":32,
-		"blocks":32,
-		"blocksize":65536,
-		"items":0,
-		"hits":0,
-		"miss":0,
-		"full":0,
-		"last_modified_at":0
-	}
-	],
-	"sockets":[
-	{
-		"name":"127.0.0.1:2000",
-		"proto":"uwsgi",
-		"queue":0,
-		"max_queue":100,
-		"shared":0,
-		"can_offload":0
-	}
-	],
-	"workers":[
-	{
-		"id":1,
-		"pid":79545,
-		"accepting":1,
-		"requests":1895,
-		"delta_requests":345,
-		"exceptions":0,
-		"harakiri_count":0,
-		"signals":300,
-		"signal_queue":0,
-		"status":"idle",
-		"rss":789790720,
-		"vsz":1477410816,
-		"running_time":19757779,
-		"last_spawn":1477079439,
-		"respawn_count":5,
-		"tx":2244564,
-		"avg_rt":182085,
-		"apps":[
-		{
-			"id":0,
-			"modifier1":0,
-			"mountpoint":"",
-			"startup_time":23,
-			"requests":1895,
-			"exceptions":0,
-			"chdir":""
-		}
-		],
-		"cores":[
-		{
-			"id":0,
-			"requests":1895,
-			"static_requests":0,
-			"routed_requests":0,
-			"offloaded_requests":0,
-			"write_errors":0,
-			"read_errors":0,
-			"in_request":0,
-			"vars":[
-
-			],
-			"req_info":
-			{
-
+		"counters": {
+			"Acounter":{
+				"firstrollup": 134,
+				"secondrollup": 89
 			}
-		}
-		]
-	},
-	{
-		"id":2,
-		"pid":3930,
-		"accepting":1,
-		"requests":2419,
-		"delta_requests":290,
-		"exceptions":0,
-		"harakiri_count":0,
-		"signals":300,
-		"signal_queue":0,
-		"status":"busy",
-		"rss":827023360,
-		"vsz":1514618880,
-		"running_time":36199811,
-		"last_spawn":1477081120,
-		"respawn_count":5,
-		"tx":6627598,
-		"avg_rt":178958,
-		"apps":[
-		{
-			"id":0,
-			"modifier1":0,
-			"mountpoint":"",
-			"startup_time":23,
-			"requests":2420,
-			"exceptions":0,
-			"chdir":""
-		}
-		],
-		"cores":[
-		{
-			"id":0,
-			"requests":2419,
-			"static_requests":0,
-			"routed_requests":0,
-			"offloaded_requests":0,
-			"write_errors":0,
-			"read_errors":0,
-			"in_request":1,
-			"vars":[
-"SCRIPT_URL=/",
-"SCRIPT_URI=XXXXXXXXXXXXXXXXXXXXX",
-"PATH_INFO=/",
-"HTTP_USER_AGENT=XXXXXXXXXXXXXXXXXXXXXXX",
-"HTTP_ACCEPT=*/*",
-"HTTP_HOST=XXXXXXXXXXXXXXXXXXXXXXXX",
-"HTTP_X_MODE=ro",
-"HTTP_X_FORWARDED_FOR=XXXXXXXXXXXXXXXXXXXXX",
-"HTTP_CONNECTION=close",
-"PATH=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-"SERVER_SIGNATURE=",
-"SERVER_SOFTWARE=XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-"SERVER_NAME=XXXXXXXXXXXX",
-"SERVER_ADDR=XXXXXXXXXXXXXXXXXX",
-"SERVER_PORT=80",
-"REMOTE_ADDR=XXXXXXXXXXXXXXXX",
-"DOCUMENT_ROOT=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-"SERVER_ADMIN=XXXXXXXXXXXXXXXXX",
-"SCRIPT_FILENAME=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-"REMOTE_PORT=XXXXX",
-"GATEWAY_INTERFACE=CGI/1.1",
-"SERVER_PROTOCOL=HTTP/1.1",
-"REQUEST_METHOD=GET",
-"QUERY_STRING=",
-"REQUEST_URI=XXXXXXXXXX",
-"SCRIPT_NAME=",
-"BODY_SIZE=0",
-"BODY_SIZE=0",
-""
-			],
-			"req_info":
-			{
-			"request_start":1477081161
+		},
+		"meters": {},
+		"timers": {
+			"some_timer": {
+				"average": 123
+			},
+			"othertimer": {
+				"mean": 345
 			}
-		}
+		},
+		"gauges": {
+			"some_random_metric": {
+				"rollup1": 12
+			}
+		},
+		"histograms": {}
+		},
+		{
+			"workers":[
+			{"status":"idle"},
+			{"status":"busy"},
+			{"status":"pause"},
+			{"status":"cheap"},
+			{"status":"sig255"},
+			{"status":"invalid"},
+			{"status":"idle"},
+			{"status":"cheap255"}
 		]
-	}
-	]
-	}
-	`
+		}
+		`
 }
 
 func validateUWSGIResults(t *testing.T, actual []metric.Metric) {
@@ -572,6 +383,7 @@ func TestDefaultConfigNerveUWSGI(t *testing.T) {
 	assert.Equal(t, 2, inst.timeout)
 	assert.Equal(t, "/etc/nerve/nerve.conf.json", inst.configFilePath)
 	assert.Equal(t, "status/metrics", inst.queryPath)
+	assert.Equal(t, "status/uwsgi", inst.workersStatsQueryPath)
 }
 
 func TestConfigNerveUWSGI(t *testing.T) {
@@ -700,54 +512,9 @@ func TestNerveUWSGICollectWithSchema(t *testing.T) {
 	validateEmptyChannel(t, inst.Channel())
 }
 
+// TODO if workerStats is enabled and works
 // TODO if workerStats is enabled but endpoint returns 404
 // TODO if workerStats is enabled with blacklist
-
-func TestNerveUWSGICollectWithSchemaAndWorkerStatsEnabled(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		if w.URL == "/status/metrics" {
-			w.Header().Set("Metrics-Schema", "uwsgi.1.1")
-			fmt.Fprint(w, getTestSchemaUWSGIResponse())
-		}
-	}))
-	defer server.Close()
-
-	ip, port := parseURL(server.URL)
-
-	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
-		"test_service.things.and.stuff": util.EndPoint{ip, port},
-	})
-
-	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
-	defer os.Remove(tmpFile.Name())
-	assert.Nil(t, err)
-
-	marshalled, err := json.Marshal(minimalNerveConfig)
-	assert.Nil(t, err)
-
-	_, err = tmpFile.Write(marshalled)
-	assert.Nil(t, err)
-
-	cfg := map[string]interface{}{
-		"configFilePath":      tmpFile.Name(),
-		"queryPath":           "",
-		"workersStatsEnabled": true,
-	}
-
-	inst := getTestNerveUWSGI()
-	inst.Configure(cfg)
-
-	go inst.Collect()
-
-	actual := []metric.Metric{}
-	for i := 0; i < 5; i++ {
-		actual = append(actual, <-inst.Channel())
-	}
-
-	validateUWSGIResults(t, actual)
-	validateFullSchemaDimensions(t, actual, "test_service", port)
-	validateEmptyChannel(t, inst.Channel())
-}
 
 func TestNerveJavaCollectWithSchema(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
