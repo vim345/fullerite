@@ -33,6 +33,7 @@ type nerveUWSGICollector struct {
 	timeout               int
 	servicesWhitelist     []string
 	workersStatsEnabled   bool
+	workersStatsQueryPath string
 	workersStatsBlacklist []string
 }
 
@@ -51,6 +52,7 @@ func newNerveUWSGI(channel chan metric.Metric, initialInterval int, log *l.Entry
 	col.name = "NerveUWSGI"
 	col.configFilePath = "/etc/nerve/nerve.conf.json"
 	col.queryPath = "status/metrics"
+	col.workersStatsQueryPath = "status/uwsgi"
 	col.timeout = 2
 
 	return col
@@ -72,6 +74,9 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	}
 	if val, exists := configMap["workersStatsEnabled"]; exists {
 		n.workersStatsEnabled = config.GetAsBool(val, false)
+	}
+	if val, exists := configMap["workersStatsQueryPath"]; exists {
+		n.queryPath = val.(string)
 	}
 	if val, exists := configMap["http_timeout"]; exists {
 		n.timeout = config.GetAsInt(val, 2)
@@ -127,7 +132,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	// We still maintain a blacklist (with wildcard support) just in case
 	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
 		serviceLog.Debug("Trying to fetch workers stats")
-		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, "status/uwsgi")
+		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
 		uwsgiWorkerStatsMetrics := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
 		if uwsgiWorkerStatsMetrics != nil {
 			// Add the metrics to our existing ones so we get the post process for free.
@@ -235,10 +240,9 @@ func parseUWSGIWorkersStats(raw []byte) ([]metric.Metric, error) {
 	}
 	registry := make(map[string]int)
 	registry["IdleWorkers"] = 0
-	// Initialize this one to 1 because the collector uses one worker
-	registry["BusyWorkers"] = 1
+	registry["BusyWorkers"] = 0
 
-	// Let's not initialize these are they are mostly 0
+	// Let's emit these only if they aren't 0
 	// registry["SigWorkers"] = 0
 	// registry["PauseWorkers"] = 0
 	// registry["CheapWorkers"] = 0
