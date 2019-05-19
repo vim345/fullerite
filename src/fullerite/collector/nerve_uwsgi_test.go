@@ -142,10 +142,76 @@ func getArtificialSimpleUWSGIWorkerStatsResponse() string {
 	return `{
         "workers":[
 		{"status":"busy"},
-		{"status":"idle"},
+		{"status":"crazy"},
 		{"status":"busy"}
 	]
 	}`
+}
+
+func getTestSchemaPyramidUWSGIMetricsResponseWithoutServiceDims() string {
+	return `{
+	"counters": {
+		"Acounter":{
+			"firstrollup": 134,
+			"secondrollup": 89
+		}
+	},
+	"meters": {
+        "pyramid_uwsgi_metrics.tweens.2xx-responses":{
+            "count": 987
+        }
+    },
+	"timers": {
+		"some_timer": {
+			"average": 123
+		},
+		"othertimer": {
+			"mean": 345
+		}
+	},
+	"gauges": {
+		"some_random_metric": {
+			"rollup1": 12
+		}
+	},
+	"histograms": {}
+	}
+	`
+}
+
+func getTestSchemaPyramidUWSGIMetricsResponse() string {
+	return `{
+    "service_dims": {
+        "firstdim": "first",
+        "seconddim": "second"
+    },
+	"counters": {
+		"Acounter":{
+			"firstrollup": 134,
+			"secondrollup": 89
+		}
+	},
+	"meters": {
+        "pyramid_uwsgi_metrics.tweens.2xx-responses":{
+            "count": 987
+        }
+    },
+	"timers": {
+		"some_timer": {
+			"average": 123
+		},
+		"othertimer": {
+			"mean": 345
+		}
+	},
+	"gauges": {
+		"some_random_metric": {
+			"rollup1": 12
+		}
+	},
+	"histograms": {}
+	}
+	`
 }
 
 func getTestSchemaUWSGIResponse() string {
@@ -221,10 +287,16 @@ func validateUWSGIResults(t *testing.T, actual []metric.Metric, length int) {
 			assert.True(t, exists)
 			assert.Equal(t, val, m.Value)
 		case "IdleWorkers":
-			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, 0.0, m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		case "BusyWorkers":
 			assert.Equal(t, 2.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "CrazyWorkers":
+			assert.Equal(t, 1.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "pyramid_uwsgi_metrics.tweens.2xx-responses":
+			assert.Equal(t, 987.0, m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
 		default:
 			t.Fatal("Unexpected metric name: " + m.Name)
@@ -499,6 +571,12 @@ func UWSGITestHTTPHandler(w http.ResponseWriter, r *http.Request) {
 	case "/status/metrics":
 		w.Header().Set("Metrics-Schema", "uwsgi.1.1")
 		fmt.Fprint(w, getTestSchemaUWSGIResponse())
+	case "/status/pyramiduwsgimetrics":
+		w.Header().Set("Metrics-Schema", "uwsgi.1.1")
+		fmt.Fprint(w, getTestSchemaPyramidUWSGIMetricsResponse())
+	case "/status/pyramiduwsgimetricsnoservicedims":
+		w.Header().Set("Metrics-Schema", "uwsgi.1.1")
+		fmt.Fprint(w, getTestSchemaPyramidUWSGIMetricsResponseWithoutServiceDims())
 	case "/status/javametrics":
 		w.Header().Set("Metrics-Schema", "java-1.1")
 		fmt.Fprint(w, getTestJavaResponse())
@@ -511,6 +589,95 @@ func UWSGITestHTTPHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 		fmt.Fprint(w, "NOTHING to see here")
 	}
+}
+
+func TestNerveUWSGICollectWithSchemaAndWorkersNoExtraDims(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":      tmpFile.Name(),
+		"queryPath":           "status/pyramiduwsgimetricsnoservicedims",
+		"workersStatsEnabled": true,
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	length := 9
+	for i := 0; i < length; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, length)
+	// Here we are just expecting service and port dimensions
+	validateFullDimensions(t, actual, "test_service", port)
+	validateEmptyChannel(t, inst.Channel())
+}
+
+func TestNerveUWSGICollectWithSchemaAndWorkersExtraDims(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(UWSGITestHTTPHandler))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"test_service.things.and.stuff": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+
+	cfg := map[string]interface{}{
+		"configFilePath":      tmpFile.Name(),
+		"queryPath":           "status/pyramiduwsgimetrics",
+		"workersStatsEnabled": true,
+	}
+
+	inst := getTestNerveUWSGI()
+	inst.Configure(cfg)
+
+	go inst.Collect()
+
+	actual := []metric.Metric{}
+	length := 9
+	for i := 0; i < length; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, length)
+	// Here we are expecting all metrics including the uwsgi ones
+	// to contain service, port and the extra service dims
+	validateFullSchemaDimensions(t, actual, "test_service", port)
+	validateEmptyChannel(t, inst.Channel())
 }
 
 func TestNerveUWSGICollectWithSchemaAndWorkers(t *testing.T) {
@@ -545,7 +712,7 @@ func TestNerveUWSGICollectWithSchemaAndWorkers(t *testing.T) {
 	go inst.Collect()
 
 	actual := []metric.Metric{}
-	length := 7
+	length := 8
 	for i := 0; i < length; i++ {
 		actual = append(actual, <-inst.Channel())
 	}

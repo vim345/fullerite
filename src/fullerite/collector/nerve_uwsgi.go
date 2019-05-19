@@ -6,7 +6,6 @@ import (
 	"fullerite/metric"
 	"fullerite/util"
 
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -109,7 +108,6 @@ func (n *nerveUWSGICollector) Collect() {
 // calls an additional endpoint if UWSGI is detected
 func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	serviceLog := n.log.WithField("service", serviceName)
-
 	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 	rawResponse, schemaVer, err := queryEndpoint(endpoint, n.timeout)
@@ -127,18 +125,37 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	// without a costly additional HTTP call.
 	// This prevent us from having to maintain a whitelist of services to query
 	// or from flooding all non UWSGI services with these requests.
-	// We still maintain a blacklist (with wildcard support) just in case
+	// We still maintain a blacklist just in case
 	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
-		serviceLog.Debug("Trying to fetch workers stats")
-		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
-		uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
-		if err != nil {
-			serviceLog.Info("Could not get additional worker stat metrics")
-		} else {
-			// Add the metrics to our existing ones so we get the post process for free.
-			serviceLog.Debug("Additional workers metrics collected: ", len(uwsgiWorkerStatsMetrics))
-			for _, v := range uwsgiWorkerStatsMetrics {
-				metrics = append(metrics, v)
+		extraDims := map[string]string{}
+		skipParsing := false
+		for _, metric := range metrics {
+			// In the future, we could include Workers stats in the normal metrics endpoint
+			// In this case we don't need to gather them again.
+			if strings.Contains(metric.Name, "Workers") {
+				skipParsing = true
+			}
+			// This is a cheap way to grab the extra dimensions from a known uwsgi metric
+			// sparing us from refactoring dropwizard.Parse or from handling the JSON decoding again
+			if metric.Name == "pyramid_uwsgi_metrics.tweens.2xx-responses" {
+				for dim, v := range metric.Dimensions {
+					extraDims[dim] = v
+				}
+			}
+		}
+		if !skipParsing {
+			serviceLog.Debug("Trying to fetch workers stats")
+			uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
+			uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
+			if err != nil {
+				serviceLog.Info("Could not get additional worker stat metrics")
+			} else {
+				// Add the metrics to our existing ones so we get the post process for free.
+				serviceLog.Debug("Additional workers metrics collected: ", len(uwsgiWorkerStatsMetrics))
+				metric.AddToAll(&uwsgiWorkerStatsMetrics, extraDims)
+				for _, v := range uwsgiWorkerStatsMetrics {
+					metrics = append(metrics, v)
+				}
 			}
 		}
 	}
@@ -223,56 +240,10 @@ func (n *nerveUWSGICollector) tryFetchUWSGIWorkersStats(serviceName string, endp
 		serviceLog.Info("Failed to query workers stats endpoint ", endpoint, ": ", err)
 		return emptyResult, err
 	}
-	metrics, err := parseUWSGIWorkersStats(rawResponse)
+	metrics, err := util.ParseUWSGIWorkersStats(rawResponse)
 	if err != nil {
 		serviceLog.Info("No workers stats retreived: ", err)
 		return emptyResult, err
 	}
 	return metrics, nil
-}
-
-// Counts workers status stats from JSON content
-func parseUWSGIWorkersStats(raw []byte) ([]metric.Metric, error) {
-	result := make(map[string]interface{})
-	err := json.Unmarshal(raw, &result)
-	results := []metric.Metric{}
-	if err != nil {
-		return results, err
-	}
-	registry := make(map[string]int)
-	registry["IdleWorkers"] = 0
-	registry["BusyWorkers"] = 0
-
-	// Let's emit these only if they aren't 0
-	// registry["SigWorkers"] = 0
-	// registry["PauseWorkers"] = 0
-	// registry["CheapWorkers"] = 0
-	// registry["UnknownStateWorkers"] = 0
-	workers, ok := result["workers"].([]interface{})
-	if !ok {
-		return results, fmt.Errorf("\"workers\" field not found or not an array")
-	}
-	for _, worker := range workers {
-		workerMap, ok := worker.(map[string]interface{})
-		if !ok {
-			return results, fmt.Errorf("worker record is not a map")
-		}
-		status, ok := workerMap["status"].(string)
-		if !ok {
-			return results, fmt.Errorf("status not found or not a string")
-		}
-		if strings.Index(status, "sig") == 0 {
-			status = "sig"
-		}
-		metricName := strings.Title(status) + "Workers"
-		_, exists := registry[metricName]
-		if !exists {
-			registry[metricName] = 0
-		}
-		registry[metricName]++
-	}
-	for key, value := range registry {
-		results = append(results, metric.WithValue(key, float64(value)))
-	}
-	return results, err
 }
