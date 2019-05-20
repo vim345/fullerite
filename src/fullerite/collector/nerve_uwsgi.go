@@ -116,7 +116,6 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		return
 	}
 	metrics, err := dropwizard.Parse(rawResponse, schemaVer, n.serviceInWhitelist(serviceName))
-	extraDims := dropwizard.ExtractServiceDims(rawResponse)
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
@@ -132,11 +131,12 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		for _, metric := range metrics {
 			// In the future, we could include Workers stats in the normal metrics endpoint
 			// In this case we don't need to gather them again.
-			if strings.Contains(metric.Name, "Workers") {
+			if metric.Name == "BusyWorkers" {
 				skipParsing = true
 			}
 		}
 		if !skipParsing {
+			extraDims := dropwizard.ExtractServiceDims(rawResponse)
 			serviceLog.Debug("Trying to fetch workers stats")
 			uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
 			uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
