@@ -116,6 +116,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		return
 	}
 	metrics, err := dropwizard.Parse(rawResponse, schemaVer, n.serviceInWhitelist(serviceName))
+	extraDims := dropwizard.ExtractServiceDims(rawResponse)
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
@@ -127,20 +128,12 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	// or from flooding all non UWSGI services with these requests.
 	// We still maintain a blacklist just in case
 	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
-		extraDims := map[string]string{}
 		skipParsing := false
 		for _, metric := range metrics {
 			// In the future, we could include Workers stats in the normal metrics endpoint
 			// In this case we don't need to gather them again.
 			if strings.Contains(metric.Name, "Workers") {
 				skipParsing = true
-			}
-			// This is a cheap way to grab the extra dimensions from a known uwsgi metric
-			// sparing us from refactoring dropwizard.Parse or from handling the JSON decoding again
-			if metric.Name == "pyramid_uwsgi_metrics.tweens.2xx-responses" {
-				for dim, v := range metric.Dimensions {
-					extraDims[dim] = v
-				}
 			}
 		}
 		if !skipParsing {
