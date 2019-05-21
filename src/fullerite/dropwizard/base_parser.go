@@ -192,11 +192,14 @@ func (parser *BaseParser) parseMapOfMap(
 	return []metric.Metric{}
 }
 
+type serviceDimsOnly struct {
+	ServiceDims map[string]interface{} `json:"service_dims"`
+}
+
 // ExtractServiceDims is a lightweight version of extractParsedMetric to make
 // common service dimensions available in the collector
 func ExtractServiceDims(raw []byte) map[string]string {
-	parsed := new(Format)
-	parsed.ServiceDims = map[string]interface{}{}
+	parsed := new(serviceDimsOnly)
 	results := map[string]string{}
 	err := json.Unmarshal(raw, parsed)
 

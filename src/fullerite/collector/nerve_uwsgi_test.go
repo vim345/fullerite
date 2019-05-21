@@ -565,6 +565,97 @@ func TestNerveUWSGICollectWorkersStatsEnabledServiceDims(t *testing.T) {
 	}
 	testNerveUWSGICollectHelper(t, httpHandler, cfg, expectedMetrics)
 }
+func TestNerveUWSGICollectWorkersStatsEnabledServiceDimsFullOldPyramid(t *testing.T) {
+	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/status/metrics":
+			w.Header().Set("Metrics-Schema", "uwsgi.1.1")
+			fmt.Fprint(w, `{
+				"version": "1.3.0a1",
+				"counters": {},
+				"gauges": {},
+				"histograms": {},
+				"meters": {
+				  "pyramid_uwsgi_metrics.tweens.2xx-responses": {
+					"count": 91911,
+					"m15_rate": 0.2617664902208245,
+					"units": "events/second"
+				  }
+				},
+				"timers": {
+				  "pyramid_uwsgi_metrics.tweens.status": {
+					"count": 80255,
+					"p99": 0.8959770202636719,
+					"mean_rate": 0.22937415235065844,
+					"duration_units": "milliseconds",
+					"rate_units": "calls/second"
+				  }
+				},
+				"service_dims": {
+				  "service_name": "styleguide",
+				  "instance_name": "main"
+				}
+			  }`)
+		case "/status/uwsgi":
+			fmt.Fprint(w, `{"workers":[
+				{"status":"busy"},
+				{"status":"idle"}
+			]}`)
+		}
+	})
+	cfg := map[string]interface{}{
+		"workersStatsEnabled": true,
+	}
+	expectedMetrics := []metric.Metric{
+		metric.Metric{Name: "BusyWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"service_name": "styleguide", "instance_name": "main", "service": "test_service"}},
+		metric.Metric{Name: "IdleWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"instance_name": "main", "service_name": "styleguide", "service": "test_service"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 91911, Dimensions: map[string]string{"rollup": "count", "type": "meter", "service_name": "styleguide", "instance_name": "main", "service": "test_service"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 0.2617664902208245, Dimensions: map[string]string{"service": "test_service", "rollup": "m15_rate", "type": "meter", "service_name": "styleguide", "instance_name": "main"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.status", MetricType: "gauge", Value: 0.8959770202636719, Dimensions: map[string]string{"rollup": "p99", "type": "timer", "service_name": "styleguide", "instance_name": "main", "service": "test_service"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.status", MetricType: "gauge", Value: 80255, Dimensions: map[string]string{"rollup": "count", "type": "timer", "service_name": "styleguide", "instance_name": "main", "service": "test_service"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.status", MetricType: "gauge", Value: 0.22937415235065844, Dimensions: map[string]string{"service": "test_service", "rollup": "mean_rate", "type": "timer", "service_name": "styleguide", "instance_name": "main"}},
+	}
+	testNerveUWSGICollectHelper(t, httpHandler, cfg, expectedMetrics)
+}
+func TestNerveUWSGICollectWorkersStatsEnabledServiceDimsNewPyramid(t *testing.T) {
+	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/status/metrics":
+			w.Header().Set("Metrics-Schema", "uwsgi.1.1")
+			fmt.Fprint(w, `{
+				"gauges": [],
+				"format": 2,
+				"histograms": [],
+				"service_dims": {
+				  "instance": "a"
+				},
+				"version": "4.1.2",
+				"timers": [],
+				"meters": [
+				  {
+					"count": 23868,
+					"name": "pyramid_uwsgi_metrics.tweens.2xx-responses"
+				  }
+				],
+				"counters": []
+			  }`)
+		case "/status/uwsgi":
+			fmt.Fprint(w, `{"workers":[
+				{"status":"busy"},
+				{"status":"idle"}
+			]}`)
+		}
+	})
+	cfg := map[string]interface{}{
+		"workersStatsEnabled": true,
+	}
+	expectedMetrics := []metric.Metric{
+		metric.Metric{Name: "BusyWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"instance": "a", "service": "test_service"}},
+		metric.Metric{Name: "IdleWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"instance": "a", "service": "test_service"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 23868, Dimensions: map[string]string{"rollup": "count", "type": "meter", "instance": "a", "service": "test_service"}},
+	}
+	testNerveUWSGICollectHelper(t, httpHandler, cfg, expectedMetrics)
+}
 func TestNerveUWSGICollectBadURL(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
