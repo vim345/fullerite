@@ -470,16 +470,6 @@ func TestNerveUWSGICollectWithSchema(t *testing.T) {
 	testNerveUWSGICollectHelper(t, httpHandler, cfg, expectedMetrics)
 }
 
-/* List of the following test cases:
-CollectWorkersStats	0	1	1	1	1	1	1	1
-UWSGIHeader			0	0	1	1	1	1	1	1
-ServiceDims			0	0	0	1	1	1	1	1
-BadURL				0	0	0	0	1	0	0	0
-SlowStatsEndpoint	0	0	0	0	0	1	0	0
-BlacklistedService	0	0	0	0	0	0	1	0
-AlreadyCollected	0	0	0	0	0	0	0	1
-
-*/
 func TestNerveUWSGICollectWorkersStatsDisabled(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
