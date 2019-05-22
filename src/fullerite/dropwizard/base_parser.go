@@ -1,6 +1,7 @@
 package dropwizard
 
 import (
+	"encoding/json"
 	"fullerite/metric"
 	"regexp"
 
@@ -189,6 +190,26 @@ func (parser *BaseParser) parseMapOfMap(
 	metricMap map[string]map[string]interface{},
 	metricType string) []metric.Metric {
 	return []metric.Metric{}
+}
+
+type serviceDimsOnly struct {
+	ServiceDims map[string]interface{} `json:"service_dims"`
+}
+
+// ExtractServiceDims is a lightweight version of extractParsedMetric to make
+// common service dimensions available in the collector
+func ExtractServiceDims(raw []byte) map[string]string {
+	parsed := new(serviceDimsOnly)
+	results := map[string]string{}
+	err := json.Unmarshal(raw, parsed)
+
+	if err == nil {
+		for k, v := range parsed.ServiceDims {
+			results[k] = v.(string)
+		}
+	}
+
+	return results
 }
 
 // Parse is just a placehoder function

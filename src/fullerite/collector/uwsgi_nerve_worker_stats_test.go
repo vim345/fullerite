@@ -292,8 +292,8 @@ func getRealUWSGIWorkerStatsResponse() string {
 	`
 }
 
-func validateUWSGIWorkerStatsResults(t *testing.T, actual []metric.Metric, results [6]float64) {
-	assert.Equal(t, 6, len(actual))
+func validateUWSGIWorkerStatsResults(t *testing.T, actual []metric.Metric, expectedLength int, results []float64) {
+	assert.Equal(t, expectedLength, len(actual))
 
 	for _, m := range actual {
 
@@ -313,9 +313,14 @@ func validateUWSGIWorkerStatsResults(t *testing.T, actual []metric.Metric, resul
 		case "PauseWorkers":
 			assert.Equal(t, results[4], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
-		case "UnknownStateWorkers":
+		case "InvalidWorkers":
 			assert.Equal(t, results[5], m.Value)
 			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "Cheap255Workers":
+			assert.Equal(t, results[6], m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		default:
+			t.Fatal("Unexpected metric name: " + m.Name)
 		}
 	}
 }
@@ -402,7 +407,7 @@ func convertURL(url string) (string, string) {
 	return ip, port
 }
 
-func DoTesting(t *testing.T, firstResponse string, secondResponse string, results [6]float64) {
+func DoTesting(t *testing.T, firstResponse string, secondResponse string, results []float64) {
 	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
 		fmt.Fprint(w, firstResponse)
 	}))
@@ -460,26 +465,27 @@ func DoTesting(t *testing.T, firstResponse string, secondResponse string, result
 	go inst.Collect()
 
 	actual := []metric.Metric{}
-	for i := 0; i < 6; i++ {
+	length := len(results)
+	for i := 0; i < length; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
-	validateUWSGIWorkerStatsResults(t, actual, results)
+	validateUWSGIWorkerStatsResults(t, actual, len(results), results)
 	validateStatsDimensions(t, actual, "test_service", goodPort)
 	validateStatsEmptyChannel(t, inst.Channel())
 }
 
 func TestNerveUWSGIArtificialStatsCollect(t *testing.T) {
-	DoTesting(t, getArtificialUWSGIWorkerStatsResponse(), "", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
+	DoTesting(t, getArtificialUWSGIWorkerStatsResponse(), "", []float64{2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0})
 }
 
 func TestNerveUWSGIRealStatsCollect(t *testing.T) {
-	DoTesting(t, getRealUWSGIWorkerStatsResponse(), "", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
+	DoTesting(t, getRealUWSGIWorkerStatsResponse(), "", []float64{1.0, 1.0})
 }
 
 func TestNonResponseStatsQueries(t *testing.T) {
-	DoTesting(t, getRealUWSGIWorkerStatsResponse(), "none", [6]float64{1.0, 1.0, 0.0, 0.0, 0.0, 0.0})
+	DoTesting(t, getRealUWSGIWorkerStatsResponse(), "none", []float64{1.0, 1.0})
 }
 
 func TestInvalidJSONStatsQueries(t *testing.T) {
-	DoTesting(t, getArtificialUWSGIWorkerStatsResponse(), "{\"workers\":[{\"a\":\"b\"}]}", [6]float64{2.0, 1.0, 1.0, 1.0, 1.0, 2.0})
+	DoTesting(t, getArtificialUWSGIWorkerStatsResponse(), "{\"workers\":[{\"a\":\"b\"}]}", []float64{2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0})
 }

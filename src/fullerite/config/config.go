@@ -89,6 +89,23 @@ func GetAsFloat(value interface{}, defaultValue float64) (result float64) {
 	return
 }
 
+// GetAsBool uses ParseBool, will match on real bool or strings that looks like booleans
+func GetAsBool(value interface{}, defaultValue bool) (result bool) {
+	result = defaultValue
+	switch value.(type) {
+	case string:
+		fromString, err := strconv.ParseBool(value.(string))
+		if err == nil {
+			result = fromString
+		} else {
+			log.Warn("Failed to read ", value, "as a bool. Falling back to default", defaultValue)
+		}
+	case bool:
+		result = value.(bool)
+	}
+	return
+}
+
 // GetAsInt parses a string/float to an int or returns the int if int is passed in
 func GetAsInt(value interface{}, defaultValue int) (result int) {
 	result = defaultValue

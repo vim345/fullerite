@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	l "github.com/Sirupsen/logrus"
@@ -26,16 +27,20 @@ const (
 type nerveUWSGICollector struct {
 	baseCollector
 
-	configFilePath    string
-	queryPath         string
-	timeout           int
-	servicesWhitelist []string
+	configFilePath        string
+	queryPath             string
+	timeout               int
+	servicesWhitelist     []string
+	workersStatsEnabled   bool
+	workersStatsQueryPath string
+	workersStatsBlacklist []string
 }
 
 func init() {
 	RegisterCollector("NerveUWSGI", newNerveUWSGI)
 }
 
+// Default values of configuration fields
 func newNerveUWSGI(channel chan metric.Metric, initialInterval int, log *l.Entry) Collector {
 	col := new(nerveUWSGICollector)
 
@@ -46,11 +51,13 @@ func newNerveUWSGI(channel chan metric.Metric, initialInterval int, log *l.Entry
 	col.name = "NerveUWSGI"
 	col.configFilePath = "/etc/nerve/nerve.conf.json"
 	col.queryPath = "status/metrics"
+	col.workersStatsQueryPath = "status/uwsgi"
 	col.timeout = 2
 
 	return col
 }
 
+// Rewrites config variables from the global config
 func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["queryPath"]; exists {
 		n.queryPath = val.(string)
@@ -61,7 +68,15 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["servicesWhitelist"]; exists {
 		n.servicesWhitelist = config.GetAsSlice(val)
 	}
-
+	if val, exists := configMap["workersStatsBlacklist"]; exists {
+		n.workersStatsBlacklist = config.GetAsSlice(val)
+	}
+	if val, exists := configMap["workersStatsEnabled"]; exists {
+		n.workersStatsEnabled = config.GetAsBool(val, false)
+	}
+	if val, exists := configMap["workersStatsQueryPath"]; exists {
+		n.workersStatsQueryPath = val.(string)
+	}
 	if val, exists := configMap["http_timeout"]; exists {
 		n.timeout = config.GetAsInt(val, 2)
 	}
@@ -69,6 +84,7 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	n.configureCommonParams(configMap)
 }
 
+// Parses nerve config from HTTP uWSGI stats endpoints
 func (n *nerveUWSGICollector) Collect() {
 	rawFileContents, err := ioutil.ReadFile(n.configFilePath)
 	if err != nil {
@@ -88,12 +104,12 @@ func (n *nerveUWSGICollector) Collect() {
 	}
 }
 
+// Fetches and computes stats from metrics HTTP endpoint,
+// calls an additional endpoint if UWSGI is detected
 func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	serviceLog := n.log.WithField("service", serviceName)
-
 	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
-
 	rawResponse, schemaVer, err := queryEndpoint(endpoint, n.timeout)
 	if err != nil {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
@@ -103,6 +119,28 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
+	}
+	// If we detect metrics from uwsgi, we try to fetch an additional Workers info
+	// If this was a separate collector, there would be no way to figure that out
+	// without a costly additional HTTP call.
+	// This prevent us from having to maintain a whitelist of services to query
+	// or from flooding all non UWSGI services with these requests.
+	// We still maintain a blacklist just in case
+	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
+		extraDims := dropwizard.ExtractServiceDims(rawResponse)
+		serviceLog.Debug("Trying to fetch workers stats")
+		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
+		uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
+		if err != nil {
+			serviceLog.Info("Could not get additional worker stat metrics")
+		} else {
+			// Add the metrics to our existing ones so we get the post process for free.
+			serviceLog.Debug("Additional workers metrics collected: ", len(uwsgiWorkerStatsMetrics))
+			metric.AddToAll(&uwsgiWorkerStatsMetrics, extraDims)
+			for _, v := range uwsgiWorkerStatsMetrics {
+				metrics = append(metrics, v)
+			}
+		}
 	}
 
 	metric.AddToAll(&metrics, map[string]string{
@@ -162,4 +200,33 @@ func (n *nerveUWSGICollector) serviceInWhitelist(service string) bool {
 		}
 	}
 	return false
+}
+
+// serviceInWhitelist returns true if the service name passed as argument
+// is found among the ones whitelisted by the user
+func (n *nerveUWSGICollector) serviceInWorkersStatsBlacklist(service string) bool {
+	for _, s := range n.workersStatsBlacklist {
+		if s == service {
+			return true
+		}
+	}
+	return false
+}
+
+// Fetches and computes status stats from an HTTP endpoint
+func (n *nerveUWSGICollector) tryFetchUWSGIWorkersStats(serviceName string, endpoint string) ([]metric.Metric, error) {
+	emptyResult := []metric.Metric{}
+	serviceLog := n.log.WithField("service", serviceName)
+	serviceLog.Debug("making GET request to ", endpoint)
+	rawResponse, _, err := queryEndpoint(endpoint, n.timeout)
+	if err != nil {
+		serviceLog.Info("Failed to query workers stats endpoint ", endpoint, ": ", err)
+		return emptyResult, err
+	}
+	metrics, err := util.ParseUWSGIWorkersStats(rawResponse)
+	if err != nil {
+		serviceLog.Info("No workers stats retreived: ", err)
+		return emptyResult, err
+	}
+	return metrics, nil
 }

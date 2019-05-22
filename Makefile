@@ -1,6 +1,6 @@
 FULLERITE      := fullerite
 BEATIT         := beatit
-VERSION        := 0.6.43
+VERSION        := 0.6.44
 SRCDIR         := src
 GLIDE          := glide
 HANDLER_DIR    := $(SRCDIR)/fullerite/handler
@@ -30,7 +30,7 @@ comma := ,
 GOPATH  := $(shell pwd -L)
 export GOPATH
 
-PATH := $(GOPATH)/bin:$(PATH)
+PATH := $(GOPATH)/bin:$(GOPATH)/go/bin:$(PATH)
 export PATH
 
 all: clean fmt lint $(FULLERITE) $(BEATIT) test
@@ -66,13 +66,7 @@ $(BEATIT): $(BEATIT_SOURCES)
 	@go build -o bin/$(BEATIT) fullerite/beatit
 
 go:
-	curl -s https://dl.google.com/go/go1.9.linux-amd64.tar.gz | tar xz
-	@echo "Please type: eval \`make goenv\`"
-
-goenv: go
-	@echo export GOROOT=`readlink -f go/`
-	@echo export GOPATH=`readlink -f go/bin`
-	@echo export PATH=`readlink -f go/bin`:\$$PATH
+	uname -a |grep -qE '^Linux.*x86_64' && curl -s https://dl.google.com/go/go1.9.linux-amd64.tar.gz | tar xz
 
 test: tests
 tests: deps diamond_test fullerite-tests
