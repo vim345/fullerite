@@ -127,28 +127,18 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	// or from flooding all non UWSGI services with these requests.
 	// We still maintain a blacklist just in case
 	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
-		skipParsing := false
-		for _, metric := range metrics {
-			// In the future, we could include Workers stats in the normal metrics endpoint
-			// In this case we don't need to gather them again.
-			if metric.Name == "BusyWorkers" {
-				skipParsing = true
-			}
-		}
-		if !skipParsing {
-			extraDims := dropwizard.ExtractServiceDims(rawResponse)
-			serviceLog.Debug("Trying to fetch workers stats")
-			uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
-			uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
-			if err != nil {
-				serviceLog.Info("Could not get additional worker stat metrics")
-			} else {
-				// Add the metrics to our existing ones so we get the post process for free.
-				serviceLog.Debug("Additional workers metrics collected: ", len(uwsgiWorkerStatsMetrics))
-				metric.AddToAll(&uwsgiWorkerStatsMetrics, extraDims)
-				for _, v := range uwsgiWorkerStatsMetrics {
-					metrics = append(metrics, v)
-				}
+		extraDims := dropwizard.ExtractServiceDims(rawResponse)
+		serviceLog.Debug("Trying to fetch workers stats")
+		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
+		uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
+		if err != nil {
+			serviceLog.Info("Could not get additional worker stat metrics")
+		} else {
+			// Add the metrics to our existing ones so we get the post process for free.
+			serviceLog.Debug("Additional workers metrics collected: ", len(uwsgiWorkerStatsMetrics))
+			metric.AddToAll(&uwsgiWorkerStatsMetrics, extraDims)
+			for _, v := range uwsgiWorkerStatsMetrics {
+				metrics = append(metrics, v)
 			}
 		}
 	}
