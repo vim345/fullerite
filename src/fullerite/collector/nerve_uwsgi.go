@@ -27,13 +27,15 @@ const (
 type nerveUWSGICollector struct {
 	baseCollector
 
-	configFilePath        string
-	queryPath             string
-	timeout               int
-	servicesWhitelist     []string
-	workersStatsEnabled   bool
-	workersStatsQueryPath string
-	workersStatsBlacklist []string
+	configFilePath            string
+	queryPath                 string
+	timeout                   int
+	cumCounterEnabledServices []string
+	workersStatsEnabled       bool
+	workersStatsQueryPath     string
+	workersStatsBlacklist     []string
+	servicesMetricsWhitelist  []string
+	servicesMetricsBlacklist  []string
 }
 
 func init() {
@@ -65,8 +67,8 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["configFilePath"]; exists {
 		n.configFilePath = val.(string)
 	}
-	if val, exists := configMap["servicesWhitelist"]; exists {
-		n.servicesWhitelist = config.GetAsSlice(val)
+	if val, exists := configMap["cumCounterEnabledServices"]; exists {
+		n.cumCounterEnabledServices = config.GetAsSlice(val)
 	}
 	if val, exists := configMap["workersStatsBlacklist"]; exists {
 		n.workersStatsBlacklist = config.GetAsSlice(val)
@@ -79,6 +81,20 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	}
 	if val, exists := configMap["http_timeout"]; exists {
 		n.timeout = config.GetAsInt(val, 2)
+	}
+	if val, exists := configMap["servicesMetricsWhitelist"]; exists {
+		if len(n.servicesMetricsBlacklist) > 0 {
+			n.log.Error("Only whitelist or blacklist is allowed. Cannot configure with both")
+			return
+		}
+		n.servicesMetricsWhitelist = config.GetAsSlice(val)
+	}
+	if val, exists := configMap["servicesMetricsBlacklist"]; exists {
+		if len(n.servicesMetricsWhitelist) > 0 {
+			n.log.Error("Only whitelist or blacklist is allowed. Cannot configure with both")
+			return
+		}
+		n.servicesMetricsBlacklist = config.GetAsSlice(val)
 	}
 
 	n.configureCommonParams(configMap)
@@ -99,8 +115,18 @@ func (n *nerveUWSGICollector) Collect() {
 	}
 	n.log.Debug("Finished parsing Nerve config into ", services)
 
+	// We need to check multiple conditions here and this is dependent on
+	// whether we have a blacklist or whitelist
 	for _, service := range services {
-		go n.queryService(service.Name, service.Port)
+		if len(n.servicesMetricsBlacklist) == 0 && len(n.servicesMetricsWhitelist) == 0 {
+			go n.queryService(service.Name, service.Port)
+		} else if len(n.servicesMetricsWhitelist) > 0 && n.serviceInList(service.Name, n.servicesMetricsWhitelist) {
+			go n.queryService(service.Name, service.Port)
+		} else {
+			if !n.serviceInList(service.Name, n.servicesMetricsBlacklist) {
+				go n.queryService(service.Name, service.Port)
+			}
+		}
 	}
 }
 
@@ -115,7 +141,10 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
 		return
 	}
-	metrics, err := dropwizard.Parse(rawResponse, schemaVer, n.serviceInWhitelist(serviceName))
+	metrics, err := dropwizard.Parse(
+		rawResponse,
+		schemaVer,
+		n.serviceInList(serviceName, n.cumCounterEnabledServices))
 	if err != nil {
 		serviceLog.Warn("Failed to parse response into metrics: ", err)
 		return
@@ -126,7 +155,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
 	// This prevent us from having to maintain a whitelist of services to query
 	// or from flooding all non UWSGI services with these requests.
 	// We still maintain a blacklist just in case
-	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
+	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInList(serviceName, n.workersStatsBlacklist) {
 		extraDims := dropwizard.ExtractServiceDims(rawResponse)
 		serviceLog.Debug("Trying to fetch workers stats")
 		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
@@ -191,21 +220,10 @@ func queryEndpoint(endpoint string, timeout int) ([]byte, string, error) {
 	return txt, schemaVer, nil
 }
 
-// serviceInWhitelist returns true if the service name passed as argument
-// is found among the ones whitelisted by the user
-func (n *nerveUWSGICollector) serviceInWhitelist(service string) bool {
-	for _, s := range n.servicesWhitelist {
-		if s == service {
-			return true
-		}
-	}
-	return false
-}
-
-// serviceInWhitelist returns true if the service name passed as argument
-// is found among the ones whitelisted by the user
-func (n *nerveUWSGICollector) serviceInWorkersStatsBlacklist(service string) bool {
-	for _, s := range n.workersStatsBlacklist {
+// Checks for service name in a list and returns true if the name is present
+// and returns False if it is not. This is used by multiple functions.
+func (n *nerveUWSGICollector) serviceInList(service string, list []string) bool {
+	for _, s := range list {
 		if s == service {
 			return true
 		}

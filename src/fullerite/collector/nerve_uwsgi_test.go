@@ -828,7 +828,7 @@ func TestNerveJavaCollectWithSchemaCumulativeCountersEnabled(t *testing.T) {
 	cfg := map[string]interface{}{
 		"configFilePath":    tmpFile.Name(),
 		"queryPath":         "",
-		"servicesWhitelist": []string{"test_service"},
+		"cumCounterEnabledServices": []string{"test_service"},
 	}
 
 	inst := getTestNerveUWSGI()

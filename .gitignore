@@ -9,6 +9,7 @@ src/github.com/
 *.pyc
 *.DS_Store
 .project
+.vscode/*
 .vagrant
 src/fullerite/collector/collector.test
 *.pprof
