@@ -83,10 +83,6 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 		n.timeout = config.GetAsInt(val, 2)
 	}
 	if val, exists := configMap["servicesMetricsWhitelist"]; exists {
-		if len(n.servicesMetricsBlacklist) > 0 {
-			n.log.Error("Only whitelist or blacklist is allowed. Cannot configure with both")
-			return
-		}
 		n.servicesMetricsWhitelist = config.GetAsSlice(val)
 	}
 	if val, exists := configMap["servicesMetricsBlacklist"]; exists {
