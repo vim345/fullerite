@@ -8,16 +8,9 @@ See https://developer.nvidia.com/nvidia-system-management-interface
 #### Dependencies
 
  * nvidia-smi
- * nvidia-ml-py (Optional)
 """
 
 from itertools import izip
-try:
-    import pynvml
-    USE_PYTHON_BINDING = True
-except ImportError:
-    USE_PYTHON_BINDING = False
-
 import diamond.collector
 
 
@@ -78,52 +71,12 @@ class NvidiaGPUCollector(diamond.collector.ProcessCollector):
                 )
                 self.publish(metric_name, metric)
 
-    def collect_via_pynvml(self, stats_config):
-        """
-        Use pynvml python binding to collect metrics
-        :param stats_config:
-        :return:
-        """
-        try:
-            NVML_TEMPERATURE_GPU = 0
-            pynvml.nvmlInit()
-            device_count = pynvml.nvmlDeviceGetCount()
-
-            for device_index in xrange(device_count):
-                handle = pynvml.nvmlDeviceGetHandleByIndex(device_index)
-                memoryInfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                utilizationRates = pynvml.nvmlDeviceGetUtilizationRates(handle)
-
-                metrics = {
-                    'memory.total': memoryInfo.total / 1024 / 1024,
-                    'memory.used': memoryInfo.total / 1024 / 1024,
-                    'memory.free': memoryInfo.free / 1024 / 1024,
-                    'utilization.gpu': utilizationRates.gpu,
-                    'utilization.memory': utilizationRates.memory,
-                    'temperature.gpu':
-                        pynvml.nvmlDeviceGetTemperature(handle,
-                                                        NVML_TEMPERATURE_GPU)
-                }
-
-                for stat_name in stats_config[1:]:
-                    metric = metrics.get(stat_name)
-                    if metric:
-                        metric_name = 'gpu_{index}.{stat_name}'.format(
-                            index=str(device_index),
-                            stat_name=stat_name
-                        )
-                        self.publish(metric_name, metric)
-        finally:
-            pynvml.nvmlShutdown()
 
     def collect(self):
         """
         Collector GPU stats
         """
         stats_config = self.config['stats']
-        if USE_PYTHON_BINDING:
-            collect_metrics = self.collect_via_pynvml
-        else:
-            collect_metrics = self.collect_via_nvidia_smi
+        collect_metrics = self.collect_via_nvidia_smi
 
         collect_metrics(stats_config)
