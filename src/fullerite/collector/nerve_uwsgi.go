@@ -116,8 +116,10 @@ func (n *nerveUWSGICollector) Collect() {
 	for _, service := range services {
 		if len(n.servicesMetricsBlacklist) == 0 && len(n.servicesMetricsWhitelist) == 0 {
 			go n.queryService(service.Name, service.Port)
-		} else if len(n.servicesMetricsWhitelist) > 0 && n.serviceInList(service.Name, n.servicesMetricsWhitelist) {
-			go n.queryService(service.Name, service.Port)
+		} else if len(n.servicesMetricsWhitelist) > 0  {
+			if n.serviceInList(service.Name, n.servicesMetricsWhitelist) {
+				go n.queryService(service.Name, service.Port)
+			}
 		} else {
 			if !n.serviceInList(service.Name, n.servicesMetricsBlacklist) {
 				go n.queryService(service.Name, service.Port)

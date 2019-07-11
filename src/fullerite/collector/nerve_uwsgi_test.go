@@ -113,6 +113,38 @@ func getTestUWSGIResponse() string {
 	`
 }
 
+func getTestUWSGIResponseForService(service string) string {
+	return fmt.Sprintf(`{
+		"version": "1.3.0a1",
+		"counters": {
+			"Acounter":{
+				"firstrollup": 134,
+				"secondrollup": 89
+			}
+		},
+		"gauges": {
+			"some_random_metric": {
+				"rollup1": 12
+			}
+		},
+		"histograms": {},
+		"meters": {},
+		"timers": {
+			"some_timer": {
+				"average": 123
+			},
+			"othertimer": {
+				"mean": 345
+			}
+		},
+		"service_dims": {
+		  "service_name": "%s",
+		  "instance_name": "main"
+		}
+	  }
+	  `, service)
+}
+
 func getTestJavaResponse() string {
 	return `{
 	"counters": {
@@ -870,6 +902,91 @@ func TestNerveJavaCollectWithSchemaCumulativeCountersEnabled(t *testing.T) {
 			t.Fatalf("unknown metric name %s", m.Name)
 		}
 	}
+}
+
+func TestNerveUWSGICollectWithMetricsBlacklist(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
+		fmt.Fprint(w, getTestUWSGIResponseForService("example"))
+	}))
+	defer server.Close()
+
+	// assume format is http://ipaddr:port
+	ip, port := parseURL(server.URL)
+	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
+		"example_blacklist.blacklist": util.EndPoint{ip, port},
+		"example_whitelist.whitelist": util.EndPoint{ip, port},
+		"example.happyhour": util.EndPoint{ip, port},
+	})
+
+	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
+	defer os.Remove(tmpFile.Name())
+	assert.Nil(t, err)
+
+	marshalled, err := json.Marshal(minimalNerveConfig)
+	assert.Nil(t, err)
+
+	_, err = tmpFile.Write(marshalled)
+	assert.Nil(t, err)
+	
+	var cfg map[string]interface{}
+	var inst *nerveUWSGICollector
+	var actual []metric.Metric
+
+	// Test an empty whitelist & blacklist
+	cfg = map[string]interface{}{
+		"configFilePath":       tmpFile.Name(),
+		"queryPath":            "",
+		"servicesMetricsBlacklist": []string{},
+		"servicesMetricsWhitelist": []string{},
+	}
+	inst = getTestNerveUWSGI()
+	inst.Configure(cfg)
+	go inst.Collect()
+
+	actual = []metric.Metric{}
+	for i := 0; i < 15; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+	validateUWSGIResults(t, actual, 15)
+	validateEmptyChannel(t, inst.Channel())
+
+	// Test with a blacklist
+	cfg = map[string]interface{}{
+		"configFilePath":       tmpFile.Name(),
+		"queryPath":            "",
+		"servicesMetricsBlacklist": []string{"example_blacklist"},
+	}
+
+	inst = getTestNerveUWSGI()
+	inst.Configure(cfg)
+	go inst.Collect()
+	
+	actual = []metric.Metric{}
+	for i := 0; i < 10; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, 10)
+	validateEmptyChannel(t, inst.Channel())
+
+	// Test with a whitelist
+	cfg = map[string]interface{}{
+		"configFilePath":       tmpFile.Name(),
+		"queryPath":            "",
+		"servicesMetricsWhitelist": []string{"example"},
+	}
+
+	inst = getTestNerveUWSGI()
+	inst.Configure(cfg)
+	go inst.Collect()
+	
+	actual = []metric.Metric{}
+	for i := 0; i < 5; i++ {
+		actual = append(actual, <-inst.Channel())
+	}
+
+	validateUWSGIResults(t, actual, 5)
+	validateEmptyChannel(t, inst.Channel())	
 }
 
 func TestNonConflictingServiceQueries(t *testing.T) {
