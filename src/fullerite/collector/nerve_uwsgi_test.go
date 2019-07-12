@@ -502,7 +502,9 @@ func TestNerveUWSGICollectWithSchema(t *testing.T) {
 		metric.Metric{Name: "some_timer", MetricType: "gauge", Value: 123, Dimensions: map[string]string{"type": "timer", "rollup": "average", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 		metric.Metric{Name: "othertimer", MetricType: "gauge", Value: 345, Dimensions: map[string]string{"type": "timer", "rollup": "mean", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 
 func TestNerveUWSGICollectWorkersStatsDisabled(t *testing.T) {
@@ -526,7 +528,9 @@ func TestNerveUWSGICollectWorkersStatsDisabled(t *testing.T) {
 	expectedMetrics := []metric.Metric{
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsEnabledNoUWSGIHeader(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -549,7 +553,9 @@ func TestNerveUWSGICollectWorkersStatsEnabledNoUWSGIHeader(t *testing.T) {
 	expectedMetrics := []metric.Metric{
 		metric.Metric{Name: "foo", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsEnabledNoServiceDims(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -573,7 +579,9 @@ func TestNerveUWSGICollectWorkersStatsEnabledNoServiceDims(t *testing.T) {
 		metric.Metric{Name: "BusyWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"service": "test_service"}},
 		metric.Metric{Name: "IdleWorkers", MetricType: "gauge", Value: 0, Dimensions: map[string]string{"service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsEnabledServiceDims(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -598,7 +606,9 @@ func TestNerveUWSGICollectWorkersStatsEnabledServiceDims(t *testing.T) {
 		metric.Metric{Name: "BusyWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"firstdim": "first", "seconddim": "second", "service": "test_service"}},
 		metric.Metric{Name: "IdleWorkers", MetricType: "gauge", Value: 0, Dimensions: map[string]string{"firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsEnabledServiceDimsFullOldPyramid(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -650,7 +660,9 @@ func TestNerveUWSGICollectWorkersStatsEnabledServiceDimsFullOldPyramid(t *testin
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.status", MetricType: "gauge", Value: 80255, Dimensions: map[string]string{"rollup": "count", "type": "timer", "service_name": "styleguide", "instance_name": "main", "service": "test_service"}},
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.status", MetricType: "gauge", Value: 0.22937415235065844, Dimensions: map[string]string{"service": "test_service", "rollup": "mean_rate", "type": "timer", "service_name": "styleguide", "instance_name": "main"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsEnabledServiceDimsNewPyramid(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -689,7 +701,9 @@ func TestNerveUWSGICollectWorkersStatsEnabledServiceDimsNewPyramid(t *testing.T)
 		metric.Metric{Name: "IdleWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"instance": "a", "service": "test_service"}},
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 23868, Dimensions: map[string]string{"rollup": "count", "type": "meter", "instance": "a", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectBadURL(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -711,7 +725,9 @@ func TestNerveUWSGICollectBadURL(t *testing.T) {
 	expectedMetrics := []metric.Metric{
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsSlowStatsEndpoint(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -736,7 +752,9 @@ func TestNerveUWSGICollectWorkersStatsSlowStatsEndpoint(t *testing.T) {
 	expectedMetrics := []metric.Metric{
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWorkersStatsBlacklistedService(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -760,7 +778,9 @@ func TestNerveUWSGICollectWorkersStatsBlacklistedService(t *testing.T) {
 	expectedMetrics := []metric.Metric{
 		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 func TestNerveUWSGICollectWithPyramidWorkersStatsEnabledFullExample(t *testing.T) {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -787,7 +807,9 @@ func TestNerveUWSGICollectWithPyramidWorkersStatsEnabledFullExample(t *testing.T
 		metric.Metric{Name: "CrazyWorkers", MetricType: "gauge", Value: 1, Dimensions: map[string]string{"firstdim": "first", "seconddim": "second", "service": "test_service"}},
 		metric.Metric{Name: "IdleWorkers", MetricType: "gauge", Value: 0, Dimensions: map[string]string{"firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics)
+
+	services := []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 
 func TestNerveJavaCollectWithSchema(t *testing.T) {
@@ -858,8 +880,8 @@ func TestNerveJavaCollectWithSchemaCumulativeCountersEnabled(t *testing.T) {
 	assert.Nil(t, err)
 
 	cfg := map[string]interface{}{
-		"configFilePath":    tmpFile.Name(),
-		"queryPath":         "",
+		"configFilePath":            tmpFile.Name(),
+		"queryPath":                 "",
 		"cumCounterEnabledServices": []string{"test_service"},
 	}
 
@@ -904,89 +926,60 @@ func TestNerveJavaCollectWithSchemaCumulativeCountersEnabled(t *testing.T) {
 	}
 }
 
-func TestNerveUWSGICollectWithMetricsBlacklist(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rsp *http.Request) {
-		fmt.Fprint(w, getTestUWSGIResponseForService("example"))
-	}))
-	defer server.Close()
-
-	// assume format is http://ipaddr:port
-	ip, port := parseURL(server.URL)
-	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
-		"example_blacklist.blacklist": util.EndPoint{ip, port},
-		"example_whitelist.whitelist": util.EndPoint{ip, port},
-		"example.happyhour": util.EndPoint{ip, port},
+func TestNerveUWSGICollectWithMetricsBlacklistAndWhitelist(t *testing.T) {
+	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/status/metrics":
+			w.Header().Set("Metrics-Schema", "uwsgi.1.1")
+			fmt.Fprint(w, `{
+				"service_dims": {"firstdim": "first","seconddim": "second"},
+				"meters": {"pyramid_uwsgi_metrics.tweens.2xx-responses":{"count": 987}}
+			}`)
+		case "/status/uwsgi":
+			fmt.Fprint(w, `{"workers":[
+				{"status":"busy"}
+			]}`)
+		}
 	})
-
-	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
-	defer os.Remove(tmpFile.Name())
-	assert.Nil(t, err)
-
-	marshalled, err := json.Marshal(minimalNerveConfig)
-	assert.Nil(t, err)
-
-	_, err = tmpFile.Write(marshalled)
-	assert.Nil(t, err)
-	
 	var cfg map[string]interface{}
-	var inst *nerveUWSGICollector
-	var actual []metric.Metric
+	var expectedMetrics []metric.Metric
+	var services []string
 
-	// Test an empty whitelist & blacklist
 	cfg = map[string]interface{}{
-		"configFilePath":       tmpFile.Name(),
-		"queryPath":            "",
 		"servicesMetricsBlacklist": []string{},
 		"servicesMetricsWhitelist": []string{},
 	}
-	inst = getTestNerveUWSGI()
-	inst.Configure(cfg)
-	go inst.Collect()
-
-	actual = []metric.Metric{}
-	for i := 0; i < 15; i++ {
-		actual = append(actual, <-inst.Channel())
+	expectedMetrics = []metric.Metric{
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service"}},
 	}
-	validateUWSGIResults(t, actual, 15)
-	validateEmptyChannel(t, inst.Channel())
 
-	// Test with a blacklist
+	services = []string{"test_service.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
+
+	// Test config with blacklist
 	cfg = map[string]interface{}{
-		"configFilePath":       tmpFile.Name(),
-		"queryPath":            "",
-		"servicesMetricsBlacklist": []string{"example_blacklist"},
+		"servicesMetricsBlacklist": []string{"test_service_blacklist"},
+		"servicesMetricsWhitelist": []string{},
 	}
 
-	inst = getTestNerveUWSGI()
-	inst.Configure(cfg)
-	go inst.Collect()
-	
-	actual = []metric.Metric{}
-	for i := 0; i < 10; i++ {
-		actual = append(actual, <-inst.Channel())
+	expectedMetrics = []metric.Metric{
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service_whitelist"}},
 	}
 
-	validateUWSGIResults(t, actual, 10)
-	validateEmptyChannel(t, inst.Channel())
+	services = []string{"test_service_blacklist.things.and.stuff", "test_service_whitelist.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 
-	// Test with a whitelist
+	// Test config with a whitelist
 	cfg = map[string]interface{}{
-		"configFilePath":       tmpFile.Name(),
-		"queryPath":            "",
-		"servicesMetricsWhitelist": []string{"example"},
+		"servicesMetricsBlacklist": []string{},
+		"servicesMetricsWhitelist": []string{"test_service_one", "test_service_two"},
 	}
-
-	inst = getTestNerveUWSGI()
-	inst.Configure(cfg)
-	go inst.Collect()
-	
-	actual = []metric.Metric{}
-	for i := 0; i < 5; i++ {
-		actual = append(actual, <-inst.Channel())
+	expectedMetrics = []metric.Metric{
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service_one"}},
+		metric.Metric{Name: "pyramid_uwsgi_metrics.tweens.2xx-responses", MetricType: "gauge", Value: 987, Dimensions: map[string]string{"type": "meter", "rollup": "count", "firstdim": "first", "seconddim": "second", "service": "test_service_two"}},
 	}
-
-	validateUWSGIResults(t, actual, 5)
-	validateEmptyChannel(t, inst.Channel())	
+	services = []string{"test_service_blacklist.things.and.stuff", "test_service_one.things.and.stuff", "test_service_two.things.and.stuff"}
+	assertNerveUWSGICollectedMetrics(t, httpHandler, cfg, expectedMetrics, services)
 }
 
 func TestNonConflictingServiceQueries(t *testing.T) {
@@ -1137,17 +1130,20 @@ func (s *metricSorter) Less(i, j int) bool {
 	return s.by(&s.metrics[i], &s.metrics[j])
 }
 
-func assertNerveUWSGICollectedMetrics(t *testing.T, httpHandler http.HandlerFunc, cfg map[string]interface{}, expectedMetrics []metric.Metric) {
+func assertNerveUWSGICollectedMetrics(t *testing.T, httpHandler http.HandlerFunc, cfg map[string]interface{}, expectedMetrics []metric.Metric, services []string) {
 	server := httptest.NewServer(httpHandler)
 	defer server.Close()
 
 	// assume format is http://ipaddr:port
 	ip, port := parseURL(server.URL)
+	serviceSetting := make(map[string]util.EndPoint)
 
-	minimalNerveConfig := util.CreateMinimalNerveConfig(map[string]util.EndPoint{
-		"test_service.things.and.stuff": util.EndPoint{ip, port},
-	})
+	for _, service := range services {
+		serviceSetting[service] = util.EndPoint{ip, port}
+	}
+	minimalNerveConfig := util.CreateMinimalNerveConfig(serviceSetting)
 
+	fmt.Printf("%v", serviceSetting)
 	tmpFile, err := ioutil.TempFile("", "fullerite_testing")
 	defer os.Remove(tmpFile.Name())
 	assert.Nil(t, err)
@@ -1183,9 +1179,14 @@ func assertNerveUWSGICollectedMetrics(t *testing.T, httpHandler http.HandlerFunc
 	value := func(p1, p2 *metric.Metric) bool {
 		return p1.Value < p2.Value
 	}
+	service := func(p1, p2 *metric.Metric) bool {
+		return p1.Dimensions["service"] < p2.Dimensions["service"]
+	}
 	By(value).Sort(actual)
 	By(name).Sort(actual)
+	By(service).Sort(actual)
 	By(value).Sort(expectedMetrics)
 	By(name).Sort(expectedMetrics)
+	By(service).Sort(expectedMetrics)
 	assert.Equal(t, expectedMetrics, actual)
 }
