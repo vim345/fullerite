@@ -935,10 +935,8 @@ func TestNerveUWSGICollectWithMetricsBlacklistAndWhitelist(t *testing.T) {
 				"service_dims": {"firstdim": "first","seconddim": "second"},
 				"meters": {"pyramid_uwsgi_metrics.tweens.2xx-responses":{"count": 987}}
 			}`)
-		case "/status/uwsgi":
-			fmt.Fprint(w, `{"workers":[
-				{"status":"busy"}
-			]}`)
+		default:
+			w.WriteHeader(404)
 		}
 	})
 	var cfg map[string]interface{}
