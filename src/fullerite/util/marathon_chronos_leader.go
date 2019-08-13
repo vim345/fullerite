@@ -3,7 +3,9 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	l "github.com/Sirupsen/logrus"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -32,7 +34,7 @@ func (e leaderError) Error() string {
 }
 
 // IsLeader checks if a given host is the marathon leader
-func IsLeader(host string, endpoint string, client http.Client) (bool, error) {
+func IsLeader(host string, endpoint string, client http.Client, log *l.Entry) (bool, error) {
 	url := getLeaderURL(host, endpoint)
 
 	contents, err := GetWrapper(url, client)
@@ -57,8 +59,39 @@ func IsLeader(host string, endpoint string, client http.Client) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	isOurIP, err := IPInHostInterfaces(s[0], log)
+	if err != nil {
+		return false, err
+	}
+	return s[0] == h || isOurIP, nil
+}
 
-	return s[0] == h, nil
+// IPInHostInterfaces checks if given IP is assigned to a local interface
+func IPInHostInterfaces(ip string, log *l.Entry) (bool, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return false, fmt.Errorf("Failed to get network interfaces: %s", err)
+	}
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+		if err == nil {
+			for _, addr := range addrs {
+				var intIP net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					intIP = v.IP
+				default:
+					continue
+				}
+				if ip == intIP.String() {
+					return true, nil
+				}
+			}
+		} else {
+			log.Error("Failed to get addresses for interface: ", err.Error())
+		}
+	}
+	return false, nil
 }
 
 // GetWrapper performs a get against a URL and return either the body of the response or an error
