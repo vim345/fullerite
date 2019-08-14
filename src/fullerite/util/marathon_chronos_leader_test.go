@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,6 +16,7 @@ func TestIsLeader(t *testing.T) {
 
 	oldHostname := hostname
 	defer func() { hostname = oldHostname }()
+	log := l.WithFields(l.Fields{})
 
 	tests := []struct {
 		ourHostname string
@@ -39,7 +41,7 @@ func TestIsLeader(t *testing.T) {
 		getLeaderURL = func(ip string, _ string) string { return ts.URL }
 		hostname = func() (string, error) { return test.ourHostname, nil }
 
-		actual, _ := IsLeader("", "", http.Client{})
+		actual, _ := IsLeader("", "", http.Client{}, log)
 
 		assert.Equal(t, test.expected, actual, test.msg)
 	}

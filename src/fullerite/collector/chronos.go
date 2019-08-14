@@ -73,7 +73,7 @@ func (m *ChronosStats) Configure(configMap map[string]interface{}) {
 // Collect compares the leader against this hosts's hostaname and sends metrics if this is the leader
 func (m *ChronosStats) Collect() {
 	// Non-chronos-leaders forward requests to the leader, so only the leader's metrics matter
-	if leader, err := util.IsLeader(m.chronosHost, "leader", m.client); leader && err == nil {
+	if leader, err := util.IsLeader(m.chronosHost, "leader", m.client, m.log); leader && err == nil {
 		go sendChronosMetrics(m)
 	} else if err != nil {
 		m.log.Error("Error finding leader: ", err)
