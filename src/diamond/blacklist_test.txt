@@ -28,7 +28,6 @@ TestNagiosPerfdataCollector
 TestConnTrackCollector
 TestNetworkCollector
 TestHttpCollector
-TestElasticSearchCollector
 TestNginxCollector
 TestVMStatCollector
 TestNfsdCollector
