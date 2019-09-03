@@ -111,6 +111,63 @@ class TestElasticSearchCollector(CollectorTestCase):
         self.assertPublishedMany(publish_mock, metrics)
 
     @patch.object(Collector, 'publish')
+    def test_should_work_with_real_data_and_no_aliases(self, publish_mock):
+        returns = [
+            self.getFixture('version'),
+            self.getFixture('stats'),
+            self.getFixture('cluster_stats'),
+            self.getFixture('indices_stats'),
+        ]
+        with patch(
+            'elasticsearch.urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
+
+            self.collector.config['cluster'] = True
+            self.collector.collect()
+
+            # check how many fixtures were consumed
+            self.assertEqual(urlopen_mock.call_count, 5)
+
+        metrics = {
+            'http.current': 1,
+
+            'indices.docs.count': 11968062,
+            'indices.docs.deleted': 2692068,
+            'indices.datastore.size': 22724243633,
+
+            'indices._all.docs.count': 4,
+            'indices._all.docs.deleted': 0,
+            'indices._all.datastore.size': 2674,
+
+            'indices.test.docs.count': 4,
+            'indices.test.docs.deleted': 0,
+            'indices.test.datastore.size': 2674,
+            
+            'process.cpu.percent': 58,
+
+            'process.mem.resident': 5192126464,
+            'process.mem.share': 11075584,
+            'process.mem.virtual': 7109668864,
+
+            'disk.reads.count': 55996,
+            'disk.reads.size': 1235387392,
+            'disk.writes.count': 5808198,
+            'disk.writes.size': 23287275520,
+
+            'thread_pool.generic.threads': 1,
+
+            'network.tcp.active_opens': 2299,
+
+            'jvm.mem.pools.CMS_Old_Gen.used': 530915016,
+        }
+
+        self.setDocExample(collector=self.collector.__class__.__name__,
+                           metrics=metrics,
+                           defaultpath=self.collector.config['path'])
+        self.assertPublishedMany(publish_mock, metrics)
+
+    @patch.object(Collector, 'publish')
     def test_should_work_with_real_data_logstash_mode(self, publish_mock):
         returns = [
             self.getFixture('version'),

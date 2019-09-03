@@ -233,7 +233,10 @@ class ElasticSearchCollector(diamond.collector.Collector):
         
         # Collect index aliases
         result = self._get(host, port, "_alias")
-        index_to_aliases_map = self._build_index_to_aliases_map(result)
+        if result:
+            index_to_aliases_map = self._build_index_to_aliases_map(result)
+        else:
+            index_to_aliases_map = None
 
 
         for name, index in indices.iteritems():
