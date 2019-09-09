@@ -139,7 +139,7 @@ class ElasticSearchCollector(diamond.collector.Collector):
         for key1, d1 in data.iteritems():
             self._copy_one_level(metrics, '%s.%s' % (prefix, key1), d1, filter)
 
-    def _index_metrics(self, metrics, prefix, index):
+    def _index_metrics(self, metrics, prefix, index, index_to_aliases_map=None):
         if self.config['logstash_mode']:
             """Remove the YYYY.MM.DD bit from logstash indices.
             This way we keep using the same metric naming and not polute
@@ -152,17 +152,20 @@ class ElasticSearchCollector(diamond.collector.Collector):
                 self._set_or_sum_metric(metrics,
                                         '%s.indexes_in_group' % prefix, 1)
 
-        self._add_metric(metrics, '%s.docs.count' % prefix, index,
-                         ['docs', 'count'])
-        self._add_metric(metrics, '%s.docs.deleted' % prefix, index,
-                         ['docs', 'deleted'])
-        self._add_metric(metrics, '%s.datastore.size' % prefix, index,
-                         ['store', 'size_in_bytes'])
+        index_names_to_publish = index_to_aliases_map.get(prefix, []) if index_to_aliases_map else []
+        index_names_to_publish.append(prefix)
+        for prefix in index_names_to_publish:
+            self._add_metric(metrics, '%s.docs.count' % prefix, index,
+                             ['docs', 'count'])
+            self._add_metric(metrics, '%s.docs.deleted' % prefix, index,
+                             ['docs', 'deleted'])
+            self._add_metric(metrics, '%s.datastore.size' % prefix, index,
+                             ['store', 'size_in_bytes'])
 
-        # publish all 'total' and 'time_in_millis' stats
-        self._copy_two_level(
-            metrics, prefix, index,
-            lambda key: key.endswith('total') or key.endswith('time_in_millis'))
+            # publish all 'total' and 'time_in_millis' stats
+            self._copy_two_level(
+                metrics, prefix, index,
+                lambda key: key.endswith('total') or key.endswith('time_in_millis'))
 
     def _add_metric(self, metrics, metric_path, data, data_path):
         """If the path specified by data_path (a list) exists in data,
@@ -227,10 +230,32 @@ class ElasticSearchCollector(diamond.collector.Collector):
             indices = result['indices']
         else:
             return
+        
+        # Collect index aliases
+        result = self._get(host, port, "_alias")
+        if result:
+            index_to_aliases_map = self._build_index_to_aliases_map(result)
+        else:
+            index_to_aliases_map = None
+
 
         for name, index in indices.iteritems():
-            self._index_metrics(metrics, 'indices.%s' % name,
-                                index['primaries'])
+            self._index_metrics(
+                metrics,
+                'indices.%s' % name,
+                index['primaries'],
+                index_to_aliases_map=index_to_aliases_map
+            )
+
+    def _build_index_to_aliases_map(self, result):
+        mapping = {}
+        for index, aliases_dict in result.items():
+            prefix = 'indices.%s' % index
+            indexes = list(aliases_dict.get('aliases', {}).keys())
+            prefixes = ['indices.%s' % i for i in indexes]    
+            mapping[prefix] = prefixes
+        return mapping
+
 
     def collect_instance(self, alias, host, port):
         es_version = self._get(host, port, '/', 'version')['version']['number']
@@ -240,7 +265,6 @@ class ElasticSearchCollector(diamond.collector.Collector):
             # All stats are fetched by default
             result = self._get(host, port, '_nodes/_local/stats', 'nodes')
 
-        result = self._get(host, port, '_nodes/_local/stats', 'nodes')
         if not result:
             return
 

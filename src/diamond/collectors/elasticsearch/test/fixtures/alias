@@ -1,0 +1,12 @@
+{
+  "logstash-adm-syslog-2014.01.02": {
+    "aliases": {
+    }
+  },
+  "test": {
+    "aliases": {
+      "test_alias": {
+      }
+    }
+  }
+}

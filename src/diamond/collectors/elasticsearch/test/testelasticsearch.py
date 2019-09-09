@@ -18,7 +18,6 @@ from elasticsearch import ElasticSearchCollector
 class TestElasticSearchCollector(CollectorTestCase):
     def setUp(self):
         config = get_collector_config('ElasticSearchCollector', {})
-
         self.collector = ElasticSearchCollector(config, None)
 
     def test_import(self):
@@ -26,13 +25,13 @@ class TestElasticSearchCollector(CollectorTestCase):
 
     def test_new__instances_default(self):
         config = get_collector_config('ElasticSearchCollector', {})
-        self.collector = ElasticSearchCollector(config, None)
+        self.collector = ElasticSearchCollector(config, configfile=config['collectors']['ElasticSearchCollector'])
         self.assertEqual(self.collector.instances, {'': ('127.0.0.1', 9200)})
 
     def test_new__instances_single(self):
         config = get_collector_config('ElasticSearchCollector', {
             'instances': 'bla'})
-        self.collector = ElasticSearchCollector(config, None)
+        self.collector = ElasticSearchCollector(config, configfile=config['collectors']['ElasticSearchCollector'])
         self.assertEqual(self.collector.instances, {'default': ('bla', 9200)})
 
     def test_new__instances_multi(self):
@@ -42,7 +41,7 @@ class TestElasticSearchCollector(CollectorTestCase):
                 'foo@1234',
                 'bar@bla:1234',
             ]})
-        self.collector = ElasticSearchCollector(config, None)
+        self.collector = ElasticSearchCollector(config, configfile=config['collectors']['ElasticSearchCollector'])
         self.assertEqual(self.collector.instances, {
             'default': ('something', 9200),
             'foo': ('1234', 9200),
@@ -52,21 +51,22 @@ class TestElasticSearchCollector(CollectorTestCase):
     @patch.object(Collector, 'publish')
     def test_should_work_with_real_data(self, publish_mock):
         returns = [
+            self.getFixture('version'),
             self.getFixture('stats'),
             self.getFixture('cluster_stats'),
             self.getFixture('indices_stats'),
+            self.getFixture('alias'),
         ]
-        urlopen_mock = patch('urllib2.urlopen', Mock(
-            side_effect=lambda *args: returns.pop(0)))
+        with patch(
+            'elasticsearch.urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
 
-        self.collector.config['cluster'] = True
+            self.collector.config['cluster'] = True
+            self.collector.collect()
 
-        urlopen_mock.start()
-        self.collector.collect()
-        urlopen_mock.stop()
-
-        # check how many fixtures were consumed
-        self.assertEqual(urlopen_mock.new.call_count, 3)
+            # check how many fixtures were consumed
+            self.assertEqual(urlopen_mock.call_count, 5)
 
         metrics = {
             'http.current': 1,
@@ -82,7 +82,68 @@ class TestElasticSearchCollector(CollectorTestCase):
             'indices.test.docs.count': 4,
             'indices.test.docs.deleted': 0,
             'indices.test.datastore.size': 2674,
+            
+            'indices.test_alias.docs.count': 4,
+            'indices.test_alias.docs.deleted': 0,
+            'indices.test_alias.datastore.size': 2674,
 
+            'process.cpu.percent': 58,
+
+            'process.mem.resident': 5192126464,
+            'process.mem.share': 11075584,
+            'process.mem.virtual': 7109668864,
+
+            'disk.reads.count': 55996,
+            'disk.reads.size': 1235387392,
+            'disk.writes.count': 5808198,
+            'disk.writes.size': 23287275520,
+
+            'thread_pool.generic.threads': 1,
+
+            'network.tcp.active_opens': 2299,
+
+            'jvm.mem.pools.CMS_Old_Gen.used': 530915016,
+        }
+
+        self.setDocExample(collector=self.collector.__class__.__name__,
+                           metrics=metrics,
+                           defaultpath=self.collector.config['path'])
+        self.assertPublishedMany(publish_mock, metrics)
+
+    @patch.object(Collector, 'publish')
+    def test_should_work_with_real_data_and_no_aliases(self, publish_mock):
+        returns = [
+            self.getFixture('version'),
+            self.getFixture('stats'),
+            self.getFixture('cluster_stats'),
+            self.getFixture('indices_stats'),
+        ]
+        with patch(
+            'elasticsearch.urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
+
+            self.collector.config['cluster'] = True
+            self.collector.collect()
+
+            # check how many fixtures were consumed
+            self.assertEqual(urlopen_mock.call_count, 5)
+
+        metrics = {
+            'http.current': 1,
+
+            'indices.docs.count': 11968062,
+            'indices.docs.deleted': 2692068,
+            'indices.datastore.size': 22724243633,
+
+            'indices._all.docs.count': 4,
+            'indices._all.docs.deleted': 0,
+            'indices._all.datastore.size': 2674,
+
+            'indices.test.docs.count': 4,
+            'indices.test.docs.deleted': 0,
+            'indices.test.datastore.size': 2674,
+            
             'process.cpu.percent': 58,
 
             'process.mem.resident': 5192126464,
@@ -109,20 +170,20 @@ class TestElasticSearchCollector(CollectorTestCase):
     @patch.object(Collector, 'publish')
     def test_should_work_with_real_data_logstash_mode(self, publish_mock):
         returns = [
+            self.getFixture('version'),
             self.getFixture('stats'),
             self.getFixture('logstash_indices_stats'),
+            self.getFixture('alias'),
         ]
-        urlopen_mock = patch('urllib2.urlopen', Mock(
-            side_effect=lambda *args: returns.pop(0)))
+        with patch('elasticsearch.urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
 
-        self.collector.config['logstash_mode'] = True
+            self.collector.config['logstash_mode'] = True
+            self.collector.collect()
 
-        urlopen_mock.start()
-        self.collector.collect()
-        urlopen_mock.stop()
-
-        # check how many fixtures were consumed
-        self.assertEqual(urlopen_mock.new.call_count, 2)
+            # check how many fixtures were consumed
+            self.assertEqual(urlopen_mock.call_count, 4)
 
         # Omit all non-indices metrics, since those were already
         # checked in previous test.
@@ -181,18 +242,18 @@ class TestElasticSearchCollector(CollectorTestCase):
     @patch.object(Collector, 'publish')
     def test_should_work_with_real_0_90_data(self, publish_mock):
         returns = [
+            self.getFixture('version0.90'),
             self.getFixture('stats0.90'),
             self.getFixture('indices_stats'),
+            self.getFixture('alias'),
         ]
-        urlopen_mock = patch('urllib2.urlopen', Mock(
-            side_effect=lambda *args: returns.pop(0)))
+        with patch('elasticsearch.urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
+            self.collector.collect()
 
-        urlopen_mock.start()
-        self.collector.collect()
-        urlopen_mock.stop()
-
-        # check how many fixtures were consumed
-        self.assertEqual(urlopen_mock.new.call_count, 2)
+            # check how many fixtures were consumed
+            self.assertEqual(urlopen_mock.call_count, 4)
 
         # test some 0.90 specific stats
         metrics = {
@@ -210,12 +271,14 @@ class TestElasticSearchCollector(CollectorTestCase):
 
     @patch.object(Collector, 'publish')
     def test_should_fail_gracefully(self, publish_mock):
-        urlopen_mock = patch('urllib2.urlopen', Mock(
-                             return_value=self.getFixture('stats_blank')))
-
-        urlopen_mock.start()
-        self.collector.collect()
-        urlopen_mock.stop()
+        returns = [
+            self.getFixture('version'),
+            self.getFixture('stats_blank'),
+        ]
+        with patch('elasticsearch.urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
+            self.collector.collect()
 
         self.assertPublishedMany(publish_mock, {})
 
@@ -226,24 +289,26 @@ class TestElasticSearchCollector(CollectorTestCase):
                 'esprodata01@10.10.10.201:9200',
                 'esprodata02@10.10.10.202:9200',
             ]})
-        self.collector = ElasticSearchCollector(config, None)
+        self.collector = ElasticSearchCollector(config, configfile=config['collectors']['ElasticSearchCollector'])
         self.assertEqual(len(self.collector.instances), 2)
 
         returns = [
+            self.getFixture('version'),
             self.getFixture('stats'),
             self.getFixture('indices_stats'),
+            self.getFixture('alias'),
+            self.getFixture('version'),
             self.getFixture('stats2'),
             self.getFixture('indices_stats2'),
+            self.getFixture('alias'),
         ]
-        urlopen_mock = patch('urllib2.urlopen', Mock(
-            side_effect=lambda *args: returns.pop(0)))
+        with patch('urllib2.urlopen',
+            side_effect=lambda *args: returns.pop(0)
+        ) as urlopen_mock:
+            self.collector.collect()
 
-        urlopen_mock.start()
-        self.collector.collect()
-        urlopen_mock.stop()
-
-        # check how many fixtures were consumed
-        self.assertEqual(urlopen_mock.new.call_count, 4)
+            # check how many fixtures were consumed
+            self.assertEqual(urlopen_mock.call_count, 8)
 
         metrics = {
             'esprodata01.http.current': 1,
