@@ -123,7 +123,7 @@ func (d *DockerStats) Collect() {
 		d.log.Error("Invalid endpoint: ", docker.ErrInvalidEndpoint)
 		return
 	}
-	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false})
+	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false, Size: true})
 	if err != nil {
 		d.log.Error("ListContainers() failed: ", err)
 		return
@@ -140,6 +140,11 @@ func (d *DockerStats) Collect() {
 			d.log.Info("Skip container: ", container.Name)
 			continue
 		}
+
+		// https://github.com/fsouza/go-dockerclient/issues/811
+		container.SizeRw = apiContainer.SizeRw
+		container.SizeRootFs = apiContainer.SizeRootFs
+
 		if _, ok := d.previousCPUValues[container.ID]; !ok {
 			d.previousCPUValues[container.ID] = new(CPUValues)
 		}
@@ -202,6 +207,7 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		buildDockerMetric("DockerCpuPercentage", metric.Gauge, cpuPercentage),
 		buildDockerMetric("DockerCpuThrottledPeriods", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledPeriods)),
 		buildDockerMetric("DockerCpuThrottledNanoseconds", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledTime)),
+		buildDockerMetric("DockerLocalDiskUsed", metric.Gauge, float64(container.SizeRw)),
 	}
 	for netiface := range containerStats.Networks {
 		// legacy format
