@@ -78,6 +78,28 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 	stats.MemoryStats.Limit = 70
 	stats.CPUStats.ThrottlingData.ThrottledPeriods = 123
 	stats.CPUStats.ThrottlingData.ThrottledTime = 456
+	stats.BlkioStats.IOServiceBytesRecursive = []docker.BlkioStatsEntry{
+		docker.BlkioStatsEntry{
+			Major: 1,
+			Minor: 2,
+			Op:    "Read",
+			Value: 1234,
+		},
+		docker.BlkioStatsEntry{
+			Major: 3,
+			Minor: 4,
+			Op:    "Write",
+			Value: 5678,
+		},
+	}
+	stats.BlkioStats.IOServicedRecursive = []docker.BlkioStatsEntry{
+		docker.BlkioStatsEntry{
+			Major: 3,
+			Minor: 4,
+			Op:    "Total",
+			Value: 1111,
+		},
+	}
 
 	containerJSON := []byte(`
 	{
@@ -108,6 +130,20 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 		"instance_name":  "main",
 		"iface":          "eth0",
 	}
+	dev12Dims := map[string]string{
+		"container_id":   "test-id",
+		"container_name": "test-container",
+		"service_name":   "my_service",
+		"instance_name":  "main",
+		"blkdev":         "1:2",
+	}
+	dev34Dims := map[string]string{
+		"container_id":   "test-id",
+		"container_name": "test-container",
+		"service_name":   "my_service",
+		"instance_name":  "main",
+		"blkdev":         "3:4",
+	}
 
 	expectedDimsGen := map[string]string{
 		"service_name":  "my_service",
@@ -122,6 +158,9 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 		metric.Metric{"DockerLocalDiskUsed", "gauge", 1234, baseDims},
 		metric.Metric{"DockerTxBytes", "cumcounter", 20, netDims},
 		metric.Metric{"DockerRxBytes", "cumcounter", 10, netDims},
+		metric.Metric{"DockerBlkDeviceReadBps", "gauge", 1234, dev12Dims},
+		metric.Metric{"DockerBlkDeviceWriteBps", "gauge", 5678, dev34Dims},
+		metric.Metric{"DockerBlkDeviceTotalIOps", "gauge", 1111, dev34Dims},
 		metric.Metric{"DockerContainerCount", "counter", 1, expectedDimsGen},
 	}
 
