@@ -45,7 +45,7 @@ func TestConvertToLog(t *testing.T) {
 
 	dpString, err := h.convertToLog(m)
 	if err != nil {
-		t.Errorf("convertToLog failed to convert %q: err", m, err)
+		t.Errorf("convertToLog failed to convert %+v: %s", m, err)
 	}
 
 	assert.Equal(t, "{\"name\":\"TestMetric\",\"type\":\"gauge\",\"value\":0,\"dimensions\":{}}", dpString)

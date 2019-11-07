@@ -26,7 +26,7 @@ type leaderError struct {
 }
 
 func (e httpError) Error() string {
-	return fmt.Sprintf("%s: %s", http.StatusText(e.Status), e.Status)
+	return fmt.Sprintf("%s: %d", http.StatusText(e.Status), e.Status)
 }
 
 func (e leaderError) Error() string {

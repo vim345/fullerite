@@ -4,4 +4,4 @@ install:
   - "pip install --user tox"
   - bash scripts/gitcookie.sh
 go:
-  - 1.9
+  - 1.13

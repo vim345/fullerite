@@ -157,12 +157,12 @@ func (c *YamlMetrics) getFulleriteFormatMetrics(yamlData []byte) (metrics []metr
 		var metric metric.Metric
 		j, err := json.Marshal(v)
 		if err != nil {
-			c.log.Error("getFulleriteFormatMetrics: Skipping, could not Marshal '%s': %s", v, err.Error())
+			c.log.Errorf("getFulleriteFormatMetrics: Skipping, could not Marshal '%s': %s", v, err.Error())
 			continue
 		}
 		c.log.Debug(fmt.Sprintf("Got metric defn: %s", j))
 		if err := json.Unmarshal(j, &metric); err != nil {
-			c.log.Error("getFulleriteFormatMetrics: Skipping, could not Unmarshal '%s': %s", string(j), err.Error())
+			c.log.Errorf("getFulleriteFormatMetrics: Skipping, could not Unmarshal '%s': %s", string(j), err.Error())
 			continue
 		}
 		metric.Name = c.metricPrefix + "." + metric.Name

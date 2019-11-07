@@ -69,7 +69,7 @@ func (s *procNetUDPStats) Configure(configMap map[string]interface{}) {
 		if err == nil {
 			s.localAddressWhitelist = localRex
 		} else {
-			s.log.Warn(fmt.Sprintf("Failed to compile regex %s. Error: ", whitelist.(string), err))
+			s.log.Warn(fmt.Sprintf("Failed to compile regex %s. Error: %s", whitelist.(string), err))
 		}
 	}
 
@@ -78,7 +78,7 @@ func (s *procNetUDPStats) Configure(configMap map[string]interface{}) {
 		if err == nil {
 			s.remoteAddressWhitelist = remoteRex
 		} else {
-			s.log.Warn(fmt.Sprintf("Failed to compile regex %s. Error: ", whitelist.(string), err))
+			s.log.Warn(fmt.Sprintf("Failed to compile regex %s. Error: %s", whitelist.(string), err))
 		}
 	}
 
