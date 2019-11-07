@@ -155,7 +155,12 @@ func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
 	done := make(chan bool, 1)
 
 	go func() {
-		errC <- d.dockerClient.Stats(docker.StatsOptions{container.ID, statsC, false, done, time.Second * time.Duration(d.interval)})
+		errC <- d.dockerClient.Stats(docker.StatsOptions{
+			ID:      container.ID,
+			Stats:   statsC,
+			Stream:  false,
+			Done:    done,
+			Timeout: time.Second * time.Duration(d.interval)})
 	}()
 	select {
 	case stats, ok := <-statsC:
