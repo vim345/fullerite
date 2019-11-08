@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"fullerite/config"
 	"fullerite/metric"
 	"reflect"
@@ -123,7 +124,7 @@ func (d *DockerStats) Collect() {
 		d.log.Error("Invalid endpoint: ", docker.ErrInvalidEndpoint)
 		return
 	}
-	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false})
+	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false, Size: true})
 	if err != nil {
 		d.log.Error("ListContainers() failed: ", err)
 		return
@@ -140,6 +141,11 @@ func (d *DockerStats) Collect() {
 			d.log.Info("Skip container: ", container.Name)
 			continue
 		}
+
+		// https://github.com/fsouza/go-dockerclient/issues/811
+		container.SizeRw = apiContainer.SizeRw
+		container.SizeRootFs = apiContainer.SizeRootFs
+
 		if _, ok := d.previousCPUValues[container.ID]; !ok {
 			d.previousCPUValues[container.ID] = new(CPUValues)
 		}
@@ -155,7 +161,12 @@ func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
 	done := make(chan bool, 1)
 
 	go func() {
-		errC <- d.dockerClient.Stats(docker.StatsOptions{container.ID, statsC, false, done, time.Second * time.Duration(d.interval)})
+		errC <- d.dockerClient.Stats(docker.StatsOptions{
+			ID:      container.ID,
+			Stats:   statsC,
+			Stream:  false,
+			Done:    done,
+			Timeout: time.Second * time.Duration(d.interval)})
 	}()
 	select {
 	case stats, ok := <-statsC:
@@ -197,6 +208,7 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		buildDockerMetric("DockerCpuPercentage", metric.Gauge, cpuPercentage),
 		buildDockerMetric("DockerCpuThrottledPeriods", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledPeriods)),
 		buildDockerMetric("DockerCpuThrottledNanoseconds", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledTime)),
+		buildDockerMetric("DockerLocalDiskUsed", metric.Gauge, float64(container.SizeRw)),
 	}
 	for netiface := range containerStats.Networks {
 		// legacy format
@@ -207,6 +219,10 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		rxb.AddDimension("iface", netiface)
 		ret = append(ret, rxb)
 	}
+
+	ret = append(ret, metricsForBlkioStatsEntries(containerStats.BlkioStats.IOServiceBytesRecursive, "DockerBlkDevice%sBps")...)
+	ret = append(ret, metricsForBlkioStatsEntries(containerStats.BlkioStats.IOServicedRecursive, "DockerBlkDevice%sIOps")...)
+
 	additionalDimensions := map[string]string{}
 	if d.emitImageName {
 		stringList := strings.Split(container.Config.Image, ":")
@@ -222,6 +238,16 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 	metric.AddToAll(&ret, additionalDimensions)
 	ret = append(ret, buildDockerMetric("DockerContainerCount", metric.Counter, 1))
 	metric.AddToAll(&ret, d.extractDimensions(container))
+	return ret
+}
+
+func metricsForBlkioStatsEntries(blkioStatsEntries []docker.BlkioStatsEntry, metricNameTemplate string) []metric.Metric {
+	ret := []metric.Metric{}
+	for _, blkio := range blkioStatsEntries {
+		io := buildDockerMetric(fmt.Sprintf(metricNameTemplate, blkio.Op), metric.Gauge, float64(blkio.Value))
+		io.AddDimension("blkdev", fmt.Sprintf("%d:%d", blkio.Major, blkio.Minor))
+		ret = append(ret, io)
+	}
 	return ret
 }
 
