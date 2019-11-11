@@ -219,8 +219,8 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		ret = append(ret, rxb)
 	}
 
-	ret = append(ret, metricsForBlkioStatsEntries(containerStats.BlkioStats.IOServiceBytesRecursive, "DockerBlkDevice%sBps")...)
-	ret = append(ret, metricsForBlkioStatsEntries(containerStats.BlkioStats.IOServicedRecursive, "DockerBlkDevice%sIOps")...)
+	ret = append(ret, metricsForBlkioStatsEntries(containerStats.BlkioStats.IOServiceBytesRecursive, "DockerBlkDevice%sBytes")...)
+	ret = append(ret, metricsForBlkioStatsEntries(containerStats.BlkioStats.IOServicedRecursive, "DockerBlkDevice%sRequests")...)
 
 	additionalDimensions := map[string]string{}
 	if d.emitImageName {
@@ -243,7 +243,7 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 func metricsForBlkioStatsEntries(blkioStatsEntries []docker.BlkioStatsEntry, metricNameTemplate string) []metric.Metric {
 	ret := []metric.Metric{}
 	for _, blkio := range blkioStatsEntries {
-		io := buildDockerMetric(fmt.Sprintf(metricNameTemplate, blkio.Op), metric.Gauge, float64(blkio.Value))
+		io := buildDockerMetric(fmt.Sprintf(metricNameTemplate, blkio.Op), metric.CumulativeCounter, float64(blkio.Value))
 		io.AddDimension("blkdev", fmt.Sprintf("%d:%d", blkio.Major, blkio.Minor))
 		ret = append(ret, io)
 	}

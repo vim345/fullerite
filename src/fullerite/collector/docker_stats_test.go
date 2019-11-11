@@ -158,9 +158,9 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 		metric.Metric{"DockerLocalDiskUsed", "gauge", 1234, baseDims},
 		metric.Metric{"DockerTxBytes", "cumcounter", 20, netDims},
 		metric.Metric{"DockerRxBytes", "cumcounter", 10, netDims},
-		metric.Metric{"DockerBlkDeviceReadBps", "gauge", 1234, dev12Dims},
-		metric.Metric{"DockerBlkDeviceWriteBps", "gauge", 5678, dev34Dims},
-		metric.Metric{"DockerBlkDeviceTotalIOps", "gauge", 1111, dev34Dims},
+		metric.Metric{"DockerBlkDeviceReadBytes", "cumcounter", 1234, dev12Dims},
+		metric.Metric{"DockerBlkDeviceWriteBytes", "cumcounter", 5678, dev34Dims},
+		metric.Metric{"DockerBlkDeviceTotalRequests", "cumcounter", 1111, dev34Dims},
 		metric.Metric{"DockerContainerCount", "counter", 1, expectedDimsGen},
 	}
 
