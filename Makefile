@@ -59,9 +59,6 @@ deps:
 
 $(FULLERITE): $(SOURCES) deps
 	@echo Building $(FULLERITE)...
-	@# The following is a workaround for `src/fullerite/vendor/github.com/samuel/go-thrift/examples/scribe/thrift.go:63:9: e declared and not used`
-	@# I know.  Please feel free to do it better.
-	@sed -i -e '63,64d' src/fullerite/vendor/github.com/samuel/go-thrift/examples/scribe/thrift.go
 	@go build -o bin/$(FULLERITE) $@
 
 $(BEATIT): $(BEATIT_SOURCES)
