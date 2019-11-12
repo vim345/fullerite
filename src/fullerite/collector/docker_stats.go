@@ -208,6 +208,7 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 		buildDockerMetric("DockerCpuThrottledPeriods", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledPeriods)),
 		buildDockerMetric("DockerCpuThrottledNanoseconds", metric.CumulativeCounter, float64(containerStats.CPUStats.ThrottlingData.ThrottledTime)),
 		buildDockerMetric("DockerLocalDiskUsed", metric.Gauge, float64(container.SizeRw)),
+		buildDockerMetric("DockerImageLocalDiskUsed", metric.Gauge, float64(container.SizeRootFs)),
 	}
 	for netiface := range containerStats.Networks {
 		// legacy format
