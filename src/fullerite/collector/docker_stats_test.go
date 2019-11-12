@@ -156,6 +156,7 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 		metric.Metric{"DockerCpuThrottledPeriods", "cumcounter", 123, baseDims},
 		metric.Metric{"DockerCpuThrottledNanoseconds", "cumcounter", 456, baseDims},
 		metric.Metric{"DockerLocalDiskUsed", "gauge", 1234, baseDims},
+		metric.Metric{"DockerImageLocalDiskUsed", "gauge", 5678, baseDims},
 		metric.Metric{"DockerTxBytes", "cumcounter", 20, netDims},
 		metric.Metric{"DockerRxBytes", "cumcounter", 10, netDims},
 		metric.Metric{"DockerBlkDeviceReadBytes", "cumcounter", 1234, dev12Dims},
@@ -233,6 +234,7 @@ func TestDockerStatsBuildwithEmitImageName(t *testing.T) {
 		metric.Metric{"DockerCpuThrottledPeriods", "cumcounter", 123, baseDims},
 		metric.Metric{"DockerCpuThrottledNanoseconds", "cumcounter", 456, baseDims},
 		metric.Metric{"DockerLocalDiskUsed", "gauge", 0, baseDims},
+		metric.Metric{"DockerImageLocalDiskUsed", "gauge", 0, baseDims},
 		metric.Metric{"DockerTxBytes", "cumcounter", 20, netDims},
 		metric.Metric{"DockerRxBytes", "cumcounter", 10, netDims},
 		metric.Metric{"DockerContainerCount", "counter", 1, expectedDimsGen},
@@ -295,6 +297,7 @@ func TestDockerStatsBuildMetricsWithNameAsEnvVariable(t *testing.T) {
 		metric.Metric{"DockerCpuThrottledPeriods", "cumcounter", 123, expectedDims},
 		metric.Metric{"DockerCpuThrottledNanoseconds", "cumcounter", 456, expectedDims},
 		metric.Metric{"DockerLocalDiskUsed", "gauge", 0, expectedDims},
+		metric.Metric{"DockerImageLocalDiskUsed", "gauge", 0, expectedDims},
 		metric.Metric{"DockerContainerCount", "counter", 1, expectedDimsGen},
 	}
 
