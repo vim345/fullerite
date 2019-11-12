@@ -113,7 +113,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/samuel/go-thrift
-  version: e9042807f4f5bf47563df6992d3ea0857313e2be
+  version: 5165175b40afa0d250de9a330d47c1ea2051589f
   subpackages:
   - examples/scribe
   - thrift
