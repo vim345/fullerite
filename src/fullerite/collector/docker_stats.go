@@ -124,16 +124,19 @@ func (d *DockerStats) Collect() {
 		d.log.Error("Invalid endpoint: ", docker.ErrInvalidEndpoint)
 		return
 	}
-	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false, Size: true})
+	containers, err := d.dockerClient.ListContainers(docker.ListContainersOptions{All: false})
 	if err != nil {
 		d.log.Error("ListContainers() failed: ", err)
 		return
 	}
 	for _, apiContainer := range containers {
-		container, err := d.dockerClient.InspectContainer(apiContainer.ID)
+		container, err := d.dockerClient.InspectContainerWithOptions(docker.InspectContainerOptions{
+			ID:   apiContainer.ID,
+			Size: true,
+		})
 
 		if err != nil {
-			d.log.Error("InspectContainer() failed: ", err)
+			d.log.Error("InspectContainerWithOptions() failed: ", err)
 			continue
 		}
 
@@ -141,10 +144,6 @@ func (d *DockerStats) Collect() {
 			d.log.Info("Skip container: ", container.Name)
 			continue
 		}
-
-		// https://github.com/fsouza/go-dockerclient/issues/811
-		container.SizeRw = apiContainer.SizeRw
-		container.SizeRootFs = apiContainer.SizeRootFs
 
 		if _, ok := d.previousCPUValues[container.ID]; !ok {
 			d.previousCPUValues[container.ID] = new(CPUValues)

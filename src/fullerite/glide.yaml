@@ -9,7 +9,7 @@ import:
 - package: github.com/codegangsta/cli
   version: 8cea2901d4b2c28b97001e67a7d2d60e227f3da6
 - package: github.com/fsouza/go-dockerclient
-  version: 5ed61518c8145370f9dc37bdce76a835d403df59
+  version: b047305728a119e0df88f2d5e74c1e4530184990
 - package: github.com/golang/protobuf
   version: 98fa357170587e470c5f27d3c3ea0947b71eb455
   subpackages:

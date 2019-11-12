@@ -1,5 +1,5 @@
-hash: 3f812bc629f7c570bcd2a98e9dc59ffebf468d593a9fb55b5a4278ad3ce94bdf
-updated: 2019-11-07T03:26:17.432098973-08:00
+hash: e5f05d7126820ab18015e9bc61b72086ecd8946fee6345cf17c818d5358b4190
+updated: 2019-11-11T11:59:54.46264413-08:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -59,7 +59,7 @@ imports:
 - name: github.com/docker/go-units
   version: 519db1ee28dcc9fd2474ae59fca29a810482bfb1
 - name: github.com/fsouza/go-dockerclient
-  version: 5ed61518c8145370f9dc37bdce76a835d403df59
+  version: b047305728a119e0df88f2d5e74c1e4530184990
 - name: github.com/fzipp/gocyclo
   version: 6acd4345c835499920e8426c7e4e8d7a34f1bb83
 - name: github.com/ghodss/yaml
