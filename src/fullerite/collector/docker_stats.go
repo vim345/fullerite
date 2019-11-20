@@ -6,6 +6,7 @@ import (
 	"fullerite/metric"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -245,7 +246,8 @@ func metricsForBlkioStatsEntries(blkioStatsEntries []docker.BlkioStatsEntry, met
 	ret := []metric.Metric{}
 	for _, blkio := range blkioStatsEntries {
 		io := buildDockerMetric(fmt.Sprintf(metricNameTemplate, blkio.Op), metric.CumulativeCounter, float64(blkio.Value))
-		io.AddDimension("blkdev", fmt.Sprintf("%d:%d", blkio.Major, blkio.Minor))
+		io.AddDimension("blkdev_major", strconv.FormatUint(blkio.Major, 10))
+		io.AddDimension("blkdev_minor", strconv.FormatUint(blkio.Minor, 10))
 		ret = append(ret, io)
 	}
 	return ret

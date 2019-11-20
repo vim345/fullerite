@@ -135,14 +135,16 @@ func TestDockerStatsBuildMetrics(t *testing.T) {
 		"container_name": "test-container",
 		"service_name":   "my_service",
 		"instance_name":  "main",
-		"blkdev":         "1:2",
+		"blkdev_major":   "1",
+		"blkdev_minor":   "2",
 	}
 	dev34Dims := map[string]string{
 		"container_id":   "test-id",
 		"container_name": "test-container",
 		"service_name":   "my_service",
 		"instance_name":  "main",
-		"blkdev":         "3:4",
+		"blkdev_major":   "3",
+		"blkdev_minor":   "4",
 	}
 
 	expectedDimsGen := map[string]string{
