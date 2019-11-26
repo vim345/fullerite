@@ -1,5 +1,5 @@
-hash: e5f05d7126820ab18015e9bc61b72086ecd8946fee6345cf17c818d5358b4190
-updated: 2019-11-11T11:59:54.46264413-08:00
+hash: be0317ad91e2ae97eb0fd19f2b1a541706ade865043913d726514ec3b855a5bb
+updated: 2019-11-25T09:06:04.478486684-08:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -65,9 +65,10 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/gogo/protobuf
-  version: 5628607bb4c51c3157aacc3a50f0ab707582b805
+  version: 65acae22fc9d1fe290b33faa2bd64cdc20a463a0
   subpackages:
   - proto
+  - sortkeys
 - name: github.com/golang/lint
   version: 8f348af5e29faa4262efdc14302797f23774e477
   subpackages:
@@ -80,6 +81,8 @@ imports:
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
+- name: github.com/google/gofuzz
+  version: f140a6486e521aad38f5917de355cbf147cc0496
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/Microsoft/go-winio
@@ -123,15 +126,29 @@ imports:
   version: d26492970760ca5d33129d2d799e34be5c4782eb
   subpackages:
   - hooks/test
+- name: golang.org/x/net
+  version: cdfb69ac37fc6fa907650654115ebebb3aae2087
+  subpackages:
+  - http/httpguts
+  - http2
+  - http2/hpack
+  - idna
 - name: golang.org/x/sync
-  version: cd5d95a43a6e21273425c7ae415d3df9ea832eeb
+  version: 42b317875d0fa942474b76e1b46a6060d720ae6e
   subpackages:
   - errgroup
 - name: golang.org/x/sys
-  version: b90f89a1e7a9c1f6b918820b3daa7f08488c8594
+  version: 3b5209105503162ded1863c307ac66fec31120dd
   subpackages:
   - unix
   - windows
+- name: golang.org/x/text
+  version: e6919f6577db79269a6443b9dc46d18f2238fb5d
+  subpackages:
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
 - name: golang.org/x/tools
   version: 92d42b9ff15f625347a13b6aeafd04a33537ce91
 - name: google.golang.org/genproto
@@ -146,17 +163,49 @@ imports:
   - grpclog
   - internal
   - status
+- name: gopkg.in/inf.v0
+  version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
   version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
+- name: k8s.io/api
+  version: 16d7abae0d2a8ab2a6a7ad1bf3300eaacd541f56
+  subpackages:
+  - core/v1
+- name: k8s.io/apimachinery
+  version: 72ed19daf4bb788ae595ae4103c404cb0fa09c84
+  subpackages:
+  - pkg/api/resource
+  - pkg/apis/meta/v1
+  - pkg/conversion
+  - pkg/conversion/queryparams
+  - pkg/fields
+  - pkg/labels
+  - pkg/runtime
+  - pkg/runtime/schema
+  - pkg/selection
+  - pkg/types
+  - pkg/util/errors
+  - pkg/util/intstr
+  - pkg/util/json
+  - pkg/util/naming
+  - pkg/util/net
+  - pkg/util/runtime
+  - pkg/util/sets
+  - pkg/util/validation
+  - pkg/util/validation/field
+  - pkg/watch
+  - third_party/forked/golang/reflect
+- name: k8s.io/klog
+  version: 3ca30a56d8a775276f9cdae009ba326fdc05af7f
 testImports:
 - name: github.com/davecgh/go-spew
-  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/MakeNowJust/heredoc
   version: bb23615498cded5e105af4ce27de75b089cbe851
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
