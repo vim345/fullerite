@@ -1,6 +1,10 @@
 package: fullerite
 import:
+- package: github.com/sirupsen/logrus
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
 - package: github.com/Sirupsen/logrus
+  repo: git@github.com:/sirupsen/logrus
+  vcs: git
   version: d26492970760ca5d33129d2d799e34be5c4782eb
 - package: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6

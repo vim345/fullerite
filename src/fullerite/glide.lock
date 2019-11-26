@@ -1,5 +1,5 @@
-hash: e5f05d7126820ab18015e9bc61b72086ecd8946fee6345cf17c818d5358b4190
-updated: 2019-11-11T11:59:54.46264413-08:00
+hash: 9c8448479e82a58359daf71c682cf1296b0315dd85ff53ee8533922ae238e58d
+updated: 2019-11-25T17:39:33.847431-08:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -80,8 +80,6 @@ imports:
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
-- name: github.com/konsorten/go-windows-terminal-sequences
-  version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/Microsoft/go-winio
   version: fc70bd9a86b5562b3b5eb1040e803febee1e90a1
   subpackages:
@@ -117,12 +115,14 @@ imports:
   subpackages:
   - examples/scribe
   - thrift
-- name: github.com/sirupsen/logrus
-  version: 67a7fdcf741f4d5cee82cb9800994ccfd4393ad0
 - name: github.com/Sirupsen/logrus
   version: d26492970760ca5d33129d2d799e34be5c4782eb
+  repo: git@github.com:/sirupsen/logrus
+  vcs: git
   subpackages:
   - hooks/test
+- name: github.com/sirupsen/logrus
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
 - name: golang.org/x/sync
   version: cd5d95a43a6e21273425c7ae415d3df9ea832eeb
   subpackages:
