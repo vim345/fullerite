@@ -1,5 +1,5 @@
 FULLERITE      := fullerite
-BEATIT         := beatit
+BEATIT         := teatit
 VERSION        := 0.6.49
 SRCDIR         := src
 GLIDE          := glide
@@ -69,7 +69,7 @@ go:
 	uname -a |grep -qE '^Linux.*x86_64' && curl -s https://dl.google.com/go/go1.13.linux-amd64.tar.gz | tar xz
 
 test: tests
-tests: deps diamond_test fullerite-tests
+tests: deps fullerite-tests
 
 fullerite-tests:
 	@echo Testing $(FULLERITE)
