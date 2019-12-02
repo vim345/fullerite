@@ -33,6 +33,13 @@ export GOPATH
 PATH := $(GOPATH)/bin:$(GOPATH)/go/bin:$(PATH)
 export PATH
 
+# Use yelp-internal pypi if building at Yelp.
+ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
+    export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+else
+    export PIP_INDEX_URL ?= https://pypi.python.org/simple
+endif
+
 all: clean fmt lint $(FULLERITE) $(BEATIT) test
 
 .PHONY: clean
