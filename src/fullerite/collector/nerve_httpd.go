@@ -122,7 +122,7 @@ func (c *NerveHTTPD) Collect() {
 
 	for _, service := range services {
 		if c.serviceInWhitelist(service) {
-			go c.emitHTTPDMetric(service, service.Port)
+			go c.emitHTTPDMetric(service)
 		}
 	}
 }
@@ -136,22 +136,22 @@ func (c *NerveHTTPD) serviceInWhitelist(service util.NerveService) bool {
 	return false
 }
 
-func (c *NerveHTTPD) emitHTTPDMetric(service util.NerveService, port int) {
-	metrics := getNerveHTTPDMetrics(c, service, port)
+func (c *NerveHTTPD) emitHTTPDMetric(service util.NerveService) {
+	metrics := getNerveHTTPDMetrics(c, service)
 	for _, metric := range metrics {
 		c.Channel() <- metric
 	}
 	c.Channel() <- metric.Sentinel()
 }
 
-func (c *NerveHTTPD) getMetrics(service util.NerveService, port int) []metric.Metric {
+func (c *NerveHTTPD) getMetrics(service util.NerveService) []metric.Metric {
 	results := []metric.Metric{}
 	serviceLog := c.log.WithField("service", service.Name)
 
-	endpoint := fmt.Sprintf("http://%s:%d/%s", c.host, port, c.queryPath)
+	endpoint := fmt.Sprintf("http://%s:%d/%s", c.host, service.Port, c.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 
-	httpResponse := fetchApacheMetrics(endpoint, port)
+	httpResponse := fetchApacheMetrics(endpoint, service.Port)
 
 	if httpResponse.status != 200 {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", httpResponse.err)
@@ -161,7 +161,7 @@ func (c *NerveHTTPD) getMetrics(service util.NerveService, port int) []metric.Me
 	metric.AddToAll(&apacheMetrics, map[string]string{
 		"service_name":      service.Name,
 		"service_namespace": service.Namespace,
-		"port":              strconv.Itoa(port),
+		"port":              strconv.Itoa(service.Port),
 	})
 	return apacheMetrics
 }
