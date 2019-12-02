@@ -77,7 +77,7 @@ func (m *nginxNerveStats) Collect() {
 
 func (m *nginxNerveStats) collectMetricsForService(service util.NerveService, path string) {
 	serviceLog := m.log.WithField("service", service.Name)
-	statsURL := fmt.Sprintf("http://localhost:%d%s", service.Port, path)
+	statsURL := fmt.Sprintf("http://%s:%d%s", service.Host, service.Port, path)
 
 	serviceLog.Debug("Fetching nginx stats from", statsURL)
 	metrics := getNginxMetrics(m.client, statsURL, serviceLog)

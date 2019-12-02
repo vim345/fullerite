@@ -38,6 +38,7 @@ type nerveConfigData struct {
 type NerveService struct {
 	Name      string
 	Namespace string
+	Host      string
 	Port      int
 }
 
@@ -47,46 +48,31 @@ type EndPoint struct {
 	Port string
 }
 
-// ParseNerveConfig is responsible for taking the JSON string coming in into a map of service:port
-// it will also filter based on only services runnign on this host.
-// To deal with multi-tenancy we actually will return port:service
+// ParseNerveConfig is responsible for taking the JSON string coming in into a list of NerveServices
 func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, error) {
 	services := make(map[string]NerveService)
 	results := []NerveService{}
-	ips, err := ipGetter()
-
-	if err != nil {
-		return results, err
-	}
 	parsed := new(nerveConfigData)
 
-	// convert the ips into a map for membership tests
-	ipMap := make(map[string]bool)
-	for _, val := range ips {
-		ipMap[val] = true
-	}
-
-	err = json.Unmarshal(*raw, parsed)
+	err := json.Unmarshal(*raw, parsed)
 	if err != nil {
 		return results, err
 	}
 
 	for rawServiceName, serviceConfig := range parsed.Services {
 		host := strings.TrimSpace(serviceConfig["host"].(string))
+		service := new(NerveService)
+		service.Name = strings.Split(rawServiceName, ".")[0]
+		service.Namespace = strings.Split(rawServiceName, ".")[1]
+		service.Host = host
+		port := extractPort(serviceConfig)
 
-		_, exists := ipMap[host]
-		if exists {
-			service := new(NerveService)
-			service.Name = strings.Split(rawServiceName, ".")[0]
-			service.Namespace = strings.Split(rawServiceName, ".")[1]
-			port := extractPort(serviceConfig)
-			if port != -1 {
-				service.Port = port
-				if namespaceIncluded {
-					services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
-				} else {
-					services[service.Name+":"+strconv.Itoa(port)] = *service
-				}
+		if port != -1 {
+			service.Port = port
+			if namespaceIncluded {
+				services[service.Name+service.Namespace+":"+strconv.Itoa(port)] = *service
+			} else {
+				services[service.Name+":"+strconv.Itoa(port)] = *service
 			}
 		}
 	}

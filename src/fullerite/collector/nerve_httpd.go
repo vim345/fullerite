@@ -49,7 +49,6 @@ type NerveHTTPD struct {
 
 	configFilePath    string
 	queryPath         string
-	host              string
 	timeout           int
 	statusTTL         time.Duration
 	servicesWhitelist []string
@@ -74,7 +73,6 @@ func newNerveHTTPD(channel chan metric.Metric, initialInterval int, log *l.Entry
 	c.name = "NerveHTTPD"
 	c.configFilePath = "/etc/nerve/nerve.conf.json"
 	c.queryPath = "server-status?auto"
-	c.host = "localhost"
 	c.timeout = 2
 	c.statusTTL = time.Duration(60) * time.Minute
 	return c
@@ -88,10 +86,6 @@ func (c *NerveHTTPD) Configure(configMap map[string]interface{}) {
 
 	if val, exists := configMap["configFilePath"]; exists {
 		c.configFilePath = val.(string)
-	}
-
-	if val, exists := configMap["host"]; exists {
-		c.host = val.(string)
 	}
 
 	if val, exists := configMap["status_ttl"]; exists {
@@ -148,7 +142,7 @@ func (c *NerveHTTPD) getMetrics(service util.NerveService) []metric.Metric {
 	results := []metric.Metric{}
 	serviceLog := c.log.WithField("service", service.Name)
 
-	endpoint := fmt.Sprintf("http://%s:%d/%s", c.host, service.Port, c.queryPath)
+	endpoint := fmt.Sprintf("http://%s:%d/%s", service.Host, service.Port, c.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 
 	httpResponse := fetchApacheMetrics(endpoint, service.Port)
