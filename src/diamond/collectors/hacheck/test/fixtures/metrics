@@ -1,0 +1,11 @@
+{
+  "cache": {
+    "expirations": 2692,
+    "sets": 2713,
+    "gets": 28460,
+    "hits": 25747,
+    "misses": 2713
+  },
+  "uptime": 88132.76022386551,
+  "outbound_request_queue_size": 12
+}
