@@ -148,9 +148,9 @@ func badURINerveConfig() []byte {
 
 func TestNerveConfigParsing(t *testing.T) {
 	expected := map[NerveService]bool{
-		NerveService{Name: "example_service", Namespace: "mesosstage_main", Port: 22224}: true,
-		NerveService{Name: "example_service", Namespace: "main", Port: 13752}:            true,
-		NerveService{Name: "example_service", Namespace: "another", Port: 13752}:         true,
+		NerveService{Name: "example_service", Namespace: "mesosstage_main", Port: 22224, Host: "10.56.5.21"}: true,
+		NerveService{Name: "example_service", Namespace: "main", Port: 13752, Host: "10.56.5.21"}:            true,
+		NerveService{Name: "example_service", Namespace: "another", Port: 13752, Host: "10.56.5.21"}:         true,
 	}
 
 	cfgString := getTestNerveConfig()
@@ -178,15 +178,6 @@ func TestNerveConfigParsingiNoNamespace(t *testing.T) {
 		m[r.Port] = true
 	}
 	assert.Equal(t, expected, m)
-}
-
-func TestNerveFilterOnIP(t *testing.T) {
-	cfgString := getTestNerveConfig()
-	ipGetter = func() ([]string, error) { return []string{"10.56.2.3"}, nil }
-	results, err := ParseNerveConfig(&cfgString, true)
-	assert.Nil(t, err)
-	assert.NotNil(t, results)
-	assert.Equal(t, 0, len(results))
 }
 
 func TestHandleBadNerveConfig(t *testing.T) {
