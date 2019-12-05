@@ -100,15 +100,15 @@ func (n *nerveUWSGICollector) Collect() {
 	n.log.Debug("Finished parsing Nerve config into ", services)
 
 	for _, service := range services {
-		go n.queryService(service.Name, service.Port)
+		go n.queryService(service.Name, service.Host, service.Port)
 	}
 }
 
 // Fetches and computes stats from metrics HTTP endpoint,
 // calls an additional endpoint if UWSGI is detected
-func (n *nerveUWSGICollector) queryService(serviceName string, port int) {
+func (n *nerveUWSGICollector) queryService(serviceName string, host string, port int) {
 	serviceLog := n.log.WithField("service", serviceName)
-	endpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.queryPath)
+	endpoint := fmt.Sprintf("http://%s:%d/%s", host, port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
 	rawResponse, schemaVer, err := queryEndpoint(endpoint, n.timeout)
 	if err != nil {
