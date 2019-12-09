@@ -1,0 +1,26 @@
+{
+    "services": {
+        "test.main": {
+            "haproxy": {
+                "backend": [
+                    "http-check send-state"
+                ],
+                "frontend": [
+                    "use_backend aardvark.main if aardvark.main_has_connslots"
+                ]
+            }
+        },
+        "test.no_frontend": {
+            "haproxy": {
+                "backend": [
+                    "http-check send-state"
+                ]
+            }
+        },
+        "test.main.nginx_listener": {
+            "haproxy": {
+                "disabled": true
+            }
+        }
+    }
+}
