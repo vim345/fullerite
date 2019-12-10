@@ -8,7 +8,7 @@ class SynapseCollector(diamond.collector.Collector):
     def get_default_config_help(self):
         config_help = super(SynapseCollector, self).get_default_config_help()
         config_help.update({
-            'path': 'Path to synapse.conf.json',
+            'synapse_conf_path': 'Path to synapse.conf.json',
         })
         return config_help
 
@@ -16,16 +16,16 @@ class SynapseCollector(diamond.collector.Collector):
     def get_default_config(self):
         config = super(SynapseCollector, self).get_default_config()
         config.update({
-            'path': '/etc/synapse/synapse.conf.json',
+            'synapse_conf_path': '/etc/synapse/synapse.conf.json',
         })
         return config
 
 
     def collect(self):
-        path = self.config.get('path')
+        synapse_conf_path = self.config.get('synapse_conf_path')
 
         try:
-            f = open(path)
+            f = open(synapse_conf_path)
             synapse_conf = json.loads(f.read())
         except ValueError:
             return
