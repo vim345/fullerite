@@ -93,7 +93,7 @@ class CassandraJolokiaCollector(JolokiaCollector):
             dims["type"] = scope_type
 
         if self.config["multiple_hosts_mode"] and self.current_host_identifier:
-            dims["cassandra_cluster"] = self.current_host_identifier
+            dims["cassandra_cluster"] = re.sub('^cassandra_', '', self.current_host_identifier)
 
         return metric_name, metric_type, dims
 
