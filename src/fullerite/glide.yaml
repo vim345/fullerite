@@ -41,3 +41,7 @@ testImport:
   - assert
   - require
 - package: github.com/MakeNowJust/heredoc
+- package: yelpcorp.com/query_engine_go_clientlib
+  repo: git@git.yelpcorp.com:query_engine_go_clientlib
+  version: 3f396672687a580e2e4d8d8e0818e93fd3bfb315
+  vcs: git
