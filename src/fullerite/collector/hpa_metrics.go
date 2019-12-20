@@ -18,7 +18,8 @@ import (
 
 const (
 	defaultKubeletPort    = 10255
-	autoscalingAnnotation = "autoscaling"
+	legacyAutoscalingAnnotation = "autoscaling"
+	autoscalingAnnotation = "hpa"
 	instanceNameLabelKey  = "paasta.yelp.com/instance"
 )
 
@@ -42,6 +43,11 @@ type HPAMetrics struct {
 	metricsProviderTimeout int
 	podSpecURL             string
 	additionalDimensions   map[string]string
+}
+
+type HPAMetricData struct {
+	dimensions	map[string]string
+	name	string
 }
 
 func init() {
@@ -187,13 +193,52 @@ func (d *HPAMetrics) Collect() {
 	}
 }
 
+func (d *HPAMetrics) getFromURL(url string) ([]byte, error) {
+	client := http.Client{
+		Timeout: time.Second * time.Duration(d.kubeletTimeout),
+	}
+	res, getErr := client.Get(url)
+	if getErr != nil {
+		d.log.Error("Error sending request to metrics provider: ", getErr)
+		return nil, getErr
+	}
+	defer res.Body.Close()
+	raw, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		d.log.Error("Error reading response from metrics provider: ", readErr)
+		return raw, readErr 
+	}
+	return raw, nil
+}
+
 // CollectMetricsForPod collect http or uwsgi metrics if all containers in the pod are ready,
 // and if there is "autoscaling"="http"/"uwsgi" in the annotation.
 func (d *HPAMetrics) CollectMetricsForPod(pod *corev1.Pod) {
-	metricsName, annotationPresent := pod.GetAnnotations()[autoscalingAnnotation]
-	if !annotationPresent || !d.allContainersAreReady(pod) {
+	// Return if Not all containers are ready
+	if !d.allContainersAreReady(pod) {
 		return
 	}
+	
+	// Read all supported metrics and their dimensions from annotations
+	metrics := []*HPAMetricData{}
+	annotations := pod.GetAnnotations()
+	if metricNames, annotationPresent := annotations[autoscalingAnnotation]; annotationPresent {
+		for metricName, dimensions := range config.GetAsMap(metricNames) {
+			dimensionMap := config.GetAsMap(dimensions)
+			metric := &HPAMetricData{name: metricName, dimensions: make(map[string]string)}
+			if len(dimensionMap) > 0 {
+				for k, v := range dimensionMap {
+					metric.dimensions[k] = v
+				}
+			}
+			metrics = append(metrics, metric)
+		}
+	} else if metricName, annotationPresent := annotations[legacyAutoscalingAnnotation]; annotationPresent {
+			metrics = append(metrics, &HPAMetricData{name: metricName, dimensions: make(map[string]string)})
+	} else {
+		return
+	}
+	
 	podIP := pod.Status.PodIP
 	podName := pod.GetName()
 	podNamespace := pod.GetNamespace()
@@ -204,53 +249,47 @@ func (d *HPAMetrics) CollectMetricsForPod(pod *corev1.Pod) {
 		d.log.Error(err)
 		return
 	}
-
-	url := fmt.Sprintf("http://%s:%d/%s", podIP, containerPort, metricsEndpoints[metricsName])
-	client := http.Client{
-		Timeout: time.Second * time.Duration(d.kubeletTimeout),
-	}
-	res, getErr := client.Get(url)
-	if getErr != nil {
-		d.log.Error("Error sending request to metrics provider: ", getErr)
-		return
-	}
-	defer res.Body.Close()
-	raw, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		d.log.Error("Error reading response from metrics provider: ", readErr)
-		return
-	}
-
-	var value float64
-	switch metricName {
-	case "uwsgi":
-		{
-			tmp, uwsgiErr := parseUWSGIMetrics(raw)
-			value = tmp
-			if uwsgiErr != nil {
-				d.log.Error(uwsgiErr)
-				return
-			}
-		}
-	case "http":
-		{
-			tmp, httpErr := parseHTTPMetrics(raw)
-			value = tmp
-			if httpErr != nil {
-				d.log.Error(httpErr)
-				return
-			}
-		}
-	}
-
 	labels["kubernetes_namespace"] = podNamespace
 	labels["kubernetes_pod_name"] = podName
 	for k, v := range d.additionalDimensions {
 		labels[k] = v
 	}
-	sanitizedDimensions := sanitizeDimensions(labels)
-
-	d.Channel() <- d.buildHPAMetric(metricsName, sanitizedDimensions, value)
+	// For all metrics, if their dimension is empty, use labels as dimension. 
+	for _, metric := range metrics {
+		url := fmt.Sprintf("http://%s:%d/%s", podIP, containerPort, metricsEndpoints[metric.name])
+		raw, err := d.getFromURL(url)	
+		if err != nil {
+			return
+		}
+		var value float64
+		switch metricName {
+		case "uwsgi":
+			{
+				tmp, uwsgiErr := parseUWSGIMetrics(raw)
+				value = tmp
+				if uwsgiErr != nil {
+					d.log.Error(uwsgiErr)
+					return
+				}
+			}
+		case "http":
+			{
+				tmp, httpErr := parseHTTPMetrics(raw)
+				value = tmp
+				if httpErr != nil {
+					d.log.Error(httpErr)
+					return
+				}
+			}
+		}
+		var sanitizedDimensions map[string]string
+		if len(metric.dimensions) == 0 {
+			sanitizedDimensions = sanitizeDimensions(labels)
+		} else {
+			sanitizedDimensions = sanitizeDimensions(metric.dimensions)
+		}
+		d.Channel() <- d.buildHPAMetric(metric.name, sanitizedDimensions, value)
+	}
 }
 
 // allContainersAreReady returns True if all containers in this pod are ready
