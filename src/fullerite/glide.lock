@@ -1,5 +1,5 @@
-hash: be0317ad91e2ae97eb0fd19f2b1a541706ade865043913d726514ec3b855a5bb
-updated: 2019-11-25T09:06:04.478486684-08:00
+hash: 362c097b3bb5dd04cac348ba5f1f965ae68a54ac63fe7889c7ba86f93fc45e62
+updated: 2019-12-20T10:43:46.539038895-08:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -74,7 +74,7 @@ imports:
   subpackages:
   - golint
 - name: github.com/golang/protobuf
-  version: 98fa357170587e470c5f27d3c3ea0947b71eb455
+  version: ed6926b37a637426117ccab59282c3839528a700
   subpackages:
   - proto
   - ptypes
@@ -213,3 +213,7 @@ testImports:
   subpackages:
   - assert
   - require
+- name: yelpcorp.com/query_engine_go_clientlib
+  version: 3f396672687a580e2e4d8d8e0818e93fd3bfb315
+  repo: git@git.yelpcorp.com:query_engine_go_clientlib
+  vcs: git
