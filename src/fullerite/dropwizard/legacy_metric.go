@@ -90,6 +90,8 @@ func (parser *LegacyMetric) parseNestedMetricMaps(
 
 	unvisitedMetricMaps = append(unvisitedMetricMaps, startMetricMap)
 
+	var serviceDims interface{}
+
 	for len(unvisitedMetricMaps) > 0 {
 		nodeToVisit := unvisitedMetricMaps[0]
 		unvisitedMetricMaps = unvisitedMetricMaps[1:]
@@ -100,6 +102,9 @@ func (parser *LegacyMetric) parseNestedMetricMaps(
 		for k, v := range nodeToVisit.metricMap {
 			switch t := v.(type) {
 			case map[string]interface{}:
+				if k == "service_dims" {
+					serviceDims = v
+				}
 				unvistedNode := nestedMetricMap{
 					metricSegments: append(currentMetricSegment, k),
 					metricMap:      t,
@@ -117,6 +122,12 @@ func (parser *LegacyMetric) parseNestedMetricMaps(
 					results = append(results, m)
 				}
 			}
+		}
+	}
+
+	if serviceDims != nil {
+		for k, v := range serviceDims.(map[string]interface{}) {
+			metric.AddToAll(&results, map[string]string{k: v.(string)})
 		}
 	}
 

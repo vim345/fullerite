@@ -221,3 +221,27 @@ func TestDropwizardHistogram(t *testing.T) {
 
 	assert.Equal(t, 100.0, counterMetric.Value)
 }
+
+func TestServiceDimsWithLegacyMetric(t *testing.T) {
+	var rawData = []byte(`{
+  "service_dims": {
+    "git_sha": "aabbcc",
+    "deploy_group": "canary"
+  },
+  "jvm.classloader.loaded": {
+	"value": 123
+  }
+}`)
+
+	parser := NewLegacyMetric(rawData, "", false)
+	metrics, err := parser.Parse()
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(metrics))
+
+	for _, m := range metrics {
+		assert.Equal(t, 3, len(m.Dimensions))
+		assert.Equal(t, m.Dimensions["git_sha"], "aabbcc")
+		assert.Equal(t, m.Dimensions["deploy_group"], "canary")
+	}
+}
