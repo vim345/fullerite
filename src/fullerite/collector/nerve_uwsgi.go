@@ -129,7 +129,7 @@ func (n *nerveUWSGICollector) queryService(serviceName string, host string, port
 	if strings.Contains(schemaVer, "uwsgi") && n.workersStatsEnabled && !n.serviceInWorkersStatsBlacklist(serviceName) {
 		extraDims := dropwizard.ExtractServiceDims(rawResponse)
 		serviceLog.Debug("Trying to fetch workers stats")
-		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://localhost:%d/%s", port, n.workersStatsQueryPath)
+		uwsgiWorkerStatsEndpoint := fmt.Sprintf("http://%s:%d/%s", host, port, n.workersStatsQueryPath)
 		uwsgiWorkerStatsMetrics, err := n.tryFetchUWSGIWorkersStats(serviceName, uwsgiWorkerStatsEndpoint)
 		if err != nil {
 			serviceLog.Info("Could not get additional worker stat metrics")

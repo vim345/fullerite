@@ -11,12 +11,14 @@ import:
 - package: github.com/fsouza/go-dockerclient
   version: b047305728a119e0df88f2d5e74c1e4530184990
 - package: github.com/golang/protobuf
-  version: 98fa357170587e470c5f27d3c3ea0947b71eb455
+  version: v1.3.1
   subpackages:
   - proto
 - package: github.com/pkg/profile
   version: 7b053ad66e2a49baca9cc97b982dcea0e182bda4
 - package: github.com/prometheus/procfs
+- package: github.com/prometheus/prometheus
+  version: 2.15.2
 - package: github.com/samuel/go-thrift
   version: 5165175b40afa0d250de9a330d47c1ea2051589f
   subpackages:
