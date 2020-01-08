@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	defaultKubeletPort    = 10255
+	defaultKubeletPort          = 10255
 	legacyAutoscalingAnnotation = "autoscaling"
-	autoscalingAnnotation = "hpa"
-	instanceNameLabelKey  = "paasta.yelp.com/instance"
+	autoscalingAnnotation       = "hpa"
+	instanceNameLabelKey        = "paasta.yelp.com/instance"
 )
 
 var metricsEndpoints = map[string]string{"uwsgi": "status/uwsgi", "http": "status"}
@@ -46,8 +46,8 @@ type HPAMetrics struct {
 }
 
 type HPAMetricData struct {
-	dimensions	map[string]string
-	name	string
+	dimensions map[string]string
+	name       string
 }
 
 func init() {
@@ -206,7 +206,7 @@ func (d *HPAMetrics) getFromURL(url string) ([]byte, error) {
 	raw, readErr := ioutil.ReadAll(res.Body)
 	if readErr != nil {
 		d.log.Error("Error reading response from metrics provider: ", readErr)
-		return raw, readErr 
+		return raw, readErr
 	}
 	return raw, nil
 }
@@ -218,7 +218,7 @@ func (d *HPAMetrics) CollectMetricsForPod(pod *corev1.Pod) {
 	if !d.allContainersAreReady(pod) {
 		return
 	}
-	
+
 	// Read all supported metrics and their dimensions from annotations
 	metrics := []*HPAMetricData{}
 	annotations := pod.GetAnnotations()
@@ -234,11 +234,11 @@ func (d *HPAMetrics) CollectMetricsForPod(pod *corev1.Pod) {
 			metrics = append(metrics, metric)
 		}
 	} else if metricName, annotationPresent := annotations[legacyAutoscalingAnnotation]; annotationPresent {
-			metrics = append(metrics, &HPAMetricData{name: metricName, dimensions: make(map[string]string)})
+		metrics = append(metrics, &HPAMetricData{name: metricName, dimensions: make(map[string]string)})
 	} else {
 		return
 	}
-	
+
 	podIP := pod.Status.PodIP
 	podName := pod.GetName()
 	podNamespace := pod.GetNamespace()
@@ -254,10 +254,10 @@ func (d *HPAMetrics) CollectMetricsForPod(pod *corev1.Pod) {
 	for k, v := range d.additionalDimensions {
 		labels[k] = v
 	}
-	// For all metrics, if their dimension is empty, use labels as dimension. 
+	// For all metrics, if their dimension is empty, use labels as dimension.
 	for _, metric := range metrics {
 		url := fmt.Sprintf("http://%s:%d/%s", podIP, containerPort, metricsEndpoints[metric.name])
-		raw, err := d.getFromURL(url)	
+		raw, err := d.getFromURL(url)
 		if err != nil {
 			return
 		}
