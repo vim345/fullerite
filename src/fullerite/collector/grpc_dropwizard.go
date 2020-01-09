@@ -74,8 +74,6 @@ func (e GrpcEndpoint) getClient() (metrics.MetricsClient, error) {
 		return metricsClient, err
 	}
 
-	defer conn.Close()
-
 	return metrics.NewMetricsClient(conn), nil
 }
 
@@ -84,6 +82,7 @@ func (g *grpcDropwizardCollector) getMetrics(endpoint GrpcConnector) {
 
 	client, err := endpoint.getClient()
 	if err != nil {
+		l.Warningf("Failed to connect to server: %s", err)
 		return
 	}
 
