@@ -137,7 +137,7 @@ func (g *grpcDropwizardCollector) Configure(configMap map[string]interface{}) {
 		}
 	}
 
-	if val, exists := configMap["imeout"]; exists {
+	if val, exists := configMap["timeout"]; exists {
 		g.timeout = config.GetAsInt(val, 2)
 	}
 

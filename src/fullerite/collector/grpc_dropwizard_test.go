@@ -18,6 +18,7 @@ const (
 	ADDR        = "127.0.0.1"
 	ServiceName = "ranking_platform_query_engine"
 	INTERVAL    = 5
+	TIMEOUT     = 5
 )
 
 var grpcEndpoint = GrpcEndpoint{
@@ -86,6 +87,7 @@ func TestConfigGrpcDropwizard(t *testing.T) {
 	cfg := map[string]interface{}{
 		"interval":  INTERVAL,
 		"endpoints": endpoints,
+		"timeout":   TIMEOUT,
 	}
 
 	inst := getTestGrpcDropwizard()
@@ -95,6 +97,7 @@ func TestConfigGrpcDropwizard(t *testing.T) {
 	assert.Equal(t, INTERVAL, inst.Interval())
 	assert.Equal(t, ServiceName, inst.endpoints[0].Name)
 	assert.Equal(t, PORT, inst.endpoints[0].Port)
+	assert.Equal(t, TIMEOUT, inst.timeout)
 }
 
 func TestGetMetrics(t *testing.T) {
