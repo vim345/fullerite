@@ -1,5 +1,5 @@
-hash: be0317ad91e2ae97eb0fd19f2b1a541706ade865043913d726514ec3b855a5bb
-updated: 2019-11-25T09:06:04.478486684-08:00
+hash: 66d68a7b060b6dda00d5e3bc702e8438b99e3414c008e3f64226daf93a773a2f
+updated: 2020-01-08T13:58:25.217988811-08:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -74,7 +74,7 @@ imports:
   subpackages:
   - golint
 - name: github.com/golang/protobuf
-  version: 98fa357170587e470c5f27d3c3ea0947b71eb455
+  version: b5d812f8a3706043e23a9cd5babf2e5423744d30
   subpackages:
   - proto
   - ptypes
@@ -133,6 +133,8 @@ imports:
   - http2
   - http2/hpack
   - idna
+  - internal/timeseries
+  - trace
 - name: golang.org/x/sync
   version: 42b317875d0fa942474b76e1b46a6060d720ae6e
   subpackages:
@@ -158,11 +160,41 @@ imports:
 - name: google.golang.org/grpc
   version: 2548a2203d4c51bda89005daf022f21ba0ff4e9f
   subpackages:
+  - attributes
+  - backoff
+  - balancer
+  - balancer/base
+  - balancer/roundrobin
+  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
+  - credentials
+  - credentials/internal
+  - encoding
+  - encoding/proto
   - grpclog
   - internal
+  - internal/backoff
+  - internal/balancerload
+  - internal/binarylog
+  - internal/buffer
+  - internal/channelz
+  - internal/envconfig
+  - internal/grpcrand
+  - internal/grpcsync
+  - internal/resolver/dns
+  - internal/resolver/passthrough
+  - internal/syscall
+  - internal/transport
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - resolver
+  - serviceconfig
+  - stats
   - status
+  - tap
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
