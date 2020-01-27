@@ -1,5 +1,5 @@
-hash: 66d68a7b060b6dda00d5e3bc702e8438b99e3414c008e3f64226daf93a773a2f
-updated: 2020-01-08T13:58:25.217988811-08:00
+hash: 4b063a47b42e2e33b6af9d0d8a2909027bd36cfb5908bbbcba4ceb448de834f1
+updated: 2020-01-22T04:28:48.524176326-08:00
 imports:
 - name: github.com/alyu/configparser
   version: 26b2fe18bee125de2a3090d6fadb7e280e63eba6
@@ -115,17 +115,19 @@ imports:
   version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
   subpackages:
   - xfs
+- name: github.com/prometheus/prometheus
+  version: d9613e5c466c6e9de548c4dae1b9aabf9aaf7c57
 - name: github.com/samuel/go-thrift
   version: 5165175b40afa0d250de9a330d47c1ea2051589f
   subpackages:
   - examples/scribe
   - thrift
-- name: github.com/sirupsen/logrus
-  version: 67a7fdcf741f4d5cee82cb9800994ccfd4393ad0
 - name: github.com/Sirupsen/logrus
   version: d26492970760ca5d33129d2d799e34be5c4782eb
   subpackages:
   - hooks/test
+- name: github.com/sirupsen/logrus
+  version: 67a7fdcf741f4d5cee82cb9800994ccfd4393ad0
 - name: golang.org/x/net
   version: cdfb69ac37fc6fa907650654115ebebb3aae2087
   subpackages:
