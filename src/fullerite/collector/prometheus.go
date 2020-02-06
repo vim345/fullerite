@@ -27,10 +27,8 @@ var userAgentHeader = fmt.Sprintf("Fullerite/%s", version)
 type Endpoint struct {
 	prefix              string
 	url                 string
-	serverCaFile        string
-	clientCertFile      string
-	clientKeyFile       string
-	timeout             int
+	headers             map[string]string
+	httpGetter          util.HTTPGetter
 	generatedDimensions map[string]string
 	metricsBlacklist    *map[string]bool
 	metricsWhitelist    *map[string]bool
@@ -80,12 +78,12 @@ func (p *Prometheus) Configure(configMap map[string]interface{}) {
 		if v, exists := endpoint["generated_dimensions"]; exists {
 			v2, ok := v.(map[string]interface{})
 			if !ok {
-				p.log.Fatalf("Invalid format of config entry `generated_dimensions'")
+				p.log.Fatal("Invalid format of config entry `generated_dimensions'")
 			}
 			for k, v := range v2 {
 				v2, ok := v.(string)
 				if !ok {
-					p.log.Fatalf("Invalid format of config entry `generated_dimensions'")
+					p.log.Fatal("Invalid format of config entry `generated_dimensions'")
 				}
 				generatedDimensions[k] = v2
 			}
@@ -96,13 +94,24 @@ func (p *Prometheus) Configure(configMap map[string]interface{}) {
 			timeout = config.GetAsInt(v, timeout)
 		}
 
+		httpGetter, err := util.NewHTTPGetter(
+			p.getString(endpoint, "serverCaFile"),
+			p.getString(endpoint, "clientCertFile"),
+			p.getString(endpoint, "clientKeyFile"),
+			timeout,
+		)
+		if err != nil {
+			p.log.Fatalf("Error while creating HTTP getter: %+v", err)
+		}
 		p.endpoints = append(p.endpoints, &Endpoint{
-			prefix:              endpoint["prefix"].(string),
-			url:                 p.getRequiredString(endpoint, "url"),
-			timeout:             timeout,
-			serverCaFile:        p.getString(endpoint, "serverCaFile"),
-			clientCertFile:      p.getString(endpoint, "clientCertFile"),
-			clientKeyFile:       p.getString(endpoint, "clientKeyFile"),
+			prefix: endpoint["prefix"].(string),
+			url:    p.getRequiredString(endpoint, "url"),
+			headers: map[string]string{
+				"Accept":                              acceptHeader,
+				"User-Agent":                          userAgentHeader,
+				"X-Prometheus-Scrape-Timeout-Seconds": fmt.Sprintf("%d", timeout),
+			},
+			httpGetter:          httpGetter,
 			metricsWhitelist:    p.getSet(endpoint, "metrics_whitelist"),
 			metricsBlacklist:    p.getSet(endpoint, "metrics_blacklist"),
 			generatedDimensions: generatedDimensions,
@@ -163,18 +172,9 @@ func (p *Prometheus) Collect() {
 
 // collectFromEndpoint gets metrics from the given endpoint.
 func (p *Prometheus) collectFromEndpoint(endpoint *Endpoint) {
-	headers := map[string]string{
-		"Accept":                              acceptHeader,
-		"User-Agent":                          userAgentHeader,
-		"X-Prometheus-Scrape-Timeout-Seconds": fmt.Sprintf("%d", endpoint.timeout),
-	}
-	body, contentType, scrapeErr := util.HTTPGet(
+	body, contentType, scrapeErr := endpoint.httpGetter.Get(
 		endpoint.url,
-		headers,
-		endpoint.timeout,
-		endpoint.serverCaFile,
-		endpoint.clientCertFile,
-		endpoint.clientKeyFile,
+		endpoint.headers,
 	)
 	if scrapeErr != nil {
 		p.log.Errorf("Error while scraping %s: %s", endpoint.url, scrapeErr)
