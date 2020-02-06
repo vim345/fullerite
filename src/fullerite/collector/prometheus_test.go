@@ -30,11 +30,8 @@ func TestPrometheusConfigure(t *testing.T) {
 	p.Configure(map[string]interface{}{
 		"endpoints": []interface{}{
 			map[string]interface{}{
-				"prefix":         "123/",
-				"url":            "https://etcd1.nowhere.com:2379/metrics",
-				"serverCaFile":   "/tmp/baz/server-ca.crt",
-				"clientCertFile": "/tmp/baz/client-etcd1-nowhere.com.crt",
-				"clientKeyFile":  "/tmp/baz/client-etcd1-nowhere.com.key",
+				"prefix": "123/",
+				"url":    "https://etcd1.nowhere.com:2379/metrics",
 				"metrics_whitelist": []string{
 					"123",
 					"456",
@@ -54,10 +51,6 @@ func TestPrometheusConfigure(t *testing.T) {
 
 	assert.Equal(t, endpoint.prefix, "123/")
 	assert.Equal(t, endpoint.url, "https://etcd1.nowhere.com:2379/metrics")
-	assert.Equal(t, endpoint.serverCaFile, "/tmp/baz/server-ca.crt")
-	assert.Equal(t, endpoint.clientCertFile, "/tmp/baz/client-etcd1-nowhere.com.crt")
-	assert.Equal(t, endpoint.clientKeyFile, "/tmp/baz/client-etcd1-nowhere.com.key")
-	assert.Equal(t, endpoint.timeout, 5)
 	assert.Equal(t, *endpoint.metricsWhitelist, map[string]bool{"123": true, "456": true})
 	assert.Equal(t, *endpoint.metricsBlacklist, map[string]bool{"78": true})
 	assert.Equal(t, endpoint.generatedDimensions, map[string]string{"foo": "bar"})
