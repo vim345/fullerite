@@ -1,8 +1,8 @@
 package collector
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
