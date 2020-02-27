@@ -1,9 +1,13 @@
 package collector
 
 import (
+	"context"
 	"fmt"
 
+	grpcMetrics "fullerite/collector/metrics"
+
 	l "github.com/Sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"fullerite/config"
 	"fullerite/metric"
@@ -32,6 +36,7 @@ type Endpoint struct {
 	generatedDimensions map[string]string
 	metricsBlacklist    map[string]bool
 	metricsWhitelist    map[string]bool
+	isGrpc              bool
 }
 
 // Prometheus collector type.
@@ -109,6 +114,10 @@ func (p *Prometheus) Configure(configMap map[string]interface{}) {
 		if err != nil {
 			p.log.Fatalf("Error while creating HTTP getter: %+v", err)
 		}
+		isGrpc := false
+		if v, exists := endpoint["isGrpc"]; exists {
+			isGrpc = v.(bool)
+		}
 		p.endpoints = append(p.endpoints, &Endpoint{
 			prefix: endpoint["prefix"].(string),
 			url:    p.getRequiredString(endpoint, "url"),
@@ -121,6 +130,7 @@ func (p *Prometheus) Configure(configMap map[string]interface{}) {
 			metricsWhitelist:    metricsWhitelist,
 			metricsBlacklist:    metricsBlacklist,
 			generatedDimensions: generatedDimensions,
+			isGrpc:              isGrpc,
 		})
 	}
 
@@ -176,12 +186,42 @@ func (p *Prometheus) Collect() {
 	}
 }
 
+func (p *Prometheus) scrape(endpoint *Endpoint) ([]byte, string, error) {
+	if endpoint.isGrpc {
+		return p.getGrpcMetrics(endpoint)
+	} else {
+		body, contentType, scrapeErr := endpoint.httpGetter.Get(
+			endpoint.url,
+			endpoint.headers,
+		)
+		if scrapeErr != nil {
+			p.log.Errorf("Error while scraping %s: %s", endpoint.url, scrapeErr)
+			return nil, contentType, scrapeErr
+		}
+		return body, contentType, nil
+	}
+}
+
+func (p *Prometheus) getGrpcMetrics(endpoint *Endpoint) ([]byte, string, error) {
+	contentType := "application/json"
+	conn, err := grpc.Dial(endpoint.url, grpc.WithInsecure())
+	if err != nil {
+		p.log.Errorf("Failed to connect to server: %s", err)
+		return nil, contentType, err
+	}
+	client := grpcMetrics.NewMetricsClient(conn)
+	res, err := client.Metrics(context.Background(), &grpcMetrics.MetricsRequest{})
+	if err != nil {
+		p.log.Errorf("Failed to get the results: %s", err)
+		return nil, contentType, err
+	}
+	return []byte(res.Data), contentType, nil
+}
+
 // collectFromEndpoint gets metrics from the given endpoint.
 func (p *Prometheus) collectFromEndpoint(endpoint *Endpoint) {
-	body, contentType, scrapeErr := endpoint.httpGetter.Get(
-		endpoint.url,
-		endpoint.headers,
-	)
+	body, contentType, scrapeErr := p.scrape(endpoint)
+
 	if scrapeErr != nil {
 		p.log.Errorf("Error while scraping %s: %s", endpoint.url, scrapeErr)
 		return
