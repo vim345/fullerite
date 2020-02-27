@@ -53,4 +53,5 @@ func TestPrometheusConfigure(t *testing.T) {
 	assert.Equal(t, endpoint.metricsWhitelist, map[string]bool{"123": true, "456": true})
 	assert.Equal(t, endpoint.metricsBlacklist, map[string]bool{"78": true})
 	assert.Equal(t, endpoint.generatedDimensions, map[string]string{"foo": "bar"})
+	assert.False(t, endpoint.isGrpc)
 }
