@@ -1,13 +1,9 @@
 package collector
 
 import (
-	"context"
 	"fmt"
 
-	grpcMetrics "fullerite/collector/metrics"
-
 	l "github.com/Sirupsen/logrus"
-	"google.golang.org/grpc"
 
 	"fullerite/config"
 	"fullerite/metric"
@@ -33,6 +29,7 @@ type Endpoint struct {
 	url                 string
 	headers             map[string]string
 	httpGetter          util.HTTPGetter
+	grpcGetter          util.GRPCGetter
 	generatedDimensions map[string]string
 	metricsBlacklist    map[string]bool
 	metricsWhitelist    map[string]bool
@@ -93,7 +90,6 @@ func (p *Prometheus) Configure(configMap map[string]interface{}) {
 				generatedDimensions[k] = v2
 			}
 		}
-
 		var timeout = defaultTimeoutSecs
 		if v, exists := endpoint["timeout"]; exists {
 			timeout = config.GetAsInt(v, timeout)
@@ -105,36 +101,85 @@ func (p *Prometheus) Configure(configMap map[string]interface{}) {
 		if v, exists := endpoint["metrics_blacklist"]; exists {
 			metricsBlacklist = config.GetAsSet(v)
 		}
-		httpGetter, err := util.NewHTTPGetter(
-			p.getString(endpoint, "serverCaFile"),
-			p.getString(endpoint, "clientCertFile"),
-			p.getString(endpoint, "clientKeyFile"),
-			timeout,
-		)
-		if err != nil {
-			p.log.Fatalf("Error while creating HTTP getter: %+v", err)
-		}
+
 		isGrpc := false
 		if v, exists := endpoint["isGrpc"]; exists {
 			isGrpc = v.(bool)
 		}
-		p.endpoints = append(p.endpoints, &Endpoint{
-			prefix: endpoint["prefix"].(string),
-			url:    p.getRequiredString(endpoint, "url"),
-			headers: map[string]string{
-				"Accept":                              acceptHeader,
-				"User-Agent":                          userAgentHeader,
-				"X-Prometheus-Scrape-Timeout-Seconds": fmt.Sprintf("%d", timeout),
-			},
-			httpGetter:          httpGetter,
-			metricsWhitelist:    metricsWhitelist,
-			metricsBlacklist:    metricsBlacklist,
-			generatedDimensions: generatedDimensions,
-			isGrpc:              isGrpc,
-		})
+		if isGrpc != true {
+			p.endpoints = append(p.endpoints, p.configureHTTPEndpoint(
+				timeout,
+				generatedDimensions,
+				metricsWhitelist,
+				metricsBlacklist,
+				endpoint,
+			))
+		} else {
+			p.endpoints = append(p.endpoints, p.configureGRPCEndpoint(
+				timeout,
+				generatedDimensions,
+				metricsWhitelist,
+				metricsBlacklist,
+				endpoint,
+			))
+		}
 	}
 
 	p.configureCommonParams(configMap)
+}
+
+func (p *Prometheus) configureHTTPEndpoint(
+	timeout int,
+	generatedDimensions map[string]string,
+	metricsWhitelist map[string]bool,
+	metricsBlacklist map[string]bool,
+	endpoint map[string]interface{},
+) *Endpoint {
+	httpGetter, err := util.NewHTTPGetter(
+		p.getString(endpoint, "serverCaFile"),
+		p.getString(endpoint, "clientCertFile"),
+		p.getString(endpoint, "clientKeyFile"),
+		timeout,
+	)
+	if err != nil {
+		p.log.Fatalf("Error while creating HTTP getter: %+v", err)
+	}
+	return &Endpoint{
+		prefix: endpoint["prefix"].(string),
+		url:    p.getRequiredString(endpoint, "url"),
+		headers: map[string]string{
+			"Accept":                              acceptHeader,
+			"User-Agent":                          userAgentHeader,
+			"X-Prometheus-Scrape-Timeout-Seconds": fmt.Sprintf("%d", timeout),
+		},
+		httpGetter:          httpGetter,
+		metricsWhitelist:    metricsWhitelist,
+		metricsBlacklist:    metricsBlacklist,
+		generatedDimensions: generatedDimensions,
+	}
+}
+
+func (p *Prometheus) configureGRPCEndpoint(
+	timeout int,
+	generatedDimensions map[string]string,
+	metricsWhitelist map[string]bool,
+	metricsBlacklist map[string]bool,
+	endpoint map[string]interface{},
+) *Endpoint {
+	grpcGetter, err := util.NewGRPCGetter(
+		endpoint["url"].(string),
+		timeout,
+	)
+	if err != nil {
+		p.log.Fatalf("Error while creating GRPC getter: %+v", err)
+	}
+	return &Endpoint{
+		prefix:              endpoint["prefix"].(string),
+		grpcGetter:          grpcGetter,
+		metricsWhitelist:    metricsWhitelist,
+		metricsBlacklist:    metricsBlacklist,
+		generatedDimensions: generatedDimensions,
+	}
 }
 
 func (p *Prometheus) getRequiredString(endpoint map[string]interface{}, name string) string {
@@ -187,35 +232,26 @@ func (p *Prometheus) Collect() {
 }
 
 func (p *Prometheus) scrape(endpoint *Endpoint) ([]byte, string, error) {
+	var body []byte
+	var contentType string
+	var scrapeErr error
 	if endpoint.isGrpc {
-		return p.getGrpcMetrics(endpoint)
+		body, contentType, scrapeErr = endpoint.grpcGetter.Get()
+		if scrapeErr != nil {
+			p.log.Errorf("Error while scraping grpc: %s", scrapeErr)
+			return nil, "", scrapeErr
+		}
 	} else {
-		body, contentType, scrapeErr := endpoint.httpGetter.Get(
+		body, contentType, scrapeErr = endpoint.httpGetter.Get(
 			endpoint.url,
 			endpoint.headers,
 		)
 		if scrapeErr != nil {
 			p.log.Errorf("Error while scraping %s: %s", endpoint.url, scrapeErr)
-			return nil, contentType, scrapeErr
+			return nil, "", scrapeErr
 		}
-		return body, contentType, nil
 	}
-}
-
-func (p *Prometheus) getGrpcMetrics(endpoint *Endpoint) ([]byte, string, error) {
-	contentType := "application/json"
-	conn, err := grpc.Dial(endpoint.url, grpc.WithInsecure())
-	if err != nil {
-		p.log.Errorf("Failed to connect to server: %s", err)
-		return nil, contentType, err
-	}
-	client := grpcMetrics.NewMetricsClient(conn)
-	res, err := client.Metrics(context.Background(), &grpcMetrics.MetricsRequest{})
-	if err != nil {
-		p.log.Errorf("Failed to get the results: %s", err)
-		return nil, contentType, err
-	}
-	return []byte(res.Data), contentType, nil
+	return body, contentType, nil
 }
 
 // collectFromEndpoint gets metrics from the given endpoint.
