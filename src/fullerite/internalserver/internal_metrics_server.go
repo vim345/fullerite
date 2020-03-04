@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"runtime"
+	"strings"
 
 	l "github.com/Sirupsen/logrus"
 )
@@ -132,16 +133,18 @@ func prometheusInternalMetricsCollectorStats(writer http.ResponseWriter, stats m
 
 func prometheusInternalMetricsEmit(namePrefix string, dimString string, writer http.ResponseWriter, im *metric.InternalMetrics, emitTypes bool) {
 	for k, v := range im.Counters {
+		metricName := strings.Replace(k, ".", "_", -1)
 		if emitTypes {
-			io.WriteString(writer, fmt.Sprintf("# TYPE fullerite_internal_%s_%s_count counter\n", namePrefix, k))
+			io.WriteString(writer, fmt.Sprintf("# TYPE fullerite_internal_%s_%s_count counter\n", namePrefix, metricName))
 		}
-		io.WriteString(writer, fmt.Sprintf("fullerite_internal_%s_%s_count{%s} %f\n", namePrefix, k, dimString, v))
+		io.WriteString(writer, fmt.Sprintf("fullerite_internal_%s_%s_count{%s} %f\n", namePrefix, metricName, dimString, v))
 	}
 	for k, v := range im.Gauges {
+		metricName := strings.Replace(k, ".", "_", -1)
 		if emitTypes {
-			io.WriteString(writer, fmt.Sprintf("# TYPE fullerite_internal_%s_%s gauge\n", namePrefix, k))
+			io.WriteString(writer, fmt.Sprintf("# TYPE fullerite_internal_%s_%s gauge\n", namePrefix, metricName))
 		}
-		io.WriteString(writer, fmt.Sprintf("fullerite_internal_%s_%s{%s} %f\n", namePrefix, k, dimString, v))
+		io.WriteString(writer, fmt.Sprintf("fullerite_internal_%s_%s{%s} %f\n", namePrefix, metricName, dimString, v))
 	}
 }
 
