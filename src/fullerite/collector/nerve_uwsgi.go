@@ -31,6 +31,7 @@ type nerveUWSGICollector struct {
 	queryPath             string
 	timeout               int
 	servicesWhitelist     []string
+	serviceHeadersMap     map[string]map[string]string
 	workersStatsEnabled   bool
 	workersStatsQueryPath string
 	workersStatsBlacklist []string
@@ -51,6 +52,7 @@ func newNerveUWSGI(channel chan metric.Metric, initialInterval int, log *l.Entry
 	col.name = "NerveUWSGI"
 	col.configFilePath = "/etc/nerve/nerve.conf.json"
 	col.queryPath = "status/metrics"
+	//col.serviceHeadersMap = make(map[string]map[string]string)
 	col.workersStatsQueryPath = "status/uwsgi"
 	col.timeout = 2
 
@@ -67,6 +69,9 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	}
 	if val, exists := configMap["servicesWhitelist"]; exists {
 		n.servicesWhitelist = config.GetAsSlice(val)
+	}
+	if serviceHeadersMap, exists := configMap["serviceHeaders"]; exists {
+		n.serviceHeadersMap = serviceHeadersMap
 	}
 	if val, exists := configMap["workersStatsBlacklist"]; exists {
 		n.workersStatsBlacklist = config.GetAsSlice(val)
@@ -110,7 +115,9 @@ func (n *nerveUWSGICollector) queryService(serviceName string, host string, port
 	serviceLog := n.log.WithField("service", serviceName)
 	endpoint := fmt.Sprintf("http://%s:%d/%s", host, port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
-	rawResponse, schemaVer, err := queryEndpoint(endpoint, n.timeout)
+	headers := n.serviceHeadersMap[serviceName]
+	serviceLog.Debug("GET request headers ", headers)
+	rawResponse, schemaVer, err := queryEndpoint(endpoint, headers, n.timeout)
 	if err != nil {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
 		return
@@ -155,12 +162,12 @@ func (n *nerveUWSGICollector) queryService(serviceName string, host string, port
 	}
 }
 
-func queryEndpoint(endpoint string, timeout int) ([]byte, string, error) {
+func queryEndpoint(endpoint string, headers map[string]string, timeout int) ([]byte, string, error) {
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Second,
 	}
 
-	rsp, err := client.Get(endpoint)
+	rsp, err := client.Get(endpoint, headers)
 
 	if rsp != nil {
 		defer func() {
@@ -218,7 +225,9 @@ func (n *nerveUWSGICollector) tryFetchUWSGIWorkersStats(serviceName string, endp
 	emptyResult := []metric.Metric{}
 	serviceLog := n.log.WithField("service", serviceName)
 	serviceLog.Debug("making GET request to ", endpoint)
-	rawResponse, _, err := queryEndpoint(endpoint, n.timeout)
+	headers := n.serviceHeadersMap[serviceName]
+	serviceLog.Debug("GET request headers ", headers)
+	rawResponse, _, err := queryEndpoint(endpoint, headers, n.timeout)
 	if err != nil {
 		serviceLog.Info("Failed to query workers stats endpoint ", endpoint, ": ", err)
 		return emptyResult, err
