@@ -97,24 +97,14 @@ func (n *nerveGRPCCollector) serviceInWhitelist(service util.NerveService) bool 
 // queryService fetches and computes stats from metrics GRPC endpoint,
 func (n *nerveGRPCCollector) queryService(serviceName string, port int, grpcGetter util.GRPCGetter) {
 	serviceLog := n.log.WithField("service", serviceName)
-	body, contentType, err := grpcGetter.Get()
+	metricFamilySamples, err := grpcGetter.Get()
 	if err != nil {
 		serviceLog.Warnf("Error while scraping grpc: %s", err)
 		return
 	}
-	metrics, err := util.ExtractPrometheusMetrics(
-		body,
-		contentType,
-		nil,
-		nil,
-		"",
-		nil,
-		serviceLog,
-	)
-	if err != nil {
-		serviceLog.Errorf("Error while parsing response: %s", err)
-		return
-	}
+
+	metrics := util.ExtractPrometheusMetricsFromSamples(serviceName, metricFamilySamples)
+
 	metric.AddToAll(&metrics, map[string]string{
 		"service": serviceName,
 		"port":    strconv.Itoa(port),

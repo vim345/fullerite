@@ -3,38 +3,67 @@ package collector
 import (
 	"fullerite/metric"
 
+	grpcMetrics "fullerite/collector/metrics"
 	"testing"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-var body = []byte(`
-# HELP grpc_server_handled_latency_seconds Histogram of response latency (seconds) of gRPC that had been application-level handled by the server.
-# TYPE grpc_server_handled_latency_seconds histogram
-grpc_server_handled_latency_seconds_bucket{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",le="+Inf",} 1.0
-grpc_server_handled_latency_seconds_count{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",} 1.0
-grpc_server_handled_latency_seconds_sum{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",} 0.15
-# HELP grpc_server_handled_total Total number of RPCs completed on the server, regardless of success or failure.
-# TYPE grpc_server_handled_total counter
-grpc_server_handled_total{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",code="OK",} 3.0
-# HELP grpc_server_started_total Total number of RPCs started on the server.
-# TYPE grpc_server_started_total counter
-grpc_server_started_total{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",} 1.0
-# HELP grpc_server_msg_received_total Total number of stream messages received from the client.
-# TYPE grpc_server_msg_received_total counter
-grpc_server_msg_received_total{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",} 5.0
-# HELP grpc_server_msg_sent_total Total number of stream messages sent by the server.
-# TYPE grpc_server_msg_sent_total counter
-grpc_server_msg_sent_total{grpc_type="BIDI_STREAMING",grpc_service="grpc.reflection.v1alpha.ServerReflection",grpc_method="ServerReflectionInfo",} 6.0
-`)
+var sampleOne = grpcMetrics.Sample{
+	Name:        "S1",
+	LabelNames:  []string{"grpc_type", "grpc_method"},
+	LabelValues: []string{"BIDI_STREAMING", "ServerReflectionInfo"},
+	Value:       800.0,
+}
+
+var sampleTwo = grpcMetrics.Sample{
+	Name:        "S2",
+	LabelNames:  []string{"grpc_type", "grpc_method"},
+	LabelValues: []string{"BIDI_STREAMING", "ServerReflectionInfo"},
+	Value:       900.0,
+}
+
+var sampleThree = grpcMetrics.Sample{
+	Name:        "S3",
+	LabelNames:  []string{"grpc_type", "grpc_method"},
+	LabelValues: []string{"BIDI_STREAMING", "ServerReflectionInfo"},
+	Value:       1000.0,
+}
+
+var sampleFour = grpcMetrics.Sample{
+	Name:        "S4",
+	LabelNames:  []string{"grpc_type", "grpc_method"},
+	LabelValues: []string{"BIDI_STREAMING", "ServerReflectionInfo"},
+	Value:       400.0,
+}
+
+var sampleFive = grpcMetrics.Sample{
+	Name:        "S5",
+	LabelValues: []string{"grpc_type", "grpc_method"},
+	LabelNames:  []string{"BIDI_STREAMING", "ServerReflectionInfo"},
+	Value:       500.0,
+}
+
+var metricOne = grpcMetrics.MetricFamilySamples{
+	Name:    "grpc_server_handled_total",
+	Type:    grpcMetrics.SampleType_COUNTER,
+	Help:    "Total number of RPCs completed on the server.",
+	Samples: []*grpcMetrics.Sample{&sampleOne, &sampleTwo, &sampleThree},
+}
+
+var metricTwo = grpcMetrics.MetricFamilySamples{
+	Name:    "grpc_server_started_total",
+	Type:    grpcMetrics.SampleType_GAUGE,
+	Help:    "Total number of RPCs started on the server.",
+	Samples: []*grpcMetrics.Sample{&sampleFour, &sampleFive},
+}
 
 type mockedGRPCGetter struct{}
 
 // Get retrieves content from the metrics gRPC endpoint.
-func (m *mockedGRPCGetter) Get() ([]byte, string, error) {
-	contentType := "text/plain; version=0.0.4"
-	return body, contentType, nil
+func (m *mockedGRPCGetter) Get() ([]*grpcMetrics.MetricFamilySamples, error) {
+	return []*grpcMetrics.MetricFamilySamples{&metricOne, &metricTwo}, nil
 }
 
 func init() {
@@ -76,7 +105,7 @@ func TestQueryService(t *testing.T) {
 	go inst.queryService("grpc_service", 8888, &mockedGRPCGetter{})
 
 	actual := []metric.Metric{}
-	lenLines := 7
+	lenLines := 5
 	for i := 0; i < lenLines; i++ {
 		actual = append(actual, <-inst.Channel())
 	}
@@ -89,46 +118,27 @@ func validateGRPCResults(t *testing.T, actual []metric.Metric, length int) {
 
 	for _, m := range actual {
 		switch m.Name {
-		case "grpc_server_handled_latency_seconds":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
+		case "grpc_service_S1":
+			grpcTypeDim, exists := m.GetDimensionValue("grpc_type")
 			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 0.15, m.Value)
-		case "grpc_server_handled_latency_seconds_bucket":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
+			assert.Equal(t, "BIDI_STREAMING", grpcTypeDim)
+			grpcMethodDim, exists := m.GetDimensionValue("grpc_method")
 			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 1.0, m.Value)
-		case "grpc_server_handled_latency_seconds_count":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
-			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 1.0, m.Value)
-		case "grpc_server_handled_latency_seconds_sum":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
-			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 0.1, m.Value)
-		case "grpc_server_handled_total":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
-			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 3.0, m.Value)
-		case "grpc_server_started_total":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
-			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 1.0, m.Value)
-		case "grpc_server_msg_received_total":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
-			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 5.0, m.Value)
-		case "grpc_server_msg_sent_total":
-			metricTypeDim, exists := m.GetDimensionValue("grpc_type")
-			assert.True(t, exists)
-			assert.Equal(t, "BIDI_STREAMING", metricTypeDim)
-			assert.Equal(t, 6.0, m.Value)
+			assert.Equal(t, "ServerReflectionInfo", grpcMethodDim)
+			assert.Equal(t, 800.0, m.Value)
+			assert.Equal(t, metric.Counter, m.MetricType)
+		case "grpc_service_S2":
+			assert.Equal(t, 900.0, m.Value)
+			assert.Equal(t, metric.Counter, m.MetricType)
+		case "grpc_service_S3":
+			assert.Equal(t, 1000.0, m.Value)
+			assert.Equal(t, metric.Counter, m.MetricType)
+		case "grpc_service_S4":
+			assert.Equal(t, 400.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
+		case "grpc_service_S5":
+			assert.Equal(t, 500.0, m.Value)
+			assert.Equal(t, metric.Gauge, m.MetricType)
 		default:
 			t.Fatal("Unexpected metric name: " + m.Name)
 		}

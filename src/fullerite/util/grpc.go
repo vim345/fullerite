@@ -10,13 +10,12 @@ import (
 
 // GRPCGetter provides the interface for gRPC clients.
 type GRPCGetter interface {
-	Get() ([]byte, string, error)
+	Get() ([]*grpcMetrics.MetricFamilySamples, error)
 }
 
 type grpcGetterImpl struct {
-	contentType string
-	client      grpcMetrics.MetricsClient
-	conn        *grpc.ClientConn
+	client grpcMetrics.MetricsClient
+	conn   *grpc.ClientConn
 }
 
 // NewGRPCGetter constructs a new GRPCGetter instance.
@@ -29,18 +28,17 @@ func NewGRPCGetter(url string, timeout int) (GRPCGetter, error) {
 	}
 	client := grpcMetrics.NewMetricsClient(conn)
 	return &grpcGetterImpl{
-		client:      client,
-		contentType: "text/plain; version=0.0.4",
-		conn:        conn,
+		client: client,
+		conn:   conn,
 	}, nil
 }
 
 // Get retrieves content from the metrics gRPC endpoint.
-func (g *grpcGetterImpl) Get() ([]byte, string, error) {
+func (g *grpcGetterImpl) Get() ([]*grpcMetrics.MetricFamilySamples, error) {
 	defer g.conn.Close()
 	res, err := g.client.Metrics(context.Background(), &grpcMetrics.MetricsRequest{})
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return []byte(res.Data), g.contentType, nil
+	return res.MetricFamilySample, nil
 }
