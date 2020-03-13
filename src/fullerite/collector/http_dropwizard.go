@@ -81,8 +81,7 @@ func (h *httpDropwizardCollector) queryService(s ServiceEndpoint) {
 	endpoint := fmt.Sprintf("http://localhost:%s/%s", s.Port, s.Path)
 	serviceLog.Debug("making GET request to ", endpoint)
 
-	headers := make(map[string]string)
-	rawResponse, schemaVer, err := queryEndpoint(endpoint, headers, h.timeout)
+	rawResponse, schemaVer, err := queryEndpoint(endpoint, map[string]string{}, h.timeout)
 	if err != nil {
 		serviceLog.Warn("Failed to query endpoint ", endpoint, ": ", err)
 		return

@@ -52,7 +52,6 @@ func newNerveUWSGI(channel chan metric.Metric, initialInterval int, log *l.Entry
 	col.name = "NerveUWSGI"
 	col.configFilePath = "/etc/nerve/nerve.conf.json"
 	col.queryPath = "status/metrics"
-	//col.serviceHeadersMap = make(map[string]map[string]string)
 	col.workersStatsQueryPath = "status/uwsgi"
 	col.timeout = 2
 
@@ -118,7 +117,10 @@ func (n *nerveUWSGICollector) queryService(serviceName string, host string, port
 	serviceLog := n.log.WithField("service", serviceName)
 	endpoint := fmt.Sprintf("http://%s:%d/%s", host, port, n.queryPath)
 	serviceLog.Debug("making GET request to ", endpoint)
-	headers := n.serviceHeadersMap[serviceName]
+	headers := make(map[string]string)
+	if val, exists := n.serviceHeadersMap[serviceName]; exists {
+		headers = val
+	}
 	serviceLog.Debug("GET request headers ", headers)
 	rawResponse, schemaVer, err := queryEndpoint(endpoint, headers, n.timeout)
 	if err != nil {
@@ -240,7 +242,10 @@ func (n *nerveUWSGICollector) tryFetchUWSGIWorkersStats(serviceName string, endp
 	emptyResult := []metric.Metric{}
 	serviceLog := n.log.WithField("service", serviceName)
 	serviceLog.Debug("making GET request to ", endpoint)
-	headers := n.serviceHeadersMap[serviceName]
+	headers := make(map[string]string)
+	if val, exists := n.serviceHeadersMap[serviceName]; exists {
+		headers = val
+	}
 	serviceLog.Debug("GET request headers ", headers)
 	rawResponse, _, err := queryEndpoint(endpoint, headers, n.timeout)
 	if err != nil {

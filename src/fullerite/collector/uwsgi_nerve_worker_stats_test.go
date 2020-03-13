@@ -386,7 +386,7 @@ func TestErrorQueryStatsEndpointResponse(t *testing.T) {
 	endpoint := ts.URL + "/status/uwsgi"
 	ts.Close()
 
-    headers := make(map[string]string)
+	headers := make(map[string]string)
 	_, _, queryEndpointError := queryEndpoint(endpoint, headers, 10)
 	assert.NotNil(t, queryEndpointError)
 
