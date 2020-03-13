@@ -70,8 +70,11 @@ func (n *nerveUWSGICollector) Configure(configMap map[string]interface{}) {
 	if val, exists := configMap["servicesWhitelist"]; exists {
 		n.servicesWhitelist = config.GetAsSlice(val)
 	}
-	if serviceHeadersMap, exists := configMap["serviceHeaders"]; exists {
-		n.serviceHeadersMap = serviceHeadersMap
+	if val, exists := configMap["serviceHeaders"]; exists {
+		temp := val.(map[string]interface{})
+		for service, headers := range temp {
+			n.serviceHeadersMap[service] = headers.(map[string]string)
+		}
 	}
 	if val, exists := configMap["workersStatsBlacklist"]; exists {
 		n.workersStatsBlacklist = config.GetAsSlice(val)
@@ -167,8 +170,20 @@ func queryEndpoint(endpoint string, headers map[string]string, timeout int) ([]b
 		Timeout: time.Duration(timeout) * time.Second,
 	}
 
-	rsp, err := client.Get(endpoint, headers)
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return []byte{}, "", err
+	}
+	for key, val := range headers {
+		// Host is a special header and we cannot use Header.Add for it
+		if key == "Host" {
+			req.Host = val
+		} else {
+			req.Header.Add(key, val)
+		}
+	}
 
+	rsp, err := client.Do(req)
 	if rsp != nil {
 		defer func() {
 			io.Copy(ioutil.Discard, rsp.Body)
