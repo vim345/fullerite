@@ -3,11 +3,13 @@ package util
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	l "github.com/Sirupsen/logrus"
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/pkg/textparse"
 
+	grpcMetrics "fullerite/collector/metrics"
 	"fullerite/metric"
 )
 
@@ -134,4 +136,28 @@ func ExtractPrometheusMetrics(
 	}
 
 	return metrics, err
+}
+
+// ExtractPrometheusMetricsFromSamples returns an array of metrics extracted from the
+// given grpc metric sample.
+func ExtractPrometheusMetricsFromSamples(serviceName string, familySamples []*grpcMetrics.MetricFamilySamples) (metrics []metric.Metric) {
+	allMetrics := []metric.Metric{}
+
+	for _, familySample := range familySamples {
+		for _, sample := range familySample.Samples {
+			metricName := fmt.Sprintf("%s_%s", serviceName, sample.Name)
+			metric := metric.Metric{
+				Name:       metricName,
+				MetricType: strings.ToLower(familySample.GetType().String()),
+				Value:      sample.Value,
+				Dimensions: make(map[string]string),
+			}
+			// It is assumed label names and label values always have the same length.
+			for i := 0; i < len(sample.LabelNames); i++ {
+				metric.AddDimension(sample.LabelNames[i], sample.LabelValues[i])
+			}
+			allMetrics = append(allMetrics, metric)
+		}
+	}
+	return allMetrics
 }
