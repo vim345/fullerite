@@ -11,8 +11,10 @@ class Kubelet(object):
         url = "http://{}:{}/pods".format(KUBELET_DEFAULT_HOST, KUBELET_DEFAULT_PORT)
         try:
             response = urllib2.urlopen(url)
-            if response['status'] == 200:
-                json_str = response.read()
-                return json.loads(json_str), None
-        except urllib2.URLError as e:
+        except urllib2.HTTPError as err:
+            return None, err
+
+        try:
+            return json.load(response), None
+        except (TypeError, ValueError) as e:
             return None, e
