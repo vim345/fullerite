@@ -1,11 +1,15 @@
 package collector
 
 import (
+	"bufio"
 	"fmt"
 	"fullerite/config"
 	"fullerite/metric"
+	"io"
+	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -13,11 +17,15 @@ import (
 	l "github.com/Sirupsen/logrus"
 
 	"github.com/fsouza/go-dockerclient"
+
+	"github.com/yookoala/realpath"
 )
 
 const (
 	endpoint = "unix:///var/run/docker.sock"
 )
+
+type RealPathGetter func(mountPath string) (string, error)
 
 // DockerStats collector type.
 // previousCPUValues contains the last cpu-usage values per container.
@@ -32,6 +40,7 @@ type DockerStats struct {
 	endpoint          string
 	mu                *sync.Mutex
 	emitImageName     bool
+	emitDiskMetrics   bool
 }
 
 // CPUValues struct contains the last cpu-usage values in order to compute properly the current values.
@@ -46,6 +55,27 @@ type CPUValues struct {
 type Regex struct {
 	tag   string
 	regex *regexp.Regexp
+}
+
+// DiskIOStats contains disk stats needed for deriving the IO metric of the device.
+type DiskIOStats struct {
+	deviceName string
+	minor      int
+	major      int
+	mountPath  string
+	reads      float64
+	writes     float64
+}
+
+// DiskPaastaStats contains the PaaSTA information of the container using this device as a mount.
+type DiskIOPaastaStats struct {
+	deviceName         string
+	paastaService      string
+	paastaInstance     string
+	paastaCluster      string
+	reads              float64
+	writes             float64
+	containerMountPath string
 }
 
 func init() {
@@ -65,6 +95,7 @@ func newDockerStats(channel chan metric.Metric, initialInterval int, log *l.Entr
 	d.previousCPUValues = make(map[string]*CPUValues)
 	d.compiledRegex = make(map[string]*Regex)
 	d.emitImageName = false
+	d.emitDiskMetrics = false
 	return d
 }
 
@@ -96,6 +127,13 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 			d.log.Warn("Failed to cast emit_image_name: ", reflect.TypeOf(emitImageName))
 		}
 	}
+	if emitDiskMetrics, exists := configMap["emit_disk_metrics"]; exists {
+		if boolean, ok := emitDiskMetrics.(bool); ok {
+			d.emitDiskMetrics = boolean
+		} else {
+			d.log.Warn("Failed to cast emitDiskMetrics: ", reflect.TypeOf(emitDiskMetrics))
+		}
+	}
 
 	d.dockerClient, _ = docker.NewClient(d.endpoint)
 	if generatedDimensions, exists := configMap["generatedDimensions"]; exists {
@@ -120,6 +158,9 @@ func (d *DockerStats) Configure(configMap map[string]interface{}) {
 // memory and cpu statistics.
 // For each container a gorutine is started to spin up the collection process.
 func (d *DockerStats) Collect() {
+	diskStats := make(map[string][]string)
+	var diskIOStatsList []DiskIOStats
+
 	if d.dockerClient == nil {
 		d.log.Error("Invalid endpoint: ", docker.ErrInvalidEndpoint)
 		return
@@ -129,6 +170,20 @@ func (d *DockerStats) Collect() {
 		d.log.Error("ListContainers() failed: ", err)
 		return
 	}
+
+	if d.emitDiskMetrics {
+		// Obtain the disk stats for this device. This is common for all the containers, hence, calculating before iterating over all the containers.
+		diskStats, err = d.ObtainDiskStats()
+		if err != nil {
+			d.log.Error("ObtainDiskStats() failed: ", err)
+		}
+		// join the disk stats with the IO stats
+		diskIOStatsList, err = d.ObtainDiskIOStats(diskStats)
+		if err != nil {
+			d.log.Error("ObtainDiskIOStats() failed: ", err)
+		}
+	}
+
 	for _, apiContainer := range containers {
 		container, err := d.dockerClient.InspectContainerWithOptions(docker.InspectContainerOptions{
 			ID:   apiContainer.ID,
@@ -148,13 +203,13 @@ func (d *DockerStats) Collect() {
 		if _, ok := d.previousCPUValues[container.ID]; !ok {
 			d.previousCPUValues[container.ID] = new(CPUValues)
 		}
-		go d.getDockerContainerInfo(container)
+		go d.getDockerContainerInfo(container, diskStats, diskIOStatsList)
 	}
 }
 
 // getDockerContainerInfo gets container statistics for the given container.
 // results is a channel to make possible the synchronization between the main process and the gorutines (wait-notify pattern).
-func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
+func (d *DockerStats) getDockerContainerInfo(container *docker.Container, diskStats map[string][]string, diskIOStatsList []DiskIOStats) {
 	errC := make(chan error, 1)
 	statsC := make(chan *docker.Stats, 1)
 	done := make(chan bool, 1)
@@ -176,7 +231,7 @@ func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
 		}
 		done <- true
 
-		metrics := d.extractMetrics(container, stats)
+		metrics := d.extractMetrics(container, stats, diskStats, diskIOStatsList)
 		d.sendMetrics(metrics)
 
 		break
@@ -187,10 +242,10 @@ func (d *DockerStats) getDockerContainerInfo(container *docker.Container) {
 	}
 }
 
-func (d *DockerStats) extractMetrics(container *docker.Container, stats *docker.Stats) []metric.Metric {
+func (d *DockerStats) extractMetrics(container *docker.Container, stats *docker.Stats, diskStats map[string][]string, diskIOStatsList []DiskIOStats) []metric.Metric {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	metrics := d.buildMetrics(container, stats, calculateCPUPercent(d.previousCPUValues[container.ID].totCPU, d.previousCPUValues[container.ID].systemCPU, stats))
+	metrics := d.buildMetrics(container, stats, calculateCPUPercent(d.previousCPUValues[container.ID].totCPU, d.previousCPUValues[container.ID].systemCPU, stats), diskStats, diskIOStatsList, ObtainRealPath)
 
 	d.previousCPUValues[container.ID].totCPU = stats.CPUStats.CPUUsage.TotalUsage
 	d.previousCPUValues[container.ID].systemCPU = stats.CPUStats.SystemCPUUsage
@@ -198,7 +253,7 @@ func (d *DockerStats) extractMetrics(container *docker.Container, stats *docker.
 }
 
 // buildMetrics creates the actual metrics for the given container.
-func (d DockerStats) buildMetrics(container *docker.Container, containerStats *docker.Stats, cpuPercentage float64) []metric.Metric {
+func (d DockerStats) buildMetrics(container *docker.Container, containerStats *docker.Stats, cpuPercentage float64, diskStats map[string][]string, diskIOStatsList []DiskIOStats, realPathGetterFunc RealPathGetter) []metric.Metric {
 	// Report only Rss, not cache.
 	mem := containerStats.MemoryStats.Stats.Rss + containerStats.MemoryStats.Stats.Swap
 	ret := []metric.Metric{
@@ -238,6 +293,34 @@ func (d DockerStats) buildMetrics(container *docker.Container, containerStats *d
 	metric.AddToAll(&ret, additionalDimensions)
 	ret = append(ret, buildDockerMetric("DockerContainerCount", metric.Counter, 1))
 	metric.AddToAll(&ret, d.extractDimensions(container))
+
+	if d.emitDiskMetrics {
+		// get the IO and PaaSTA stats for this container
+		paastaIOStatsList := d.ObtainDiskIOAndPaastaStats(container, diskIOStatsList, realPathGetterFunc)
+		for _, record := range paastaIOStatsList {
+			ioStatRead := buildDockerMetric("DockerDiskReads", metric.Gauge, float64(record.reads))
+			ioStatRead.AddDimension("container_mount_path", record.containerMountPath)
+			ioStatRead.AddDimension("paasta_service", record.paastaService)
+			ioStatRead.AddDimension("paasta_instance", record.paastaInstance)
+			ioStatRead.AddDimension("paasta_cluster", record.paastaCluster)
+			ret = append(ret, ioStatRead)
+
+			ioStatWrite := buildDockerMetric("DockerDiskWrites", metric.Gauge, float64(record.writes))
+			ioStatWrite.AddDimension("container_mount_path", record.containerMountPath)
+			ioStatWrite.AddDimension("paasta_service", record.paastaService)
+			ioStatWrite.AddDimension("paasta_instance", record.paastaInstance)
+			ioStatWrite.AddDimension("paasta_cluster", record.paastaCluster)
+			ret = append(ret, ioStatWrite)
+
+			io := record.writes + record.reads
+			ioStat := buildDockerMetric("DockerDiskIO", metric.Gauge, float64(io))
+			ioStat.AddDimension("container_mount_path", record.containerMountPath)
+			ioStat.AddDimension("paasta_service", record.paastaService)
+			ioStat.AddDimension("paasta_instance", record.paastaInstance)
+			ioStat.AddDimension("paasta_cluster", record.paastaCluster)
+			ret = append(ret, ioStat)
+		}
+	}
 	return ret
 }
 
@@ -307,4 +390,175 @@ func min(x, y int) int {
 		return x
 	}
 	return y
+}
+
+// returns a map, each record containing (device name --> [disk stats])
+func (d DockerStats) ObtainDiskStats() (map[string][]string, error) {
+	devNameMinMajMap := make(map[string][]string)
+	var major int
+
+	file, err := os.Open("/proc/diskstats")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	// read the contents of the file with a reader.
+	reader := bufio.NewReader(file)
+
+	// read line-by-line
+	var line string
+	for {
+		line, err = reader.ReadString('\n')
+
+		if err != nil {
+			break
+		}
+
+		// split the line on space
+		rec := strings.Fields(line)
+		if len(rec) == 14 {
+			// filter out system devices and any other which are not EC2 (major != 202). For reference, https://cromwell-intl.com/cybersecurity/ec2-secure-storage.html
+			major, err = strconv.Atoi(rec[0])
+			if err != nil {
+				d.log.Warning("Could not extract the major number for the device:" + line)
+				continue
+			}
+			if !strings.HasPrefix(rec[2], "ram") && !strings.HasPrefix(rec[2], "loop") && major == 202 {
+				devNameMinMajMap[rec[2]] = []string{rec[0], rec[1], rec[2], rec[3], rec[4], rec[5], rec[6], rec[7], rec[8], rec[9], rec[10], rec[11], rec[12], rec[13]}
+			}
+		} else {
+			d.log.Warning("This record of /proc/diskstats does not contain the required number of fields: " + line + " Shall not be processed.")
+		}
+	}
+
+	if err != io.EOF {
+		d.log.Error("Failed!: ", err)
+		return nil, err
+	}
+
+	return devNameMinMajMap, nil
+}
+
+// returns a collection of records each having (device name, major, minor, mount path, reads, writes)
+func (d DockerStats) ObtainDiskIOStats(diskStats map[string][]string) ([]DiskIOStats, error) {
+	var diskIOStatsList []DiskIOStats
+	var major int
+	var minor int
+	var reads float64
+	var writes float64
+
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	// read contents of the file
+	reader := bufio.NewReader(file)
+
+	// read line-by-line
+	var line string
+	for {
+		line, err = reader.ReadString('\n')
+
+		if err != nil {
+			break
+		}
+
+		// split the line on space
+		values := strings.Fields(line)
+		if len(values) < 2 {
+			d.log.Error("This record of /proc/mounts does not contain the required number of fields: " + line + " Shall not be processed.")
+			continue
+		}
+		deviceName := values[0]
+
+		// since we could either find an exact match of the device name or /dev/ appended to it in /proc/mounts
+		if strings.HasPrefix(deviceName, "/") {
+			// extract the value after the last slash, since that should be the device name
+			splitOnSlash := strings.Split(values[0], "/")
+			deviceName = splitOnSlash[len(splitOnSlash)-1]
+		}
+		// check if the deviceName is present in the devNameMinMaj map
+		if stats, ok := diskStats[deviceName]; ok {
+			// extract the major and minor values
+			major, err = strconv.Atoi(stats[0])
+			if err != nil {
+				d.log.Warning("Could not parse " + stats[0] + " to an integer. Skipping this line.")
+				continue
+			}
+			minor, err = strconv.Atoi(stats[1])
+			if err != nil {
+				d.log.Warning("Could not parse " + stats[1] + " to an integer. Skipping this line.")
+				continue
+			}
+			reads, err = strconv.ParseFloat(stats[3], 64)
+			if err != nil {
+				d.log.Warning("Could not parse " + stats[3] + " to float. Skipping this line.")
+				continue
+			}
+			writes, err = strconv.ParseFloat(stats[7], 64)
+			if err != nil {
+				d.log.Warning("Could not parse " + stats[4] + " to float. Skipping this line.")
+				continue
+			}
+			// create a deviceStats struct object and append to the deviceStatsList
+			diskIOStatsList = append(diskIOStatsList, DiskIOStats{deviceName, major, minor, values[1], reads, writes})
+		}
+	}
+	if err != io.EOF {
+		d.log.Error("Failed!: ", err)
+		return nil, err
+	}
+	return diskIOStatsList, err
+}
+
+// returns a list of DiskIOPaastaStats for the given container
+func (d DockerStats) ObtainDiskIOAndPaastaStats(container *docker.Container, diskIOStatsList []DiskIOStats, realPathGetterFunc RealPathGetter) []DiskIOPaastaStats {
+	var paastaIOStatsList []DiskIOPaastaStats
+	var deviceMountPath string
+	var err error
+	// check all the mounts of the container to check if it matches the mount paths of devices on this device.
+	for _, mount := range container.Mounts {
+		mountPath := mount.Source
+		for _, device := range diskIOStatsList {
+			deviceMountPath = device.mountPath
+			// to elimiate any mismatch due to the symlink /var/lib for /ephemeral
+			deviceMountPath, err = realPathGetterFunc(deviceMountPath)
+			if err != nil {
+				d.log.Error("Error obtaining the realpath for " + deviceMountPath + ". Skipping.")
+				continue
+			}
+			if mountPath == deviceMountPath {
+				env := container.Config.Env
+				envVariableMap := make(map[string]string)
+				// extract the paasta information from the container evn config
+				for _, variable := range env {
+					if strings.HasPrefix(variable, "PAASTA") {
+						name := strings.Split(variable, "=")[0]
+						value := strings.Split(variable, "=")[1]
+						if (name == "PAASTA_CLUSTER" || name == "PAASTA_INSTANCE" || name == "PAASTA_SERVICE") && len(strings.TrimSpace(value)) > 0 {
+							envVariableMap[name] = value
+						}
+					}
+					// we want to emit the complete set of paasta service+cluster+instence or nothing
+					if len(envVariableMap) == 3 {
+						for _, iostat := range diskIOStatsList {
+							if iostat.deviceName == device.deviceName {
+								paastaIOStatsList = append(paastaIOStatsList, DiskIOPaastaStats{device.deviceName, envVariableMap["PAASTA_SERVICE"], envVariableMap["PAASTA_INSTANCE"], envVariableMap["PAASTA_CLUSTER"], iostat.reads, iostat.writes, mount.Destination})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return paastaIOStatsList
+}
+
+func ObtainRealPath(mountPath string) (string, error) {
+	mountPathReal, err := realpath.Realpath(mountPath)
+	if err == nil {
+		return mountPathReal, err
+	}
+	return "", err
 }
