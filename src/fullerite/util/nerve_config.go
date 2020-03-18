@@ -13,6 +13,7 @@ import (
 var (
 	ipGetter   = getIps
 	httpRegexp = regexp.MustCompile(`http`)
+	tcpRegexp  = regexp.MustCompile(`tcp`)
 )
 
 // example configuration::
@@ -106,7 +107,7 @@ func extractPort(serviceConfig map[string]interface{}) int {
 	if len(uriArray) > 3 {
 		protocol := strings.TrimSpace(uriArray[1])
 		port := uriArray[3]
-		if !httpRegexp.MatchString(protocol) {
+		if !httpRegexp.MatchString(protocol) && !tcpRegexp.MatchString(protocol) {
 			return -1
 		}
 		if portInt, err := strconv.ParseInt(port, 10, 64); err == nil {

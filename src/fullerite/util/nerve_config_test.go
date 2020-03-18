@@ -74,7 +74,7 @@ func getTestNerveConfig() []byte {
 	                    "rise": 1,
 	                    "timeout": 6,
 	                    "type": "http",
-	                    "uri": "/http/example_service.another/13752/status"
+	                    "uri": "/tcp/example_service.another/13752/status"
 	                }
 	            ],
 	            "host": "10.56.5.21",
