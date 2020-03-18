@@ -61,7 +61,7 @@ func (m *nginxNerveStats) Collect() {
 		m.log.Warn("Failed to read the contents of file ", m.nerveConfigPath, " because ", err)
 		return
 	}
-	services, err := util.ParseNerveConfig(&rawFileContents, true)
+	services, err := util.ParseNerveConfig(&rawFileContents, true, "http")
 	if err != nil {
 		m.log.Warn("Failed to parse the nerve config at ", m.nerveConfigPath, ": ", err)
 		return

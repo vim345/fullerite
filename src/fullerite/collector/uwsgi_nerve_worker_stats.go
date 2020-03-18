@@ -75,7 +75,7 @@ func (n *uWSGINerveWorkerStatsCollector) Collect() {
 		return
 	}
 
-	services, err := util.ParseNerveConfig(&rawFileContents, false)
+	services, err := util.ParseNerveConfig(&rawFileContents, false, "http")
 	if err != nil {
 		n.log.Warn("Failed to parse the nerve config at ", n.configFilePath, ": ", err)
 		return

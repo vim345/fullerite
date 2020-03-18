@@ -4,16 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
 // For dependency injection
 var (
-	ipGetter   = getIps
-	httpRegexp = regexp.MustCompile(`http`)
-	tcpRegexp  = regexp.MustCompile(`tcp`)
+	ipGetter = getIps
 )
 
 // example configuration::
@@ -50,7 +47,7 @@ type EndPoint struct {
 }
 
 // ParseNerveConfig is responsible for taking the JSON string coming in into a list of NerveServices
-func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, error) {
+func ParseNerveConfig(raw *[]byte, namespaceIncluded bool, protocol string) ([]NerveService, error) {
 	services := make(map[string]NerveService)
 	results := []NerveService{}
 	parsed := new(nerveConfigData)
@@ -66,7 +63,7 @@ func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, erro
 		service.Name = strings.Split(rawServiceName, ".")[0]
 		service.Namespace = strings.Split(rawServiceName, ".")[1]
 		service.Host = host
-		port := extractPort(serviceConfig)
+		port := extractPort(serviceConfig, protocol)
 
 		if port != -1 {
 			service.Port = port
@@ -84,7 +81,7 @@ func ParseNerveConfig(raw *[]byte, namespaceIncluded bool) ([]NerveService, erro
 	return results, nil
 }
 
-func extractPort(serviceConfig map[string]interface{}) int {
+func extractPort(serviceConfig map[string]interface{}, protocol string) int {
 	checkConfig := make(map[string]interface{})
 
 	if checkArray, ok := serviceConfig["checks"].([]interface{}); ok {
@@ -105,9 +102,12 @@ func extractPort(serviceConfig map[string]interface{}) int {
 
 	uriArray := strings.Split(uri, "/")
 	if len(uriArray) > 3 {
-		protocol := strings.TrimSpace(uriArray[1])
+		parsedProtocol := strings.TrimSpace(uriArray[1])
 		port := uriArray[3]
-		if !httpRegexp.MatchString(protocol) && !tcpRegexp.MatchString(protocol) {
+		if !(protocol == "http" || protocol == "tcp") {
+			return -1
+		}
+		if !strings.HasPrefix(parsedProtocol, protocol) {
 			return -1
 		}
 		if portInt, err := strconv.ParseInt(port, 10, 64); err == nil {
