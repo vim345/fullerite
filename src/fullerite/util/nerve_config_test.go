@@ -74,7 +74,32 @@ func getTestNerveConfig() []byte {
 	                    "rise": 1,
 	                    "timeout": 6,
 	                    "type": "http",
-	                    "uri": "/https/example_service.another/13752/status"
+	                    "uri": "/http/example_service.another/13752/status"
+	                }
+	            ],
+	            "host": "10.56.5.21",
+	            "port": 22222,
+	            "weight": 24,
+	            "zk_hosts": [
+	                "10.40.5.5:22181",
+	                "10.40.5.6:22181",
+	                "10.40.1.17:22181"
+	            ],
+	            "zk_path": "/nerve/superregion:norcal-devc/example_service.another"
+	        },
+	        "example_service_https.another.norcal-devc.superregion:norcal-devc.13752.new": {
+	            "check_interval": 7,
+	            "checks": [
+	                {
+	                    "fall": 2,
+	                    "headers": {},
+	                    "host": "127.0.0.1",
+	                    "open_timeout": 6,
+	                    "port": 6666,
+	                    "rise": 1,
+	                    "timeout": 6,
+	                    "type": "https",
+	                    "uri": "/https/example_service_https.another/13752/status"
 	                }
 	            ],
 	            "host": "10.56.5.21",
@@ -192,6 +217,7 @@ func TestNerveConfigParsing(t *testing.T) {
 		NerveService{Name: "example_service", Namespace: "mesosstage_main", Port: 22224, Host: "10.56.5.21"}: true,
 		NerveService{Name: "example_service", Namespace: "main", Port: 13752, Host: "10.56.5.21"}:            true,
 		NerveService{Name: "example_service", Namespace: "another", Port: 13752, Host: "10.56.5.21"}:         true,
+		NerveService{Name: "example_service_https", Namespace: "another", Port: 13752, Host: "10.56.5.21"}:   true,
 	}
 
 	cfgString := getTestNerveConfig()
